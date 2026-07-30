@@ -81,7 +81,7 @@ export function LoginForm() {
               name="email"
               type="email"
               autoComplete="email"
-              placeholder="you@parish.org"
+              placeholder="sfxa@example"
               required
             />
           </div>
@@ -100,6 +100,7 @@ export function LoginForm() {
               name="password"
               type="password"
               autoComplete="current-password"
+              placeholder="Enter your Password"
               required
             />
           </div>
@@ -115,7 +116,7 @@ export function LoginForm() {
               "Sign in"
             )}
           </Button>
-          <Link
+          {/* <Link
             href="/register"
             className={cn(
               buttonVariants({ variant: "outline", size: "lg" }),
@@ -123,10 +124,10 @@ export function LoginForm() {
             )}
           >
             Register
-          </Link>
-          <p className="text-center text-xs text-muted-foreground">
+          </Link> */}
+          {/* <p className="text-center text-xs text-muted-foreground">
             New staff? Create an account and select your role.
-          </p>
+          </p> */}
           <Link
             href="/"
             className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
