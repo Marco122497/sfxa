@@ -86,6 +86,7 @@ function UserHoverCard({ user }: { user: Profile }) {
           </div>
         </div>
         <dl className="mt-3 space-y-1.5 text-xs">
+          <DetailRow label="Email" value={user.email} />
           <DetailRow label="Employee" value={user.employee_no} />
           <DetailRow label="Contact" value={user.contact_number} />
           <DetailRow label="Sex" value={user.sex} />
@@ -173,6 +174,7 @@ export function UsersTable({
         user.full_name,
         user.first_name,
         user.last_name,
+        user.email,
         user.employee_no,
         user.role,
         user.contact_number,
@@ -191,7 +193,7 @@ export function UsersTable({
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search name, employee no., role…"
+          placeholder="Search name, email, employee no.…"
           className="sm:col-span-1"
         />
         <select
@@ -226,6 +228,7 @@ export function UsersTable({
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Employee No.</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
@@ -238,6 +241,9 @@ export function UsersTable({
               <TableRow key={user.id}>
                 <TableCell>
                   <UserHoverCard user={user} />
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {user.email || "—"}
                 </TableCell>
                 <TableCell>{user.employee_no || "—"}</TableCell>
                 <TableCell>{user.role}</TableCell>

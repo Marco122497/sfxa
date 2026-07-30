@@ -19,15 +19,27 @@ export default async function AdminUsersPage() {
 
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data, error }, authUsersResult] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+    ]);
 
     if (error) {
       loadError = error.message;
     } else {
-      users = (data ?? []) as Profile[];
+      const emailById = new Map(
+        (authUsersResult.data?.users ?? []).map((authUser) => [
+          authUser.id,
+          authUser.email ?? null,
+        ])
+      );
+      users = ((data ?? []) as Profile[]).map((profile) => ({
+        ...profile,
+        email: emailById.get(profile.id) ?? null,
+      }));
     }
   } catch {
     loadError =

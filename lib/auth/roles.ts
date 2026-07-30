@@ -24,6 +24,8 @@ export type Profile = {
   last_login: string | null;
   created_at: string;
   updated_at: string;
+  /** Auth account email (from auth.users when loaded by admin). */
+  email?: string | null;
 };
 
 export function getDashboardPath(role: UserRole): string {

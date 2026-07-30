@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { login, type AuthActionState } from "@/app/actions/auth";
 import { useActionToast } from "@/hooks/use-action-toast";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 
 const initialState: AuthActionState = {};
 
@@ -27,6 +26,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [state, formAction, pending] = useActionState(login, initialState);
+  const [showPassword, setShowPassword] = useState(false);
   useActionToast(state);
 
   const queryError = searchParams.get("error");
@@ -95,14 +95,30 @@ export function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Enter your Password"
-              required
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="Enter your Password"
+                required
+                className="pr-10"
+              />
+              <button
+                type="button"
+                className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="size-4" />
+                ) : (
+                  <EyeIcon className="size-4" />
+                )}
+              </button>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
@@ -116,18 +132,6 @@ export function LoginForm() {
               "Sign in"
             )}
           </Button>
-          {/* <Link
-            href="/register"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "w-full"
-            )}
-          >
-            Register
-          </Link> */}
-          {/* <p className="text-center text-xs text-muted-foreground">
-            New staff? Create an account and select your role.
-          </p> */}
           <Link
             href="/"
             className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
