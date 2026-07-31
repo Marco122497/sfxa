@@ -7,6 +7,7 @@ import {
 
 import { requireTreasurer } from "@/lib/auth/session";
 import { getTreasurerDashboardData } from "@/lib/treasurer/dashboard";
+import { formatDateTime } from "@/lib/auth/roles";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   Card,
@@ -26,7 +27,8 @@ import {
 
 export default async function TreasurerDashboardPage() {
   const { profile } = await requireTreasurer();
-  const { stats, recentTransactions } = await getTreasurerDashboardData();
+  const { stats, recentTransactions, announcements } =
+    await getTreasurerDashboardData();
 
   const cards = [
     {
@@ -118,6 +120,37 @@ export default async function TreasurerDashboardPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Announcements</CardTitle>
+          <CardDescription>
+            Latest published parish announcements.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {announcements.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No published announcements yet.
+            </p>
+          ) : (
+            announcements.map((item) => (
+              <div
+                key={item.announcement_id}
+                className="border-b border-border pb-4 last:border-0 last:pb-0"
+              >
+                <h3 className="font-medium">{item.title}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {formatDateTime(item.published_at || item.created_at)}
+                </p>
+                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
+                  {item.content}
+                </p>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>

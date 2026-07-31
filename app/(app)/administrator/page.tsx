@@ -43,8 +43,8 @@ export default async function AdministratorDashboardPage() {
       icon: ArrowDownRightIcon,
     },
     {
-      title: "Total Donations",
-      value: formatMoney(stats.totalDonations),
+      title: "Net Income",
+      value: formatMoney(stats.netIncome),
       icon: BanknoteIcon,
     },
     {

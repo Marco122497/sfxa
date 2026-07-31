@@ -16,6 +16,14 @@ export type TreasurerTransaction = {
   date: string;
 };
 
+export type TreasurerAnnouncementPreview = {
+  announcement_id: number;
+  title: string;
+  content: string;
+  published_at: string | null;
+  created_at: string;
+};
+
 function monthStart() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), 1)
@@ -40,6 +48,7 @@ export async function getTreasurerDashboardData() {
     { data: allExpenses },
     { data: recentDonations },
     { data: recentExpenses },
+    { data: announcements },
   ] = await Promise.all([
     supabase
       .from("donations")
@@ -65,6 +74,12 @@ export async function getTreasurerDashboardData() {
       .select("expense_id, description, amount, expense_date")
       .order("expense_date", { ascending: false })
       .limit(8),
+    supabase
+      .from("announcements")
+      .select("announcement_id, title, content, published_at, created_at")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(5),
   ]);
 
   const todaysCollection = (todayDonations ?? []).reduce(
@@ -114,5 +129,9 @@ export async function getTreasurerDashboardData() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 10);
 
-  return { stats, recentTransactions };
+  return {
+    stats,
+    recentTransactions,
+    announcements: (announcements ?? []) as TreasurerAnnouncementPreview[],
+  };
 }

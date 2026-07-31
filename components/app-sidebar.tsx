@@ -103,19 +103,24 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
   if (role === "Parish Officer") {
     items.push(
       {
-        title: "Reports",
-        url: "/parish-officer/reports/income",
-        icon: FileTextIcon,
+        title: "Donations",
+        url: "/parish-officer/donations",
+        icon: HandCoinsIcon,
+      },
+      {
+        title: "Collections",
+        url: "/parish-officer/collections",
+        icon: BanknoteIcon,
+      },
+      {
+        title: "Expenses",
+        url: "/parish-officer/expenses",
+        icon: ReceiptIcon,
       },
       {
         title: "Budget Monitoring",
         url: "/parish-officer/budget",
         icon: PiggyBankIcon,
-      },
-      {
-        title: "Announcements",
-        url: "/parish-officer/announcements",
-        icon: MegaphoneIcon,
       }
     );
   }
@@ -158,12 +163,10 @@ function getPrefetchUrls(role: UserRole, home: string) {
   }
   if (role === "Parish Officer") {
     urls.push(
-      "/parish-officer/reports/income",
-      "/parish-officer/reports/expenses",
-      "/parish-officer/reports/budget",
-      "/parish-officer/reports/collections",
-      "/parish-officer/budget",
-      "/parish-officer/announcements"
+      "/parish-officer/donations",
+      "/parish-officer/collections",
+      "/parish-officer/expenses",
+      "/parish-officer/budget"
     );
   }
   return urls;
@@ -182,8 +185,13 @@ function navGroup(pathname: string) {
   if (pathname.startsWith("/treasurer/budgets")) {
     return "treasurer-budgets";
   }
-  if (pathname.startsWith("/parish-officer/reports")) {
-    return "parish-reports";
+  if (
+    pathname.startsWith("/parish-officer/donations") ||
+    pathname.startsWith("/parish-officer/collections") ||
+    pathname.startsWith("/parish-officer/expenses") ||
+    pathname.startsWith("/parish-officer/budget")
+  ) {
+    return "parish-views";
   }
   return null;
 }
@@ -203,10 +211,6 @@ function isItemActive(pathname: string, itemUrl: string, home: string) {
 
   if (itemUrl.startsWith("/administrator/categories")) {
     return pathname.startsWith("/administrator/categories");
-  }
-
-  if (itemUrl.startsWith("/parish-officer/reports")) {
-    return pathname.startsWith("/parish-officer/reports");
   }
 
   if (itemUrl.startsWith("/treasurer/budgets")) {

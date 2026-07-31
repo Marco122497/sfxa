@@ -16,6 +16,7 @@ export default async function TreasurerExpensesPage() {
     { data: categories },
     subcategoriesResult,
     expensesResult,
+    { data: budgets },
   ] = await Promise.all([
     supabase
       .from("expense_categories")
@@ -32,7 +33,15 @@ export default async function TreasurerExpensesPage() {
       )
       .order("expense_date", { ascending: false })
       .limit(200),
+    supabase.from("budgets").select("budget_categories(category_name)"),
   ]);
+
+  // Budget categories mirror expense categories by name.
+  const budgetedCategoryNames = new Set(
+    (budgets ?? [])
+      .map((row) => relationName(row.budget_categories ?? null))
+      .filter(Boolean)
+  );
 
   let expenses:
     | {
@@ -97,7 +106,10 @@ export default async function TreasurerExpensesPage() {
         <CardContent className="pt-6">
           <ExpenseManager
             expenses={rows}
-            categories={categories ?? []}
+            categories={(categories ?? []).map((category) => ({
+              ...category,
+              has_budget: budgetedCategoryNames.has(category.category_name),
+            }))}
             subcategories={subcategoriesResult.data ?? []}
           />
         </CardContent>

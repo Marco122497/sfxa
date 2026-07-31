@@ -64,6 +64,10 @@ export async function requireTreasurer() {
   return requireRole(["Treasurer"]);
 }
 
+export async function requireTreasurerOrAdmin() {
+  return requireRole(["Treasurer", "Administrator"]);
+}
+
 export async function requireParishOfficer() {
   return requireRole(["Parish Officer"]);
 }

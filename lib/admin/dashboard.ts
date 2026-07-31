@@ -4,7 +4,7 @@ import { toNumber } from "@/lib/format";
 export type AdminDashboardStats = {
   totalIncome: number;
   totalExpenses: number;
-  totalDonations: number;
+  netIncome: number;
   totalBudget: number;
   remainingBudget: number;
   totalUsers: number;
@@ -87,7 +87,7 @@ export async function getAdminDashboardData() {
   const stats: AdminDashboardStats = {
     totalIncome,
     totalExpenses,
-    totalDonations,
+    netIncome: totalIncome - totalExpenses,
     totalBudget,
     remainingBudget,
     totalUsers: totalUsers ?? 0,

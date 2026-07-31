@@ -9,14 +9,22 @@ import {
 
 export default async function TreasurerBudgetAllocationPage() {
   await requireTreasurer();
-  const { categories, rows } = await getBudgetModuleData();
+  const { categories, rows, subcategorySetupRequired } =
+    await getBudgetModuleData();
 
   return (
     <div className="space-y-6">
       <BudgetPageHeader
         title="Budget Allocation"
-        description="Create and update budget allocations by category and fiscal year."
+        description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
       />
+      {subcategorySetupRequired && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+          Specific budget allocations need a database update. Run{" "}
+          <code className="text-xs">sql/phase10-budget-subcategories.sql</code>{" "}
+          in Supabase, then refresh.
+        </p>
+      )}
       <Card>
         <CardContent className="pt-6">
           <BudgetManager budgets={rows} categories={categories} />

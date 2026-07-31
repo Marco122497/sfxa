@@ -7,10 +7,21 @@ export type MonthlyTotal = {
   total: number;
 };
 
-export type CollectionSummaryRow = {
+export type CategorySummaryRow = {
   monthKey: string;
   monthLabel: string;
   categoryName: string;
+  total: number;
+};
+
+/** @deprecated Use CategorySummaryRow — kept for existing imports */
+export type CollectionSummaryRow = CategorySummaryRow;
+
+export type ExpenseSummaryRow = {
+  monthKey: string;
+  monthLabel: string;
+  categoryName: string;
+  subcategoryName: string;
   total: number;
 };
 
@@ -49,18 +60,39 @@ function monthLabel(key: string) {
   }).format(new Date(year, month - 1, 1));
 }
 
+type MonthCategoryRpc = {
+  month_key: string;
+  category_name: string;
+  total: number;
+};
+
+function mapCategorySummary(
+  rows: MonthCategoryRpc[] | null
+): CategorySummaryRow[] {
+  return (rows ?? []).map((row) => ({
+    monthKey: row.month_key,
+    monthLabel: monthLabel(row.month_key),
+    categoryName: row.category_name,
+    total: toNumber(row.total),
+  }));
+}
+
 export async function getPublicTransparencyData() {
   const supabase = await createClient();
 
   const [
     donationsResult,
+    donationSummaryResult,
     collectionsResult,
+    expensesResult,
     budgetResult,
     projectsResult,
     announcementsResult,
   ] = await Promise.all([
     supabase.rpc("public_monthly_donation_totals"),
+    supabase.rpc("public_monthly_donation_summary"),
     supabase.rpc("public_monthly_collection_summary"),
+    supabase.rpc("public_monthly_expense_summary"),
     supabase.rpc("public_budget_utilization"),
     supabase
       .from("parish_projects")
@@ -85,11 +117,20 @@ export async function getPublicTransparencyData() {
     total: toNumber(row.total),
   }));
 
-  const monthlyCollections: CollectionSummaryRow[] = (
-    (collectionsResult.data as
+  const monthlyDonationDetails = mapCategorySummary(
+    donationSummaryResult.data as MonthCategoryRpc[] | null
+  );
+
+  const monthlyCollections = mapCategorySummary(
+    collectionsResult.data as MonthCategoryRpc[] | null
+  );
+
+  const monthlyExpenses: ExpenseSummaryRow[] = (
+    (expensesResult.data as
       | {
           month_key: string;
           category_name: string;
+          subcategory_name: string;
           total: number;
         }[]
       | null) ?? []
@@ -97,6 +138,7 @@ export async function getPublicTransparencyData() {
     monthKey: row.month_key,
     monthLabel: monthLabel(row.month_key),
     categoryName: row.category_name,
+    subcategoryName: row.subcategory_name,
     total: toNumber(row.total),
   }));
 
@@ -120,13 +162,17 @@ export async function getPublicTransparencyData() {
 
   const rpcError =
     donationsResult.error?.message ||
+    donationSummaryResult.error?.message ||
     collectionsResult.error?.message ||
+    expensesResult.error?.message ||
     budgetResult.error?.message ||
     null;
 
   return {
     monthlyDonations,
+    monthlyDonationDetails,
     monthlyCollections,
+    monthlyExpenses,
     budgetUtilization,
     projects: (projectsResult.data ?? []) as PublicProject[],
     announcements: (announcementsResult.data ?? []) as PublicAnnouncement[],

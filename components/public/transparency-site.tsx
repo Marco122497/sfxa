@@ -5,7 +5,8 @@ import { formatDateTime } from "@/lib/auth/roles";
 import { formatDate, formatMoney } from "@/lib/format";
 import type {
   BudgetUtilizationRow,
-  CollectionSummaryRow,
+  CategorySummaryRow,
+  ExpenseSummaryRow,
   MonthlyTotal,
   PublicAnnouncement,
   PublicProject,
@@ -18,7 +19,9 @@ type TransparencySiteProps = {
   dashboardHref: string | null;
   setupRequired: boolean;
   monthlyDonations: MonthlyTotal[];
-  monthlyCollections: CollectionSummaryRow[];
+  monthlyDonationDetails: CategorySummaryRow[];
+  monthlyCollections: CategorySummaryRow[];
+  monthlyExpenses: ExpenseSummaryRow[];
   budgetUtilization: BudgetUtilizationRow[];
   projects: PublicProject[];
   announcements: PublicAnnouncement[];
@@ -35,26 +38,50 @@ const IMAGES = {
     "https://images.unsplash.com/photo-1507692049790-de58290a4334?auto=format&fit=crop&w=1600&q=80",
 } as const;
 
+function recentCategoryRows(rows: CategorySummaryRow[], monthLimit = 6) {
+  const months = [...new Set(rows.map((row) => row.monthKey))].slice(
+    0,
+    monthLimit
+  );
+  const latest = rows.filter((row) => months.includes(row.monthKey));
+  const latestMonthTotal = latest
+    .filter((row) => row.monthKey === months[0])
+    .reduce((sum, row) => sum + row.total, 0);
+  const latestMonthLabel = months[0]
+    ? (latest.find((row) => row.monthKey === months[0])?.monthLabel ??
+      "This period")
+    : "This period";
+
+  return { months, latest, latestMonthTotal, latestMonthLabel };
+}
+
 export function TransparencySite({
   dashboardHref,
   setupRequired,
   monthlyDonations,
+  monthlyDonationDetails,
   monthlyCollections,
+  monthlyExpenses,
   budgetUtilization,
   projects,
   announcements,
 }: TransparencySiteProps) {
-  const collectionMonths = [
-    ...new Set(monthlyCollections.map((row) => row.monthKey)),
+  const collections = recentCategoryRows(monthlyCollections);
+  const donations = recentCategoryRows(monthlyDonationDetails);
+
+  const expenseMonths = [
+    ...new Set(monthlyExpenses.map((row) => row.monthKey)),
   ].slice(0, 6);
-
-  const latestCollections = monthlyCollections.filter((row) =>
-    collectionMonths.includes(row.monthKey)
+  const latestExpenses = monthlyExpenses.filter((row) =>
+    expenseMonths.includes(row.monthKey)
   );
-
-  const latestCollectionTotal = latestCollections
-    .filter((row) => row.monthKey === collectionMonths[0])
+  const latestExpenseTotal = latestExpenses
+    .filter((row) => row.monthKey === expenseMonths[0])
     .reduce((sum, row) => sum + row.total, 0);
+  const latestExpenseLabel = expenseMonths[0]
+    ? (latestExpenses.find((row) => row.monthKey === expenseMonths[0])
+        ?.monthLabel ?? "This period")
+    : "This period";
 
   const budgetAllocated = budgetUtilization.reduce(
     (sum, row) => sum + row.allocated,
@@ -70,12 +97,10 @@ export function TransparencySite({
       ? Math.min(100, Math.round((budgetUtilized / budgetAllocated) * 100))
       : 0;
 
-  const latestDonationTotal = monthlyDonations[0]?.total ?? 0;
-  const latestDonationLabel = monthlyDonations[0]?.monthLabel ?? "This period";
-  const latestCollectionLabel = collectionMonths[0]
-    ? latestCollections.find((row) => row.monthKey === collectionMonths[0])
-        ?.monthLabel ?? "This period"
-    : "This period";
+  const latestDonationTotal =
+    monthlyDonations[0]?.total ?? donations.latestMonthTotal;
+  const latestDonationLabel =
+    monthlyDonations[0]?.monthLabel ?? donations.latestMonthLabel;
 
   return (
     <div className="min-h-full scroll-smooth bg-[#f7f4ef] text-[#1c2a20]">
@@ -161,18 +186,18 @@ export function TransparencySite({
               },
               {
                 label: "Latest collections",
-                value: formatMoney(latestCollectionTotal),
-                hint: latestCollectionLabel,
+                value: formatMoney(collections.latestMonthTotal),
+                hint: collections.latestMonthLabel,
+              },
+              {
+                label: "Latest expenses",
+                value: formatMoney(latestExpenseTotal),
+                hint: latestExpenseLabel,
               },
               {
                 label: "Budget remaining",
                 value: formatMoney(budgetRemaining),
                 hint: `${utilizationPct}% utilized overall`,
-              },
-              {
-                label: "Active projects",
-                value: String(projects.length),
-                hint: "Listed for the community",
               },
             ].map((item) => (
               <div
@@ -221,11 +246,11 @@ export function TransparencySite({
               collections. Separate from donations. Donor names are never shown.
             </p>
 
-            {latestCollections.length === 0 ? (
+            {collections.latest.length === 0 ? (
               <p className="mt-10 text-[#1c2a20]/55">No collection data yet.</p>
             ) : (
               <div className="mt-10 border-t border-[#1c2a20]/12">
-                {latestCollections.map((row) => (
+                {collections.latest.map((row) => (
                   <div
                     key={`${row.monthKey}-${row.categoryName}`}
                     className="grid grid-cols-[1fr_auto] items-baseline gap-4 border-b border-[#1c2a20]/10 py-5 transition-colors duration-300 hover:bg-[#1c2a20]/[0.03] sm:grid-cols-[7.5rem_1fr_auto]"
@@ -267,23 +292,71 @@ export function TransparencySite({
               Monthly donations
             </h2>
             <p className="mt-4 text-base leading-relaxed text-[#f7f4ef]/65 md:text-lg">
-              Donation totals only — parish collections are listed separately.
-              No personal donor details.
+              Donation totals by category — separate from parish collections. No
+              personal donor details.
             </p>
           </div>
 
-          {monthlyDonations.length === 0 ? (
+          {donations.latest.length === 0 ? (
             <p className="mt-10 text-[#f7f4ef]/55">No donation totals yet.</p>
           ) : (
-            <div className="mt-14 grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {monthlyDonations.slice(0, 6).map((row, index) => (
+            <div className="mt-14 border-t border-[#f7f4ef]/15">
+              {donations.latest.map((row) => (
                 <div
-                  key={row.monthKey}
-                  className="border-t border-[#f7f4ef]/20 pt-5 transition-transform duration-500 hover:-translate-y-1"
-                  style={{ transitionDelay: `${index * 40}ms` }}
+                  key={`${row.monthKey}-${row.categoryName}`}
+                  className="grid grid-cols-[1fr_auto] items-baseline gap-4 border-b border-[#f7f4ef]/12 py-5 transition-colors duration-300 hover:bg-white/[0.03] sm:grid-cols-[7.5rem_1fr_auto]"
                 >
                   <p className="text-sm text-[#f7f4ef]/55">{row.monthLabel}</p>
-                  <p className="mt-3 font-[family-name:var(--font-display)] text-3xl font-semibold tabular-nums md:text-4xl">
+                  <p className="col-span-2 font-medium text-[#f7f4ef] sm:col-span-1">
+                    {row.categoryName}
+                  </p>
+                  <p className="text-right font-[family-name:var(--font-display)] text-lg tabular-nums sm:text-xl">
+                    {formatMoney(row.total)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Expenses — general + specific categories */}
+      <section id="expenses" className="scroll-mt-24 py-20 md:py-28">
+        <div className="mx-auto max-w-6xl px-4 md:px-6">
+          <div className="max-w-2xl">
+            <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight md:text-5xl">
+              Monthly expenses
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-[#1c2a20]/65 md:text-lg">
+              Spending by general and specific category. Receipts and staff notes
+              stay private.
+            </p>
+          </div>
+
+          {latestExpenses.length === 0 ? (
+            <p className="mt-10 text-[#1c2a20]/55">No expense data yet.</p>
+          ) : (
+            <div className="mt-10 border-t border-[#1c2a20]/12">
+              <div className="hidden grid-cols-[7.5rem_1fr_1fr_auto] gap-4 border-b border-[#1c2a20]/10 py-3 text-xs tracking-[0.14em] text-[#1c2a20]/45 uppercase sm:grid">
+                <p>Month</p>
+                <p>General</p>
+                <p>Specific</p>
+                <p className="text-right">Amount</p>
+              </div>
+              {latestExpenses.map((row) => (
+                <div
+                  key={`${row.monthKey}-${row.categoryName}-${row.subcategoryName}`}
+                  className="grid grid-cols-[1fr_auto] items-baseline gap-x-4 gap-y-1 border-b border-[#1c2a20]/10 py-5 transition-colors duration-300 hover:bg-[#1c2a20]/[0.03] sm:grid-cols-[7.5rem_1fr_1fr_auto]"
+                >
+                  <p className="text-sm text-[#1c2a20]/50">{row.monthLabel}</p>
+                  <p className="hidden font-medium sm:block">{row.categoryName}</p>
+                  <p className="col-span-2 font-medium sm:col-span-1 sm:font-normal">
+                    <span className="sm:hidden text-[#1c2a20]/45">
+                      {row.categoryName} ·{" "}
+                    </span>
+                    {row.subcategoryName}
+                  </p>
+                  <p className="text-right font-[family-name:var(--font-display)] text-lg tabular-nums sm:text-xl">
                     {formatMoney(row.total)}
                   </p>
                 </div>
@@ -294,15 +367,14 @@ export function TransparencySite({
       </section>
 
       {/* Budget */}
-      <section id="budget" className="scroll-mt-24 py-20 md:py-28">
+      <section id="budget" className="scroll-mt-24 border-t border-[#1c2a20]/10 bg-[#ebe6de] py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="max-w-2xl">
             <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight md:text-5xl">
               Budget utilization
             </h2>
             <p className="mt-4 text-base leading-relaxed text-[#1c2a20]/65 md:text-lg">
-              How allocated funds support parish work. Expense receipts and line
-              items stay private.
+              Allocated funds versus spending by general expense category.
             </p>
           </div>
 
@@ -379,7 +451,7 @@ export function TransparencySite({
       {/* Projects */}
       <section
         id="projects"
-        className="scroll-mt-24 border-y border-[#1c2a20]/10 bg-[#ebe6de] py-20 md:py-28"
+        className="scroll-mt-24 py-20 md:py-28"
       >
         <div className="mx-auto max-w-6xl px-4 md:px-6">
           <div className="grid gap-10 md:grid-cols-[1fr_0.9fr] md:items-end">

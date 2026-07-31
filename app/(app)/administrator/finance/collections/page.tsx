@@ -1,152 +1,68 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
-import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import { relationName } from "@/lib/treasurer/relations";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DonationManager } from "@/components/treasurer/donation-manager";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AdminCollectionsPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: donations }] = await Promise.all([
-    supabase
-      .from("donation_categories")
-      .select("category_id, category_name")
-      .order("category_name"),
-    supabase
-      .from("donations")
-      .select(
-        "donation_id, donor_name, amount, donation_date, remarks, category_id, donation_categories(category_name)"
-      )
-      .order("donation_date", { ascending: false })
-      .limit(200),
-  ]);
+  const { data: categories } = await supabase
+    .from("donation_categories")
+    .select("category_id, category_name")
+    .order("category_name");
 
   const collectionCategories = (categories ?? []).filter((row) =>
     isCollectionCategoryName(row.category_name)
   );
-  const collectionIds = new Set(
-    collectionCategories.map((row) => row.category_id)
-  );
+  const collectionIds = collectionCategories.map((c) => c.category_id);
 
-  const summary = collectionCategories.map((category) => ({
-    ...category,
-    total: (donations ?? [])
-      .filter((row) => row.category_id === category.category_id)
-      .reduce((sum, row) => sum + toNumber(row.amount), 0),
+  const { data: donations } =
+    collectionIds.length > 0
+      ? await supabase
+          .from("donations")
+          .select(
+            "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+          )
+          .in("category_id", collectionIds)
+          .order("donation_date", { ascending: false })
+          .limit(200)
+      : { data: [] };
+
+  const rows = (donations ?? []).map((row) => ({
+    donation_id: row.donation_id,
+    donor_name: null as string | null,
+    category_id: row.category_id,
+    amount: row.amount,
+    donation_date: row.donation_date,
+    remarks: row.remarks,
+    category_name: relationName(
+      row.donation_categories as
+        | { category_name?: string }
+        | { category_name?: string }[]
+        | null
+    ),
   }));
-
-  const rows = (donations ?? []).filter(
-    (row) => row.category_id != null && collectionIds.has(row.category_id)
-  );
-  const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
 
   return (
     <div className="space-y-6">
       <FinancePageHeader
         title="Collections"
-        description="View parish collection records and totals by type."
+        description="Record parish collections by type from donation categories."
       />
-
       <Card>
-        <CardHeader>
-          <CardTitle>Collection summary</CardTitle>
-          <CardDescription>
-            Totals by collection type (read-only).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {summary.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No collection types found.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Collection type</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.map((row) => (
-                  <TableRow key={row.category_id}>
-                    <TableCell>{row.category_name}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatMoney(row.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Collection records</CardTitle>
-          <CardDescription>
-            Total shown: {formatMoney(total)} · Read-only monitoring
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No collections yet. Treasurer entries will appear here.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Donor</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Remarks</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const category = relationName(
-                    row.donation_categories as
-                      | { category_name?: string }
-                      | { category_name?: string }[]
-                      | null
-                  );
-                  return (
-                    <TableRow key={row.donation_id}>
-                      <TableCell>{formatDate(row.donation_date)}</TableCell>
-                      <TableCell>{row.donor_name || "—"}</TableCell>
-                      <TableCell>{category || "—"}</TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {row.remarks || "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="pt-6">
+          <DonationManager
+            mode="collection"
+            donations={rows}
+            categories={collectionCategories}
+            defaultCategoryId={collectionCategories[0]?.category_id}
+            title="Collection history"
+            emptyMessage="No collection entries yet."
+          />
         </CardContent>
       </Card>
     </div>

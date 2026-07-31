@@ -1,6 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useActionState,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import {
@@ -38,19 +44,28 @@ const initialState: FinanceActionState = {};
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
+export type BudgetSubcategoryOption = {
+  subcategory_id: number;
+  subcategory_name: string;
+};
+
 export type BudgetCategory = {
   budget_category_id: number;
   category_name: string;
+  subcategories: BudgetSubcategoryOption[];
 };
 
 export type BudgetRow = {
   budget_id: number;
   budget_category_id: number | null;
+  expense_subcategory_id: number | null;
   fiscal_year: number;
   allocated_amount: number | string;
   remarks: string | null;
   category_name: string | null;
+  subcategory_name: string | null;
   spent: number;
+  category_spent: number;
 };
 
 function BudgetFormFields({
@@ -63,19 +78,46 @@ function BudgetFormFields({
   idPrefix: string;
 }) {
   const year = new Date().getFullYear();
+  const [categoryId, setCategoryId] = useState<number | "">(
+    defaults?.budget_category_id ?? categories[0]?.budget_category_id ?? ""
+  );
+
+  const specificOptions = useMemo(
+    () =>
+      categories.find((c) => c.budget_category_id === Number(categoryId))
+        ?.subcategories ?? [],
+    [categories, categoryId]
+  );
+
+  const [subcategoryId, setSubcategoryId] = useState<number | "">(
+    defaults?.expense_subcategory_id &&
+      specificOptions.some(
+        (s) => s.subcategory_id === defaults.expense_subcategory_id
+      )
+      ? defaults.expense_subcategory_id
+      : ""
+  );
+
+  useEffect(() => {
+    if (
+      subcategoryId !== "" &&
+      !specificOptions.some((s) => s.subcategory_id === subcategoryId)
+    ) {
+      setSubcategoryId("");
+    }
+  }, [specificOptions, subcategoryId]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-category`}>Category</Label>
+        <Label htmlFor={`${idPrefix}-category`}>General category</Label>
         <select
           id={`${idPrefix}-category`}
           name="budget_category_id"
           required
-          defaultValue={
-            defaults?.budget_category_id ??
-            categories[0]?.budget_category_id ??
-            ""
+          value={categoryId}
+          onChange={(event) =>
+            setCategoryId(event.target.value ? Number(event.target.value) : "")
           }
           className={selectClassName}
         >
@@ -88,6 +130,30 @@ function BudgetFormFields({
             </option>
           ))}
         </select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-subcategory`}>Specific category</Label>
+        <select
+          id={`${idPrefix}-subcategory`}
+          name="expense_subcategory_id"
+          value={subcategoryId}
+          onChange={(event) =>
+            setSubcategoryId(
+              event.target.value ? Number(event.target.value) : ""
+            )
+          }
+          className={selectClassName}
+        >
+          <option value="">Entire category (general)</option>
+          {specificOptions.map((sub) => (
+            <option key={sub.subcategory_id} value={sub.subcategory_id}>
+              {sub.subcategory_name}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted-foreground">
+          Specific allocations add up to the general category total.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-year`}>Fiscal year</Label>
@@ -146,7 +212,8 @@ function AddBudgetDialog({ categories }: { categories: BudgetCategory[] }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Create budget</AlertDialogTitle>
           <AlertDialogDescription>
-            Allocate a budget for a category and fiscal year.
+            Allocate a budget for a general category, or a specific category
+            under it, per fiscal year.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id="add-budget-form" className="space-y-4">
@@ -279,6 +346,15 @@ function DeleteBudgetButton({ budgetId }: { budgetId: number }) {
   );
 }
 
+type BudgetGroup = {
+  key: string;
+  fiscal_year: number;
+  category_name: string | null;
+  allocated: number;
+  spent: number;
+  rows: BudgetRow[];
+};
+
 export function BudgetManager({
   budgets,
   categories,
@@ -288,22 +364,43 @@ export function BudgetManager({
 }) {
   const [query, setQuery] = useState("");
 
-  const filtered = useMemo(() => {
+  const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return budgets;
-    return budgets.filter((row) => {
-      const haystack = [
-        row.category_name,
-        String(row.fiscal_year),
-        row.remarks,
-        String(row.allocated_amount),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
+    const filtered = !q
+      ? budgets
+      : budgets.filter((row) => {
+          const haystack = [
+            row.category_name,
+            row.subcategory_name,
+            String(row.fiscal_year),
+            row.remarks,
+            String(row.allocated_amount),
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(q);
+        });
+
+    const map = new Map<string, BudgetGroup>();
+    for (const row of filtered) {
+      const key = `${row.fiscal_year}::${row.category_name ?? ""}`;
+      const group = map.get(key) ?? {
+        key,
+        fiscal_year: row.fiscal_year,
+        category_name: row.category_name,
+        allocated: 0,
+        spent: row.category_spent,
+        rows: [],
+      };
+      group.allocated += toNumber(row.allocated_amount);
+      group.rows.push(row);
+      map.set(key, group);
+    }
+    return [...map.values()];
   }, [budgets, query]);
+
+  const totalRows = groups.reduce((sum, group) => sum + group.rows.length, 0);
 
   return (
     <div className="space-y-4">
@@ -311,7 +408,8 @@ export function BudgetManager({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold tracking-tight">Budgets</h2>
           <p className="text-sm text-muted-foreground">
-            {filtered.length} allocation{filtered.length === 1 ? "" : "s"}
+            {totalRows} allocation{totalRows === 1 ? "" : "s"} · Specific
+            allocations roll up into their general category
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -325,7 +423,7 @@ export function BudgetManager({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="text-sm text-muted-foreground">No budgets yet.</p>
       ) : (
         <Table>
@@ -341,34 +439,64 @@ export function BudgetManager({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((row) => {
-              const allocated = toNumber(row.allocated_amount);
-              const remaining = allocated - row.spent;
-              return (
-                <TableRow key={row.budget_id}>
-                  <TableCell>{row.fiscal_year}</TableCell>
-                  <TableCell>{row.category_name || "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(allocated)}
+            {groups.map((group) => (
+              <Fragment key={group.key}>
+                <TableRow className="bg-muted/50 hover:bg-muted/60">
+                  <TableCell className="font-medium">
+                    {group.fiscal_year}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(row.spent)}
+                  <TableCell className="font-semibold">
+                    {group.category_name || "—"}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatMoney(remaining)}
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatMoney(group.allocated)}
                   </TableCell>
-                  <TableCell className="max-w-[180px] truncate">
-                    {row.remarks || "—"}
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatMoney(group.spent)}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <EditBudgetDialog row={row} categories={categories} />
-                      <DeleteBudgetButton budgetId={row.budget_id} />
-                    </div>
+                  <TableCell className="text-right font-medium tabular-nums">
+                    {formatMoney(group.allocated - group.spent)}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    General total
+                  </TableCell>
+                  <TableCell />
                 </TableRow>
-              );
-            })}
+                {group.rows.map((row) => {
+                  const allocated = toNumber(row.allocated_amount);
+                  return (
+                    <TableRow key={row.budget_id}>
+                      <TableCell />
+                      <TableCell className="pl-6">
+                        {row.subcategory_name || (
+                          <span className="text-muted-foreground">
+                            General allocation
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(allocated)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(row.spent)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatMoney(allocated - row.spent)}
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {row.remarks || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          <EditBudgetDialog row={row} categories={categories} />
+                          <DeleteBudgetButton budgetId={row.budget_id} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </Fragment>
+            ))}
           </TableBody>
         </Table>
       )}

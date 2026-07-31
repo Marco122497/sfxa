@@ -1,6 +1,6 @@
-import { ParishReportNav } from "@/components/parish-officer/parish-report-nav";
+import { ParishViewNav } from "@/components/parish-officer/parish-view-nav";
 
-export function ParishReportPageHeader({
+export function ParishViewPageHeader({
   title,
   description,
   actions,
@@ -20,7 +20,7 @@ export function ParishReportPageHeader({
         </div>
         {actions}
       </div>
-      <ParishReportNav />
+      <ParishViewNav />
     </div>
   );
 }

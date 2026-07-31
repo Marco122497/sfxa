@@ -96,7 +96,8 @@ export default async function TreasurerBudgetMonitoringPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Year</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>General</TableHead>
+                  <TableHead>Specific</TableHead>
                   <TableHead className="text-right">Allocated</TableHead>
                   <TableHead className="text-right">Utilized</TableHead>
                   <TableHead className="text-right">Remaining</TableHead>
@@ -108,6 +109,11 @@ export default async function TreasurerBudgetMonitoringPage() {
                   <TableRow key={row.budget_id}>
                     <TableCell>{row.fiscal_year}</TableCell>
                     <TableCell>{row.category_name || "—"}</TableCell>
+                    <TableCell>
+                      {row.subcategory_name || (
+                        <span className="text-muted-foreground">General</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(row.allocated_amount)}
                     </TableCell>

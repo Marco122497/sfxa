@@ -1,84 +1,114 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney, toNumber } from "@/lib/format";
+import { relationName } from "@/lib/treasurer/relations";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ExpenseManager } from "@/components/treasurer/expense-manager";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AdminExpensesPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("expenses")
-    .select(
-      "expense_id, description, amount, expense_date, expense_categories(category_name)"
-    )
-    .order("expense_date", { ascending: false })
-    .limit(100);
+  const [
+    { data: categories },
+    subcategoriesResult,
+    expensesResult,
+    { data: budgets },
+  ] = await Promise.all([
+    supabase
+      .from("expense_categories")
+      .select("expense_category_id, category_name")
+      .order("category_name"),
+    supabase
+      .from("expense_subcategories")
+      .select("subcategory_id, expense_category_id, subcategory_name")
+      .order("subcategory_name"),
+    supabase
+      .from("expenses")
+      .select(
+        "expense_id, expense_category_id, expense_subcategory_id, description, amount, expense_date, receipt_url, expense_categories(category_name), expense_subcategories(subcategory_name)"
+      )
+      .order("expense_date", { ascending: false })
+      .limit(200),
+    supabase.from("budgets").select("budget_categories(category_name)"),
+  ]);
 
-  const rows = data ?? [];
-  const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
+  // Budget categories mirror expense categories by name.
+  const budgetedCategoryNames = new Set(
+    (budgets ?? [])
+      .map((row) => relationName(row.budget_categories ?? null))
+      .filter(Boolean)
+  );
+
+  let expenses:
+    | {
+        expense_id: number;
+        expense_category_id: number | null;
+        expense_subcategory_id?: number | null;
+        description: string | null;
+        amount: number | string;
+        expense_date: string;
+        receipt_url?: string | null;
+        expense_categories?:
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null;
+        expense_subcategories?:
+          | { subcategory_name?: string }
+          | { subcategory_name?: string }[]
+          | null;
+      }[]
+    | null = expensesResult.data;
+
+  if (expensesResult.error) {
+    const fallback = await supabase
+      .from("expenses")
+      .select(
+        "expense_id, expense_category_id, description, amount, expense_date, receipt_url, expense_categories(category_name)"
+      )
+      .order("expense_date", { ascending: false })
+      .limit(200);
+    expenses = fallback.data as typeof expenses;
+  }
+
+  const rows = (expenses ?? []).map((row) => ({
+    expense_id: row.expense_id,
+    expense_category_id: row.expense_category_id,
+    expense_subcategory_id: row.expense_subcategory_id ?? null,
+    description: row.description,
+    amount: row.amount,
+    expense_date: row.expense_date,
+    receipt_url: row.receipt_url ?? null,
+    category_name: relationName(row.expense_categories ?? null),
+    subcategory_name: relationName(
+      row.expense_subcategories ?? null,
+      "subcategory_name"
+    ),
+  }));
 
   return (
     <div className="space-y-6">
       <FinancePageHeader
         title="Expenses"
-        description="Monitor parish expenses (read-only)."
+        description="Record spending with a general category and a specific category under it."
       />
+      {(subcategoriesResult.error || expensesResult.error) && (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+          Specific categories need a database update. Run{" "}
+          <code className="text-xs">sql/phase9-expense-subcategories.sql</code>{" "}
+          in Supabase, then refresh.
+        </p>
+      )}
       <Card>
-        <CardHeader>
-          <CardTitle>Expense Records</CardTitle>
-          <CardDescription>Total shown: {formatMoney(total)}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No expenses yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const category = Array.isArray(row.expense_categories)
-                    ? row.expense_categories[0]?.category_name
-                    : (row.expense_categories as { category_name?: string } | null)
-                        ?.category_name;
-                  return (
-                    <TableRow key={row.expense_id}>
-                      <TableCell>{formatDate(row.expense_date)}</TableCell>
-                      <TableCell>{category || "—"}</TableCell>
-                      <TableCell className="max-w-[260px] truncate">
-                        {row.description || "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="pt-6">
+          <ExpenseManager
+            expenses={rows}
+            categories={(categories ?? []).map((category) => ({
+              ...category,
+              has_budget: budgetedCategoryNames.has(category.category_name),
+            }))}
+            subcategories={subcategoriesResult.data ?? []}
+          />
         </CardContent>
       </Card>
     </div>

@@ -47,6 +47,7 @@ const selectClassName =
 export type ExpenseCategory = {
   expense_category_id: number;
   category_name: string;
+  has_budget: boolean;
 };
 
 export type ExpenseSubcategory = {
@@ -79,8 +80,12 @@ function ExpenseFormFields({
   idPrefix: string;
 }) {
   const today = new Date().toISOString().slice(0, 10);
+  const firstBudgeted = categories.find((c) => c.has_budget);
   const [categoryId, setCategoryId] = useState<number | "">(
-    defaults?.expense_category_id ?? categories[0]?.expense_category_id ?? ""
+    defaults?.expense_category_id ??
+      firstBudgeted?.expense_category_id ??
+      categories[0]?.expense_category_id ??
+      ""
   );
   const specificForCategory = useMemo(
     () =>
@@ -125,11 +130,19 @@ function ExpenseFormFields({
             <option
               key={category.expense_category_id}
               value={category.expense_category_id}
+              disabled={!category.has_budget}
             >
               {category.category_name}
+              {category.has_budget ? "" : " — needs budget allocation"}
             </option>
           ))}
         </select>
+        {categories.some((c) => !c.has_budget) && (
+          <p className="text-xs text-muted-foreground">
+            Categories marked “needs budget allocation” must get a budget under
+            Budgets → Allocation before expenses can be recorded.
+          </p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-subcategory`}>Specific category</Label>

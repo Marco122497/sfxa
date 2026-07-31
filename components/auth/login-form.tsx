@@ -132,12 +132,6 @@ export function LoginForm() {
               "Sign in"
             )}
           </Button>
-          <Link
-            href="/"
-            className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline"
-          >
-            View public transparency dashboard
-          </Link>
         </CardFooter>
       </form>
     </Card>

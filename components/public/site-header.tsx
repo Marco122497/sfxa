@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "#collections", id: "collections", label: "Collections" },
   { href: "#donations", id: "donations", label: "Donations" },
+  { href: "#expenses", id: "expenses", label: "Expenses" },
   { href: "#budget", id: "budget", label: "Budget" },
   { href: "#projects", id: "projects", label: "Projects" },
   { href: "#announcements", id: "announcements", label: "Announcements" },
@@ -190,7 +191,7 @@ export function TransparencySiteHeader({
       <div
         className={cn(
           "overflow-hidden border-t border-[#1c2a20]/8 transition-[max-height,opacity] duration-500 ease-out md:hidden",
-          mobileOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+          mobileOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
         )}
       >
         <nav className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-3">

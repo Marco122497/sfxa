@@ -1,6 +1,7 @@
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney, toNumber } from "@/lib/format";
+import { ParishViewPageHeader } from "@/components/parish-officer/parish-view-page-header";
 import {
   Card,
   CardContent,
@@ -64,14 +65,10 @@ export default async function ParishBudgetMonitoringPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          Budget Monitoring
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          View budget allocation, utilization, and remaining balances.
-        </p>
-      </div>
+      <ParishViewPageHeader
+        title="Budget Monitoring"
+        description="View budget allocation, utilization, and remaining balances."
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

@@ -1,102 +1,69 @@
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
-import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import { relationName } from "@/lib/treasurer/relations";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DonationManager } from "@/components/treasurer/donation-manager";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function AdminDonationsPage() {
   await requireAdmin();
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("donations")
-    .select(
-      "donation_id, donor_name, amount, donation_date, remarks, donation_categories(category_name)"
-    )
-    .order("donation_date", { ascending: false })
-    .limit(200);
+  const [{ data: categories }, { data: donations }] = await Promise.all([
+    supabase
+      .from("donation_categories")
+      .select("category_id, category_name")
+      .order("category_name"),
+    supabase
+      .from("donations")
+      .select(
+        "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+      )
+      .order("donation_date", { ascending: false })
+      .limit(200),
+  ]);
 
-  const rows = (data ?? []).filter((row) => {
-    const category = relationName(
-      row.donation_categories as
-        | { category_name?: string }
-        | { category_name?: string }[]
-        | null
-    );
-    return !isCollectionCategoryName(category);
-  });
-  const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
+  const donationCategories = (categories ?? []).filter(
+    (row) => !isCollectionCategoryName(row.category_name)
+  );
+  const donationCategoryIds = new Set(
+    donationCategories.map((row) => row.category_id)
+  );
+
+  const rows = (donations ?? [])
+    .filter(
+      (row) =>
+        row.category_id == null || donationCategoryIds.has(row.category_id)
+    )
+    .map((row) => ({
+      donation_id: row.donation_id,
+      donor_name: row.donor_name,
+      category_id: row.category_id,
+      amount: row.amount,
+      donation_date: row.donation_date,
+      remarks: row.remarks,
+      category_name: relationName(
+        row.donation_categories as
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null
+      ),
+    }));
 
   return (
     <div className="space-y-6">
       <FinancePageHeader
         title="Donations"
-        description="View donation records (excluding parish collections)."
+        description="Add, edit, search, and review donation history (excluding parish collections)."
       />
       <Card>
-        <CardHeader>
-          <CardTitle>Donation records</CardTitle>
-          <CardDescription>
-            Total shown: {formatMoney(total)} · Read-only monitoring
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No donations yet. Treasurer entries will appear here.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Donor</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Remarks</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const category = relationName(
-                    row.donation_categories as
-                      | { category_name?: string }
-                      | { category_name?: string }[]
-                      | null
-                  );
-                  return (
-                    <TableRow key={row.donation_id}>
-                      <TableCell>{formatDate(row.donation_date)}</TableCell>
-                      <TableCell>{row.donor_name || "—"}</TableCell>
-                      <TableCell>{category || "—"}</TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {row.remarks || "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+        <CardContent className="pt-6">
+          <DonationManager
+            donations={rows}
+            categories={donationCategories}
+            title="Donation history"
+          />
         </CardContent>
       </Card>
     </div>

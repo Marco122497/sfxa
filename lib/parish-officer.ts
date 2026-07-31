@@ -1,18 +1,15 @@
-export const PARISH_REPORT_TABS = [
-  { href: "/parish-officer/reports/income", label: "Income Report" },
-  { href: "/parish-officer/reports/expenses", label: "Expense Report" },
-  { href: "/parish-officer/reports/budget", label: "Budget Report" },
-  {
-    href: "/parish-officer/reports/collections",
-    label: "Collection Summary",
-  },
+export const PARISH_VIEW_TABS = [
+  { href: "/parish-officer/donations", label: "Donations" },
+  { href: "/parish-officer/collections", label: "Collections" },
+  { href: "/parish-officer/expenses", label: "Expenses" },
+  { href: "/parish-officer/budget", label: "Budget" },
 ] as const;
 
-export type ParishReportTabHref = (typeof PARISH_REPORT_TABS)[number]["href"];
+export type ParishViewTabHref = (typeof PARISH_VIEW_TABS)[number]["href"];
 
-export function resolveParishReportTab(pathname: string): ParishReportTabHref {
-  const match = PARISH_REPORT_TABS.find(
+export function resolveParishViewTab(pathname: string): ParishViewTabHref {
+  const match = PARISH_VIEW_TABS.find(
     (tab) => pathname === tab.href || pathname.startsWith(`${tab.href}/`)
   );
-  return match?.href ?? PARISH_REPORT_TABS[0].href;
+  return match?.href ?? PARISH_VIEW_TABS[0].href;
 }

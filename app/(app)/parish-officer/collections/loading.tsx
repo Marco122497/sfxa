@@ -1,11 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export default function ParishReportsLoading() {
+export default function ParishCollectionsLoading() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">

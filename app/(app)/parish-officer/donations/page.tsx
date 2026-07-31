@@ -1,9 +1,11 @@
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { isCollectionCategoryName } from "@/lib/categories";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import { isReportPeriod } from "@/lib/reports";
 import { startOfPeriod } from "@/lib/reports-period";
-import { ParishReportPageHeader } from "@/components/parish-officer/parish-report-page-header";
+import { relationName } from "@/lib/treasurer/relations";
+import { ParishViewPageHeader } from "@/components/parish-officer/parish-view-page-header";
 import { ReportPeriodSelect } from "@/components/administrator/report-period-select";
 import {
   Card,
@@ -21,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-export default async function ParishIncomeReportPage({
+export default async function ParishDonationsPage({
   searchParams,
 }: {
   searchParams: Promise<{ period?: string }>;
@@ -32,7 +34,7 @@ export default async function ParishIncomeReportPage({
   const fromDate = startOfPeriod(period);
   const supabase = await createClient();
 
-  const { data: donations } = await supabase
+  const { data } = await supabase
     .from("donations")
     .select(
       "donation_id, donor_name, amount, donation_date, remarks, donation_categories(category_name)"
@@ -40,33 +42,41 @@ export default async function ParishIncomeReportPage({
     .gte("donation_date", fromDate)
     .order("donation_date", { ascending: false });
 
-  const total = (donations ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
-    0
-  );
+  const rows = (data ?? []).filter((row) => {
+    const category = relationName(
+      row.donation_categories as
+        | { category_name?: string }
+        | { category_name?: string }[]
+        | null
+    );
+    return !isCollectionCategoryName(category);
+  });
+  const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
 
   return (
     <div className="space-y-6">
-      <ParishReportPageHeader
-        title="Income Report"
-        description="Read-only view of parish income for the selected period."
+      <ParishViewPageHeader
+        title="Donations"
+        description="Read-only view of donations (excluding parish collections)."
         actions={
           <ReportPeriodSelect
             period={period}
-            basePath="/parish-officer/reports/income"
+            basePath="/parish-officer/donations"
           />
         }
       />
       <Card>
         <CardHeader>
-          <CardTitle>Income</CardTitle>
+          <CardTitle>Donation records</CardTitle>
           <CardDescription>
             From {formatDate(fromDate)} · Total {formatMoney(total)}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {(donations ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No income in period.</p>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No donations in period.
+            </p>
           ) : (
             <Table>
               <TableHeader>
@@ -79,14 +89,13 @@ export default async function ParishIncomeReportPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(donations ?? []).map((row) => {
-                  const category = Array.isArray(row.donation_categories)
-                    ? row.donation_categories[0]?.category_name
-                    : (
-                        row.donation_categories as {
-                          category_name?: string;
-                        } | null
-                      )?.category_name;
+                {rows.map((row) => {
+                  const category = relationName(
+                    row.donation_categories as
+                      | { category_name?: string }
+                      | { category_name?: string }[]
+                      | null
+                  );
                   return (
                     <TableRow key={row.donation_id}>
                       <TableCell>{formatDate(row.donation_date)}</TableCell>

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireTreasurer } from "@/lib/auth/session";
+import { requireTreasurerOrAdmin } from "@/lib/auth/session";
 
 export type FinanceActionState = {
   error?: string;
@@ -31,6 +31,10 @@ function revalidateFinance() {
   revalidatePath("/treasurer/budgets/history");
   revalidatePath("/treasurer/reports");
   revalidatePath("/administrator/finance");
+  revalidatePath("/administrator/finance/donations");
+  revalidatePath("/administrator/finance/collections");
+  revalidatePath("/administrator/finance/expenses");
+  revalidatePath("/administrator/finance/budgets");
   revalidatePath("/administrator");
   revalidatePath("/administrator/reports");
   revalidatePath("/parish-officer/budget");
@@ -38,7 +42,7 @@ function revalidateFinance() {
 }
 
 async function logBudgetHistory(
-  supabase: Awaited<ReturnType<typeof requireTreasurer>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
   userId: string,
   entry: {
     budget_id: number | null;
@@ -58,7 +62,7 @@ async function logBudgetHistory(
 }
 
 async function resolveBudgetCategoryName(
-  supabase: Awaited<ReturnType<typeof requireTreasurer>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
   budgetCategoryId: number
 ) {
   const { data } = await supabase
@@ -67,6 +71,68 @@ async function resolveBudgetCategoryName(
     .eq("budget_category_id", budgetCategoryId)
     .maybeSingle();
   return data?.category_name ?? null;
+}
+
+/** A budget's specific category must belong to the expense category matching the budget category name. */
+async function validateBudgetSubcategory(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  subcategoryId: number,
+  budgetCategoryName: string | null
+): Promise<string | null> {
+  const { data: sub } = await supabase
+    .from("expense_subcategories")
+    .select("subcategory_id, subcategory_name, expense_categories(category_name)")
+    .eq("subcategory_id", subcategoryId)
+    .maybeSingle();
+
+  if (!sub) {
+    return "Specific category not found.";
+  }
+
+  const related = sub.expense_categories as
+    | { category_name?: string }
+    | { category_name?: string }[]
+    | null;
+  const parentName = Array.isArray(related)
+    ? related[0]?.category_name
+    : related?.category_name;
+
+  if (!budgetCategoryName || parentName !== budgetCategoryName) {
+    return "Specific category does not belong to the selected general category.";
+  }
+  return null;
+}
+
+/** Expenses may only be recorded against general categories that have a budget allocation. */
+async function ensureCategoryHasBudget(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  expenseCategoryId: number
+): Promise<string | null> {
+  const { data: category } = await supabase
+    .from("expense_categories")
+    .select("category_name")
+    .eq("expense_category_id", expenseCategoryId)
+    .maybeSingle();
+
+  if (!category?.category_name) {
+    return "General category not found.";
+  }
+
+  const { data: budgetCategory } = await supabase
+    .from("budget_categories")
+    .select("budget_category_id")
+    .eq("category_name", category.category_name)
+    .maybeSingle();
+
+  if (budgetCategory) {
+    const { count } = await supabase
+      .from("budgets")
+      .select("budget_id", { count: "exact", head: true })
+      .eq("budget_category_id", budgetCategory.budget_category_id);
+    if ((count ?? 0) > 0) return null;
+  }
+
+  return `"${category.category_name}" has no budget allocation yet. Create one in Budgets → Allocation first.`;
 }
 
 function parseAmount(value: FormDataEntryValue | null) {
@@ -78,7 +144,7 @@ function parseAmount(value: FormDataEntryValue | null) {
 }
 
 async function uploadReceipt(
-  supabase: Awaited<ReturnType<typeof requireTreasurer>>["supabase"],
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
   userId: string,
   file: FormDataEntryValue | null
 ) {
@@ -130,7 +196,7 @@ export async function createDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
   const category_id = Number(formData.get("category_id"));
@@ -176,7 +242,7 @@ export async function updateDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const donation_id = Number(formData.get("donation_id"));
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
@@ -221,7 +287,7 @@ export async function deleteDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
   const donation_id = Number(formData.get("donation_id"));
 
   if (!donation_id) {
@@ -254,7 +320,7 @@ export async function createExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const expense_category_id = Number(formData.get("expense_category_id"));
   const expense_subcategory_id = Number(
@@ -282,6 +348,14 @@ export async function createExpense(
     return {
       error: "Specific category does not match the selected general category.",
     };
+  }
+
+  const budgetError = await ensureCategoryHasBudget(
+    supabase,
+    expense_category_id
+  );
+  if (budgetError) {
+    return { error: budgetError };
   }
 
   const receipt = await uploadReceipt(
@@ -334,7 +408,7 @@ export async function updateExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const expense_id = Number(formData.get("expense_id"));
   const expense_category_id = Number(formData.get("expense_category_id"));
@@ -365,6 +439,14 @@ export async function updateExpense(
     return {
       error: "Specific category does not match the selected general category.",
     };
+  }
+
+  const budgetError = await ensureCategoryHasBudget(
+    supabase,
+    expense_category_id
+  );
+  if (budgetError) {
+    return { error: budgetError };
   }
 
   const receipt = await uploadReceipt(
@@ -415,7 +497,7 @@ export async function deleteExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
   const expense_id = Number(formData.get("expense_id"));
 
   if (!expense_id) {
@@ -448,9 +530,11 @@ export async function createBudget(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const budget_category_id = Number(formData.get("budget_category_id"));
+  const expense_subcategory_id =
+    Number(formData.get("expense_subcategory_id")) || null;
   const fiscal_year = Number(formData.get("fiscal_year"));
   const allocated_amount = parseAmount(formData.get("allocated_amount"));
   const remarks = String(formData.get("remarks") || "").trim() || null;
@@ -459,10 +543,27 @@ export async function createBudget(
     return { error: "Category, fiscal year, and amount are required." };
   }
 
+  const categoryName = await resolveBudgetCategoryName(
+    supabase,
+    budget_category_id
+  );
+
+  if (expense_subcategory_id) {
+    const subError = await validateBudgetSubcategory(
+      supabase,
+      expense_subcategory_id,
+      categoryName
+    );
+    if (subError) {
+      return { error: subError };
+    }
+  }
+
   const { data, error } = await supabase
     .from("budgets")
     .insert({
       budget_category_id,
+      expense_subcategory_id,
       fiscal_year,
       allocated_amount,
       remarks,
@@ -472,13 +573,14 @@ export async function createBudget(
     .single();
 
   if (error) {
+    if (/expense_subcategory_id|column/i.test(error.message)) {
+      return {
+        error:
+          "Specific budget allocations are not set up yet. Run sql/phase10-budget-subcategories.sql in Supabase.",
+      };
+    }
     return { error: error.message };
   }
-
-  const categoryName = await resolveBudgetCategoryName(
-    supabase,
-    budget_category_id
-  );
 
   await logBudgetHistory(supabase, user.id, {
     budget_id: data.budget_id,
@@ -508,16 +610,34 @@ export async function updateBudget(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
 
   const budget_id = Number(formData.get("budget_id"));
   const budget_category_id = Number(formData.get("budget_category_id"));
+  const expense_subcategory_id =
+    Number(formData.get("expense_subcategory_id")) || null;
   const fiscal_year = Number(formData.get("fiscal_year"));
   const allocated_amount = parseAmount(formData.get("allocated_amount"));
   const remarks = String(formData.get("remarks") || "").trim() || null;
 
   if (!budget_id || !budget_category_id || !fiscal_year || !allocated_amount) {
     return { error: "Category, fiscal year, and amount are required." };
+  }
+
+  const categoryName = await resolveBudgetCategoryName(
+    supabase,
+    budget_category_id
+  );
+
+  if (expense_subcategory_id) {
+    const subError = await validateBudgetSubcategory(
+      supabase,
+      expense_subcategory_id,
+      categoryName
+    );
+    if (subError) {
+      return { error: subError };
+    }
   }
 
   const { data: existing } = await supabase
@@ -530,6 +650,7 @@ export async function updateBudget(
     .from("budgets")
     .update({
       budget_category_id,
+      expense_subcategory_id,
       fiscal_year,
       allocated_amount,
       remarks,
@@ -537,13 +658,14 @@ export async function updateBudget(
     .eq("budget_id", budget_id);
 
   if (error) {
+    if (/expense_subcategory_id|column/i.test(error.message)) {
+      return {
+        error:
+          "Specific budget allocations are not set up yet. Run sql/phase10-budget-subcategories.sql in Supabase.",
+      };
+    }
     return { error: error.message };
   }
-
-  const categoryName = await resolveBudgetCategoryName(
-    supabase,
-    budget_category_id
-  );
 
   await logBudgetHistory(supabase, user.id, {
     budget_id,
@@ -573,7 +695,7 @@ export async function deleteBudget(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurer();
+  const { supabase, user } = await requireTreasurerOrAdmin();
   const budget_id = Number(formData.get("budget_id"));
 
   if (!budget_id) {
