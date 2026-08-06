@@ -84,6 +84,46 @@ export function getAdminReportTypeMeta(type: AdminReportType) {
   return ADMIN_REPORT_TYPES.find((item) => item.id === type)!;
 }
 
+/** View-only report types available to parish officers. */
+export const PARISH_REPORT_TYPES = [
+  {
+    id: "summary",
+    label: "Financial Summary",
+    title: "FINANCIAL SUMMARY REPORT",
+    code: "FS",
+  },
+  {
+    id: "donations",
+    label: "Donation Report",
+    title: "DONATION REPORT",
+    code: "DR",
+  },
+  {
+    id: "collections",
+    label: "Collection Report",
+    title: "COLLECTION REPORT",
+    code: "CR",
+  },
+  {
+    id: "expenses",
+    label: "Expense Report",
+    title: "EXPENSE REPORT",
+    code: "ER",
+  },
+] as const;
+
+export type ParishReportType = (typeof PARISH_REPORT_TYPES)[number]["id"];
+
+export function isParishReportType(
+  value: string | undefined
+): value is ParishReportType {
+  return PARISH_REPORT_TYPES.some((item) => item.id === value);
+}
+
+export function getParishReportTypeMeta(type: ParishReportType) {
+  return PARISH_REPORT_TYPES.find((item) => item.id === type)!;
+}
+
 export type AnyReportTypeMeta = {
   id: string;
   label: string;

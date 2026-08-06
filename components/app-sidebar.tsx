@@ -121,7 +121,8 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
         title: "Budget Monitoring",
         url: "/parish-officer/budget",
         icon: PiggyBankIcon,
-      }
+      },
+      { title: "Reports", url: "/parish-officer/reports", icon: FileTextIcon }
     );
   }
 
@@ -166,7 +167,8 @@ function getPrefetchUrls(role: UserRole, home: string) {
       "/parish-officer/donations",
       "/parish-officer/collections",
       "/parish-officer/expenses",
-      "/parish-officer/budget"
+      "/parish-officer/budget",
+      "/parish-officer/reports"
     );
   }
   return urls;

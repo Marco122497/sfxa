@@ -57,7 +57,7 @@ export default async function ParishDonationsPage({
     <div className="space-y-6">
       <ParishViewPageHeader
         title="Donations"
-        description="Read-only view of donations (excluding parish collections)."
+        description="Read-only view of donations."
         actions={
           <ReportPeriodSelect
             period={period}

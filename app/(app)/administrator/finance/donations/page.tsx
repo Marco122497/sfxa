@@ -55,7 +55,7 @@ export default async function AdminDonationsPage() {
     <div className="space-y-4">
       <FinancePageHeader
         title="Donations"
-        description="Add, edit, search, and review donation history (excluding parish collections)."
+        description="Add, edit, search, and review donation history."
       />
       <Card size="sm">
         <CardContent className="px-3 py-0">

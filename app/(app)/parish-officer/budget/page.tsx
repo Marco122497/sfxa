@@ -1,6 +1,6 @@
 import { requireParishOfficer } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
-import { formatMoney, toNumber } from "@/lib/format";
+import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { formatMoney } from "@/lib/format";
 import { ParishViewPageHeader } from "@/components/parish-officer/parish-view-page-header";
 import {
   Card,
@@ -20,48 +20,8 @@ import {
 
 export default async function ParishBudgetMonitoringPage() {
   await requireParishOfficer();
-  const supabase = await createClient();
-
-  const [{ data: budgets }, { data: expenses }, { data: expenseCategories }] =
-    await Promise.all([
-      supabase
-        .from("budgets")
-        .select(
-          "budget_id, fiscal_year, allocated_amount, remarks, budget_categories(category_name)"
-        )
-        .order("fiscal_year", { ascending: false }),
-      supabase.from("expenses").select("amount, expense_category_id"),
-      supabase
-        .from("expense_categories")
-        .select("expense_category_id, category_name"),
-    ]);
-
-  const expenseNameById = new Map(
-    (expenseCategories ?? []).map((c) => [
-      c.expense_category_id,
-      c.category_name,
-    ])
-  );
-
-  const spentByCategoryName = new Map<string, number>();
-  for (const row of expenses ?? []) {
-    const name = expenseNameById.get(row.expense_category_id ?? -1);
-    if (!name) continue;
-    spentByCategoryName.set(
-      name,
-      (spentByCategoryName.get(name) ?? 0) + toNumber(row.amount)
-    );
-  }
-
-  const totalAllocated = (budgets ?? []).reduce(
-    (sum, row) => sum + toNumber(row.allocated_amount),
-    0
-  );
-  const totalSpent = (expenses ?? []).reduce(
-    (sum, row) => sum + toNumber(row.amount),
-    0
-  );
-  const remaining = totalAllocated - totalSpent;
+  const { rows, totals, subcategorySetupRequired } =
+    await getBudgetModuleData();
 
   return (
     <div className="space-y-6">
@@ -70,6 +30,14 @@ export default async function ParishBudgetMonitoringPage() {
         description="View budget allocation, utilization, and remaining balances."
       />
 
+      {subcategorySetupRequired ? (
+        <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+          Specific budget allocations need a database update. Run{" "}
+          <code className="text-xs">sql/phase10-budget-subcategories.sql</code>{" "}
+          in Supabase, then refresh.
+        </p>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
@@ -77,7 +45,7 @@ export default async function ParishBudgetMonitoringPage() {
             <CardDescription>Total allocated</CardDescription>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {formatMoney(totalAllocated)}
+            {formatMoney(totals.allocated)}
           </CardContent>
         </Card>
         <Card>
@@ -86,7 +54,7 @@ export default async function ParishBudgetMonitoringPage() {
             <CardDescription>Total spent</CardDescription>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {formatMoney(totalSpent)}
+            {formatMoney(totals.utilized)}
           </CardContent>
         </Card>
         <Card>
@@ -95,7 +63,7 @@ export default async function ParishBudgetMonitoringPage() {
             <CardDescription>Allocation minus spent</CardDescription>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
-            {formatMoney(remaining)}
+            {formatMoney(totals.remaining)}
           </CardContent>
         </Card>
       </div>
@@ -104,56 +72,53 @@ export default async function ParishBudgetMonitoringPage() {
         <CardHeader>
           <CardTitle>Allocation details</CardTitle>
           <CardDescription>
-            Per-category allocation and remaining budget.
+            General and specific category allocations with remaining budget.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {(budgets ?? []).length === 0 ? (
+          {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No budgets yet.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Year</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>General</TableHead>
+                  <TableHead>Specific</TableHead>
                   <TableHead>Remarks</TableHead>
                   <TableHead className="text-right">Allocated</TableHead>
                   <TableHead className="text-right">Utilized</TableHead>
                   <TableHead className="text-right">Remaining</TableHead>
+                  <TableHead className="text-right">%</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(budgets ?? []).map((row) => {
-                  const category = Array.isArray(row.budget_categories)
-                    ? row.budget_categories[0]?.category_name
-                    : (
-                        row.budget_categories as {
-                          category_name?: string;
-                        } | null
-                      )?.category_name;
-                  const allocated = toNumber(row.allocated_amount);
-                  const spent = category
-                    ? (spentByCategoryName.get(category) ?? 0)
-                    : 0;
-                  return (
-                    <TableRow key={row.budget_id}>
-                      <TableCell>{row.fiscal_year}</TableCell>
-                      <TableCell>{category || "—"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">
-                        {row.remarks || "—"}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(allocated)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(spent)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(allocated - spent)}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                {rows.map((row) => (
+                  <TableRow key={row.budget_id}>
+                    <TableCell>{row.fiscal_year}</TableCell>
+                    <TableCell>{row.category_name || "—"}</TableCell>
+                    <TableCell>
+                      {row.subcategory_name || (
+                        <span className="text-muted-foreground">General</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate">
+                      {row.remarks || "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(row.allocated_amount)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(row.spent)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatMoney(row.remaining)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.utilizationPct}%
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           )}
