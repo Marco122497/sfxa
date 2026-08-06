@@ -19,11 +19,13 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -331,6 +333,7 @@ function EditExpenseDialog({
             </Alert>
           )}
           <ExpenseFormFields
+            key={JSON.stringify(row)}
             categories={categories}
             subcategories={subcategories}
             idPrefix={`edit-${row.expense_id}`}
@@ -364,30 +367,84 @@ function EditExpenseDialog({
   );
 }
 
-function DeleteExpenseButton({ expenseId }: { expenseId: number }) {
+function DeleteExpenseButton({
+  expenseId,
+  label,
+}: {
+  expenseId: number;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     deleteExpense,
     initialState
   );
+  const formId = `delete-expense-${expenseId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="expense_id" value={expenseId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
         aria-label="Delete expense"
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {label}. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="expense_id" value={expenseId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -395,12 +452,17 @@ export function ExpenseManager({
   expenses,
   categories,
   subcategories,
+  canEdit = false,
+  canDelete = false,
 }: {
   expenses: ExpenseRow[];
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const [query, setQuery] = useState("");
+  const showActions = canEdit || canDelete;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -420,11 +482,11 @@ export function ExpenseManager({
   }, [expenses, query]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">Expenses</h2>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Expenses</h2>
+          <p className="text-xs text-muted-foreground">
             {filtered.length} record{filtered.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -433,7 +495,7 @@ export function ExpenseManager({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search expenses…"
-            className="w-[220px]"
+            className="h-8 w-[200px]"
           />
           <AddExpenseDialog
             categories={categories}
@@ -443,28 +505,36 @@ export function ExpenseManager({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No expenses yet.</p>
+        <p className="py-2 text-sm text-muted-foreground">No expenses yet.</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>General</TableHead>
-              <TableHead>Specific</TableHead>
-              <TableHead>Receipt</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[88px]" />
+              <TableHead className="h-8 px-2">Date</TableHead>
+              <TableHead className="h-8 px-2">General</TableHead>
+              <TableHead className="h-8 px-2">Specific</TableHead>
+              <TableHead className="h-8 px-2">Receipt</TableHead>
+              <TableHead className="h-8 px-2 text-right">Amount</TableHead>
+              {showActions ? (
+                <TableHead
+                  className={`h-8 px-2 ${canEdit && canDelete ? "w-[88px]" : "w-[48px]"}`}
+                />
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((row) => (
               <TableRow key={row.expense_id}>
-                <TableCell>{formatDate(row.expense_date)}</TableCell>
-                <TableCell>{row.category_name || "—"}</TableCell>
-                <TableCell className="max-w-[200px] truncate font-medium">
+                <TableCell className="px-2 py-1.5">
+                  {formatDate(row.expense_date)}
+                </TableCell>
+                <TableCell className="px-2 py-1.5">
+                  {row.category_name || "—"}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate px-2 py-1.5 font-medium">
                   {row.subcategory_name || row.description || "—"}
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-2 py-1.5">
                   {row.receipt_url ? (
                     <a
                       href={row.receipt_url}
@@ -479,19 +549,28 @@ export function ExpenseManager({
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="px-2 py-1.5 text-right tabular-nums">
                   {formatMoney(row.amount)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <EditExpenseDialog
-                      row={row}
-                      categories={categories}
-                      subcategories={subcategories}
-                    />
-                    <DeleteExpenseButton expenseId={row.expense_id} />
-                  </div>
-                </TableCell>
+                {showActions ? (
+                  <TableCell className="px-2 py-1.5">
+                    <div className="flex justify-end gap-1">
+                      {canEdit ? (
+                        <EditExpenseDialog
+                          row={row}
+                          categories={categories}
+                          subcategories={subcategories}
+                        />
+                      ) : null}
+                      {canDelete ? (
+                        <DeleteExpenseButton
+                          expenseId={row.expense_id}
+                          label={`${formatMoney(row.amount)} · ${row.subcategory_name || row.category_name || row.description || "expense"} · ${formatDate(row.expense_date)}`}
+                        />
+                      ) : null}
+                    </div>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>

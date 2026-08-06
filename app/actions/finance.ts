@@ -3,7 +3,10 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { requireTreasurerOrAdmin } from "@/lib/auth/session";
+import {
+  requireAdmin,
+  requireTreasurerOrAdmin,
+} from "@/lib/auth/session";
 
 export type FinanceActionState = {
   error?: string;
@@ -48,6 +51,7 @@ async function logBudgetHistory(
     budget_id: number | null;
     budget_category_id: number | null;
     category_name: string | null;
+    subcategory_name?: string | null;
     fiscal_year: number | null;
     previous_amount: number | null;
     new_amount: number | null;
@@ -71,6 +75,19 @@ async function resolveBudgetCategoryName(
     .eq("budget_category_id", budgetCategoryId)
     .maybeSingle();
   return data?.category_name ?? null;
+}
+
+async function resolveExpenseSubcategoryName(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  subcategoryId: number | null
+) {
+  if (!subcategoryId) return null;
+  const { data } = await supabase
+    .from("expense_subcategories")
+    .select("subcategory_name")
+    .eq("subcategory_id", subcategoryId)
+    .maybeSingle();
+  return data?.subcategory_name ?? null;
 }
 
 /** A budget's specific category must belong to the expense category matching the budget category name. */
@@ -242,7 +259,7 @@ export async function updateDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const donation_id = Number(formData.get("donation_id"));
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
@@ -287,7 +304,7 @@ export async function deleteDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
   const donation_id = Number(formData.get("donation_id"));
 
   if (!donation_id) {
@@ -408,7 +425,7 @@ export async function updateExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const expense_id = Number(formData.get("expense_id"));
   const expense_category_id = Number(formData.get("expense_category_id"));
@@ -497,7 +514,7 @@ export async function deleteExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
   const expense_id = Number(formData.get("expense_id"));
 
   if (!expense_id) {
@@ -586,6 +603,10 @@ export async function createBudget(
     budget_id: data.budget_id,
     budget_category_id,
     category_name: categoryName,
+    subcategory_name: await resolveExpenseSubcategoryName(
+      supabase,
+      expense_subcategory_id
+    ),
     fiscal_year,
     previous_amount: null,
     new_amount: allocated_amount,
@@ -610,7 +631,7 @@ export async function updateBudget(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const budget_id = Number(formData.get("budget_id"));
   const budget_category_id = Number(formData.get("budget_category_id"));
@@ -671,6 +692,10 @@ export async function updateBudget(
     budget_id,
     budget_category_id,
     category_name: categoryName,
+    subcategory_name: await resolveExpenseSubcategoryName(
+      supabase,
+      expense_subcategory_id
+    ),
     fiscal_year,
     previous_amount: existing ? Number(existing.allocated_amount) : null,
     new_amount: allocated_amount,
@@ -695,7 +720,7 @@ export async function deleteBudget(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user } = await requireAdmin();
   const budget_id = Number(formData.get("budget_id"));
 
   if (!budget_id) {
@@ -705,7 +730,7 @@ export async function deleteBudget(
   const { data: existing } = await supabase
     .from("budgets")
     .select(
-      "allocated_amount, fiscal_year, budget_category_id, remarks, budget_categories(category_name)"
+      "allocated_amount, fiscal_year, budget_category_id, expense_subcategory_id, remarks, budget_categories(category_name), expense_subcategories(subcategory_name)"
     )
     .eq("budget_id", budget_id)
     .maybeSingle();
@@ -728,10 +753,20 @@ export async function deleteBudget(
     ? related[0]?.category_name
     : related?.category_name;
 
+  const subRelated = existing?.expense_subcategories as
+    | { subcategory_name?: string }
+    | { subcategory_name?: string }[]
+    | null
+    | undefined;
+  const subcategoryName = Array.isArray(subRelated)
+    ? subRelated[0]?.subcategory_name
+    : subRelated?.subcategory_name;
+
   await logBudgetHistory(supabase, user.id, {
     budget_id,
     budget_category_id: existing?.budget_category_id ?? null,
     category_name: categoryName ?? null,
+    subcategory_name: subcategoryName ?? null,
     fiscal_year: existing?.fiscal_year ?? null,
     previous_amount: existing ? Number(existing.allocated_amount) : null,
     new_amount: null,

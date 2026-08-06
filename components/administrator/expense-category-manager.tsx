@@ -15,11 +15,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -158,6 +160,7 @@ function EditGeneralDialog({ row }: { row: ExpenseGeneralCategory }) {
           <div className="space-y-2">
             <Label htmlFor={`edit-general-name-${row.id}`}>Name</Label>
             <Input
+              key={row.name}
               id={`edit-general-name-${row.id}`}
               name="category_name"
               required
@@ -187,31 +190,86 @@ function EditGeneralDialog({ row }: { row: ExpenseGeneralCategory }) {
   );
 }
 
-function DeleteGeneralButton({ categoryId }: { categoryId: number }) {
+function DeleteGeneralButton({
+  categoryId,
+  categoryName,
+}: {
+  categoryId: number;
+  categoryName: string;
+}) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     deleteCategory,
     initialState
   );
+  const formId = `delete-general-${categoryId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="kind" value="expense" />
-      <input type="hidden" name="category_id" value={categoryId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
         aria-label="Delete general category"
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete general category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove “{categoryName}” and its matching
+              budget category. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="kind" value="expense" />
+            <input type="hidden" name="category_id" value={categoryId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -356,6 +414,7 @@ function EditSpecificDialog({
               Name
             </Label>
             <Input
+              key={row.subcategory_name}
               id={`edit-specific-name-${row.subcategory_id}`}
               name="subcategory_name"
               required
@@ -385,30 +444,85 @@ function EditSpecificDialog({
   );
 }
 
-function DeleteSpecificButton({ subcategoryId }: { subcategoryId: number }) {
+function DeleteSpecificButton({
+  subcategoryId,
+  subcategoryName,
+}: {
+  subcategoryId: number;
+  subcategoryName: string;
+}) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     deleteExpenseSubcategory,
     initialState
   );
+  const formId = `delete-specific-${subcategoryId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="subcategory_id" value={subcategoryId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
         aria-label="Delete specific category"
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete specific category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove “{subcategoryName}”. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="subcategory_id" value={subcategoryId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -444,24 +558,24 @@ export function ExpenseCategoryManager({
   }, [specifics, query, generalById]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search categories…"
-          className="w-[220px]"
+          className="h-8 w-[200px]"
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <section className="space-y-4 rounded-xl border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+        <section className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-base font-semibold tracking-tight">
                 General categories
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Create these first. Also used for budget allocation.
               </p>
             </div>
@@ -469,7 +583,7 @@ export function ExpenseCategoryManager({
           </div>
 
           {filteredGenerals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-2 text-sm text-muted-foreground">
               No general categories yet. Add one (e.g. Utilities) before adding
               specific categories.
             </p>
@@ -477,18 +591,23 @@ export function ExpenseCategoryManager({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="w-[88px]" />
+                  <TableHead className="h-8 px-2">Name</TableHead>
+                  <TableHead className="h-8 w-[88px] px-2" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredGenerals.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5 font-medium">
+                      {row.name}
+                    </TableCell>
+                    <TableCell className="px-2 py-1.5">
                       <div className="flex justify-end gap-1">
                         <EditGeneralDialog row={row} />
-                        <DeleteGeneralButton categoryId={row.id} />
+                        <DeleteGeneralButton
+                          categoryId={row.id}
+                          categoryName={row.name}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
@@ -498,13 +617,13 @@ export function ExpenseCategoryManager({
           )}
         </section>
 
-        <section className="space-y-4 rounded-xl border p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h2 className="text-lg font-semibold tracking-tight">
+        <section className="space-y-2 rounded-lg border p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-base font-semibold tracking-tight">
                 Specific categories
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Belong under a general (e.g. Water Bill under Utilities).
               </p>
             </div>
@@ -512,7 +631,7 @@ export function ExpenseCategoryManager({
           </div>
 
           {filteredSpecifics.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-2 text-sm text-muted-foreground">
               {generals.length === 0
                 ? "Add a general category first, then add specific categories."
                 : "No specific categories yet."}
@@ -521,25 +640,26 @@ export function ExpenseCategoryManager({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>General</TableHead>
-                  <TableHead>Specific</TableHead>
-                  <TableHead className="w-[88px]" />
+                  <TableHead className="h-8 px-2">General</TableHead>
+                  <TableHead className="h-8 px-2">Specific</TableHead>
+                  <TableHead className="h-8 w-[88px] px-2" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSpecifics.map((row) => (
                   <TableRow key={row.subcategory_id}>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5">
                       {generalById.get(row.expense_category_id) || "—"}
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="px-2 py-1.5 font-medium">
                       {row.subcategory_name}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-2 py-1.5">
                       <div className="flex justify-end gap-1">
                         <EditSpecificDialog row={row} generals={generals} />
                         <DeleteSpecificButton
                           subcategoryId={row.subcategory_id}
+                          subcategoryName={row.subcategory_name}
                         />
                       </div>
                     </TableCell>

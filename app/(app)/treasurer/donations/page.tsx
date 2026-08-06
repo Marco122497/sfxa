@@ -55,13 +55,13 @@ export default async function TreasurerDonationsPage() {
     }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <TreasurerPageHeader
         title="Donation Management"
         description="Add, edit, search, and review donation history."
       />
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <DonationManager
             donations={rows}
             categories={donationCategories}

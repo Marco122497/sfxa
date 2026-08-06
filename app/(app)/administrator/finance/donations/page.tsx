@@ -52,17 +52,19 @@ export default async function AdminDonationsPage() {
     }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <FinancePageHeader
         title="Donations"
         description="Add, edit, search, and review donation history (excluding parish collections)."
       />
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <DonationManager
             donations={rows}
             categories={donationCategories}
             title="Donation history"
+            canEdit
+            canDelete
           />
         </CardContent>
       </Card>

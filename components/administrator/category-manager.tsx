@@ -13,11 +13,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -179,6 +181,7 @@ function EditCategoryDialog({
           <div className="space-y-2">
             <Label htmlFor={`edit-category-name-${row.id}`}>Category name</Label>
             <Input
+              key={row.name}
               id={`edit-category-name-${row.id}`}
               name="category_name"
               required
@@ -211,40 +214,86 @@ function EditCategoryDialog({
 function DeleteCategoryButton({
   kind,
   categoryId,
+  categoryName,
 }: {
   kind: CategoryKind;
   categoryId: number;
+  categoryName: string;
 }) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     deleteCategory,
     initialState
   );
+  const formId = `delete-category-${kind}-${categoryId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction} className="inline">
-      <input type="hidden" name="kind" value={kind} />
-      <input type="hidden" name="category_id" value={categoryId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
         aria-label="Delete category"
         title={state.error || "Delete category"}
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-      {state.error && (
-        <p className="mt-1 max-w-[180px] text-xs text-destructive">
-          {state.error}
-        </p>
-      )}
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove “{categoryName}”. This cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="kind" value={kind} />
+            <input type="hidden" name="category_id" value={categoryId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -265,11 +314,11 @@ export function CategoryManager({
   }, [categories, query]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">{copy.title}</h2>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">{copy.title}</h2>
+          <p className="text-xs text-muted-foreground">
             {filtered.length} type{filtered.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -278,30 +327,34 @@ export function CategoryManager({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={copy.search}
-            className="w-[220px]"
+            className="h-8 w-[200px]"
           />
           <AddCategoryDialog kind={kind} />
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No types yet.</p>
+        <p className="py-2 text-sm text-muted-foreground">No types yet.</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead className="w-[100px]" />
+              <TableHead className="h-8 px-2">Name</TableHead>
+              <TableHead className="h-8 w-[100px] px-2" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((row) => (
               <TableRow key={row.id}>
-                <TableCell>{row.name}</TableCell>
-                <TableCell>
+                <TableCell className="px-2 py-1.5">{row.name}</TableCell>
+                <TableCell className="px-2 py-1.5">
                   <div className="flex justify-end gap-1">
                     <EditCategoryDialog kind={kind} row={row} />
-                    <DeleteCategoryButton kind={kind} categoryId={row.id} />
+                    <DeleteCategoryButton
+                      kind={kind}
+                      categoryId={row.id}
+                      categoryName={row.name}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

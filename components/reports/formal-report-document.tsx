@@ -1,0 +1,296 @@
+import Image from "next/image";
+
+import { formatMoney, formatDate } from "@/lib/format";
+import {
+  buildReportNumber,
+  formatReportPeriodLabel,
+  getAnyReportTypeMeta,
+} from "@/lib/reports";
+import type { FormalReportData, ReportMetric } from "@/lib/reports-data";
+import { ReportDataTable } from "@/components/reports/report-data-table";
+import { ReportPieChart } from "@/components/reports/report-pie-chart";
+
+const TONE_STYLES: Record<
+  ReportMetric["tone"],
+  { icon: string; accent: string; soft: string }
+> = {
+  navy: { icon: "#1e3a5f", accent: "#1e3a5f", soft: "#e8eef6" },
+  green: { icon: "#2f7d4a", accent: "#1e6b3a", soft: "#e8f4ec" },
+  gold: { icon: "#c9a227", accent: "#9a7b1a", soft: "#f8f1dc" },
+  purple: { icon: "#6b4c9a", accent: "#5a3d82", soft: "#f0eaf6" },
+};
+
+function MetricIcon({ tone }: { tone: ReportMetric["tone"] }) {
+  const color = TONE_STYLES[tone].icon;
+  if (tone === "navy") {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
+        <path
+          d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM4.5 19c.6-2.5 2.7-4 5.5-4s4.9 1.5 5.5 4M14 15c1.8 0 3.4.7 4.5 2"
+          stroke={color}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    );
+  }
+  if (tone === "green") {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
+        <path
+          d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z"
+          stroke={color}
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  if (tone === "gold") {
+    return (
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
+        <path
+          d="M4 10h16l-1.5 9H5.5L4 10Zm2-3h12l1 3H5l1-3Zm5 6v4"
+          stroke={color}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
+      <rect
+        x="3"
+        y="6"
+        width="18"
+        height="12"
+        rx="2"
+        stroke={color}
+        strokeWidth="1.8"
+      />
+      <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+export function FormalReportDocument({
+  data,
+  generatedBy,
+  generatedRole,
+  generatedAt,
+}: {
+  data: FormalReportData;
+  generatedBy: string;
+  generatedRole?: string;
+  generatedAt: Date;
+}) {
+  const meta = getAnyReportTypeMeta(data.type);
+  const reportNo = buildReportNumber(data.type, data.from, data.to);
+  const showBreakdown = data.showBreakdown !== false;
+  const tableTitle = data.tableTitle ?? `${meta.label} Transactions`;
+  const summaryTitle =
+    data.type === "budget" || data.type === "summary"
+      ? "Summary"
+      : `${meta.label} Summary`;
+  const breakdownTitle =
+    data.type === "budget"
+      ? "Allocation Breakdown"
+      : data.type === "expenses"
+        ? "Expenses by Category"
+        : "Type Breakdown";
+  const generatedDate = generatedAt.toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const generatedTime = generatedAt.toLocaleTimeString("en-PH", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const preparedDate = formatDate(generatedAt.toISOString().slice(0, 10));
+
+  return (
+    <article
+      id="report-print-area"
+      className="formal-report mx-auto max-w-5xl overflow-hidden rounded-xl border border-[#d7e0ea] bg-white text-[#1a2332] shadow-sm"
+    >
+      {/* Header */}
+      <header className="border-b-2 border-[#1e3a5f] px-6 py-5 sm:px-8">
+        <div className="grid gap-4 sm:grid-cols-[88px_1fr_auto] sm:items-start">
+          <div className="mx-auto flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-[#1e3a5f] bg-[#f4f7fb] sm:mx-0">
+            <Image
+              src="/SFXA.png"
+              alt="SFXA logo"
+              width={72}
+              height={72}
+              className="object-contain p-1"
+              priority
+            />
+          </div>
+
+          <div className="text-center sm:px-2">
+            <h1 className="font-[family-name:var(--font-display)] text-xl font-bold tracking-wide text-[#1e3a5f] sm:text-2xl">
+              SFXA
+            </h1>
+            <p className="mt-0.5 text-sm font-medium text-[#1e3a5f]">
+              Parish Financial Management and Transparency System
+            </p>
+            <h2 className="mt-3 font-[family-name:var(--font-display)] text-lg font-bold tracking-wide text-[#1e3a5f] underline decoration-2 underline-offset-4 sm:text-xl">
+              {data.title}
+            </h2>
+            <p className="mt-2 text-sm text-[#3d4f63]">
+              For the Period: {formatReportPeriodLabel(data.from, data.to)}
+            </p>
+          </div>
+
+          <dl className="space-y-1 text-xs text-[#3d4f63] sm:min-w-[180px] sm:text-right">
+            <div>
+              <dt className="inline font-semibold text-[#1e3a5f]">Report No.: </dt>
+              <dd className="inline">{reportNo}</dd>
+            </div>
+            <div>
+              <dt className="inline font-semibold text-[#1e3a5f]">
+                Date Generated:{" "}
+              </dt>
+              <dd className="inline">{generatedDate}</dd>
+            </div>
+            <div>
+              <dt className="inline font-semibold text-[#1e3a5f]">
+                Generated By:{" "}
+              </dt>
+              <dd className="inline">{generatedBy}</dd>
+            </div>
+            <div>
+              <dt className="inline font-semibold text-[#1e3a5f]">
+                Time Generated:{" "}
+              </dt>
+              <dd className="inline">{generatedTime}</dd>
+            </div>
+          </dl>
+        </div>
+      </header>
+
+      {/* Metrics */}
+      <section className="grid gap-3 border-b border-[#e4ebf3] bg-[#f7f9fc] px-6 py-4 sm:grid-cols-2 sm:px-8 xl:grid-cols-4">
+        {data.metrics.map((metric) => {
+          const tone = TONE_STYLES[metric.tone];
+          return (
+            <div
+              key={metric.id}
+              className="flex items-center gap-3 rounded-lg border border-[#d7e0ea] bg-white px-3 py-3"
+            >
+              <div
+                className="flex size-10 shrink-0 items-center justify-center rounded-full"
+                style={{ backgroundColor: tone.soft }}
+              >
+                <MetricIcon tone={metric.tone} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-[#6b7c90]">
+                  {metric.label}
+                </p>
+                <p
+                  className="truncate text-lg font-bold tabular-nums"
+                  style={{ color: tone.accent }}
+                >
+                  {metric.value}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Transactions */}
+      <section className="px-6 py-5 sm:px-8">
+        <h3 className="mb-3 font-[family-name:var(--font-display)] text-base font-semibold text-[#1e3a5f]">
+          {tableTitle}
+        </h3>
+        <ReportDataTable columns={data.columns} rows={data.rows} />
+      </section>
+
+      {/* Summary + chart */}
+      {(data.summaryLines.length > 0 ||
+        (showBreakdown && data.breakdown.length > 0)) && (
+        <section
+          className={`grid gap-4 border-t border-[#e4ebf3] px-6 py-5 sm:px-8 ${
+            showBreakdown && data.breakdown.length > 0
+              ? "xl:grid-cols-2"
+              : "xl:grid-cols-1"
+          }`}
+        >
+          {data.summaryLines.length > 0 ? (
+            <div className="rounded-md border border-[#c5d0de]">
+              <div className="border-b border-[#c5d0de] bg-[#1e3a5f] px-3 py-2 text-sm font-semibold text-white">
+                {summaryTitle}
+              </div>
+              <table className="w-full text-sm">
+                <tbody>
+                  {data.summaryLines.map((line) => (
+                    <tr
+                      key={line.label}
+                      className={
+                        line.emphasis
+                          ? "bg-[#e8eef6] font-bold text-[#1e3a5f]"
+                          : "border-b border-[#e4ebf3]"
+                      }
+                    >
+                      <td className="px-3 py-2.5">{line.label}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">
+                        {line.display ?? formatMoney(line.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {showBreakdown && data.breakdown.length > 0 ? (
+            <div className="rounded-md border border-[#c5d0de]">
+              <div className="border-b border-[#c5d0de] bg-[#1e3a5f] px-3 py-2 text-sm font-semibold text-white">
+                {breakdownTitle}
+              </div>
+              <div className="p-4">
+                <ReportPieChart breakdown={data.breakdown} />
+              </div>
+            </div>
+          ) : null}
+        </section>
+      )}
+
+      {/* Footer */}
+      <footer className="space-y-6 border-t border-[#e4ebf3] px-6 py-5 sm:px-8">
+        <div className="rounded-md border border-[#c5d0de] bg-[#f7f9fc] px-3 py-2.5 text-xs leading-relaxed text-[#3d4f63]">
+          <span className="font-semibold text-[#1e3a5f]">Notes: </span>
+          {data.notes}
+        </div>
+
+        <div className="grid gap-8 pt-2 sm:grid-cols-2">
+          <div className="text-center text-sm">
+            <p className="font-semibold text-[#1e3a5f]">Prepared By:</p>
+            <div className="mx-auto mt-8 w-40 border-b border-[#1a2332]" />
+            <p className="mt-2 font-medium">{generatedBy}</p>
+            <p className="text-xs text-[#6b7c90]">
+              {generatedRole || "Staff"}
+            </p>
+            <p className="mt-1 text-xs text-[#6b7c90]">Date: {preparedDate}</p>
+          </div>
+          <div className="text-center text-sm">
+            <p className="font-semibold text-[#1e3a5f]">Approved By:</p>
+            <div className="mx-auto mt-8 w-40 border-b border-[#1a2332]" />
+            <p className="mt-2 font-medium">NAME OF PRIEST</p>
+            <p className="text-xs text-[#6b7c90]">Parish Priest</p>
+            <p className="mt-1 text-xs text-[#6b7c90]">Date: __________</p>
+          </div>
+        </div>
+
+        <p className="pt-2 text-center font-[family-name:var(--font-display)] text-sm italic text-[#1e3a5f]">
+          &ldquo;Give and it shall be given to you.&rdquo; – Luke 6:38
+        </p>
+      </footer>
+    </article>
+  );
+}

@@ -13,11 +13,13 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
+  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
@@ -265,6 +267,7 @@ function EditDonationDialog({
             </Alert>
           )}
           <DonationFormFields
+            key={JSON.stringify(row)}
             categories={categories}
             idPrefix={`edit-${row.donation_id}`}
             mode={mode}
@@ -296,34 +299,87 @@ function EditDonationDialog({
 function DeleteDonationButton({
   donationId,
   mode,
+  label,
 }: {
   donationId: number;
   mode: DonationManagerMode;
+  label: string;
 }) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     deleteDonation,
     initialState
   );
   const isCollection = mode === "collection";
+  const entity = isCollection ? "collection" : "donation";
+  const formId = `delete-donation-${donationId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="donation_id" value={donationId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending}
-        aria-label={isCollection ? "Delete collection" : "Delete donation"}
+        aria-label={`Delete ${entity}`}
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              Delete {entity}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {label}. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="donation_id" value={donationId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -334,6 +390,8 @@ export function DonationManager({
   title = "Donations",
   emptyMessage = "No donations yet.",
   mode = "donation",
+  canEdit = false,
+  canDelete = false,
 }: {
   donations: DonationRow[];
   categories: DonationCategory[];
@@ -341,9 +399,12 @@ export function DonationManager({
   title?: string;
   emptyMessage?: string;
   mode?: DonationManagerMode;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const isCollection = mode === "collection";
+  const showActions = canEdit || canDelete;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -363,11 +424,11 @@ export function DonationManager({
   }, [donations, query, isCollection]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+          <p className="text-xs text-muted-foreground">
             {filtered.length} record{filtered.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -378,7 +439,7 @@ export function DonationManager({
             placeholder={
               isCollection ? "Search collections…" : "Search donations…"
             }
-            className="w-[220px]"
+            className="h-8 w-[200px]"
           />
           <AddDonationDialog
             categories={categories}
@@ -389,46 +450,67 @@ export function DonationManager({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="py-2 text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              {!isCollection && <TableHead>Donor</TableHead>}
-              <TableHead>{isCollection ? "Type" : "Category"}</TableHead>
-              <TableHead>Remarks</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[88px]" />
+              <TableHead className="h-8 px-2">Date</TableHead>
+              {!isCollection && (
+                <TableHead className="h-8 px-2">Donor</TableHead>
+              )}
+              <TableHead className="h-8 px-2">
+                {isCollection ? "Type" : "Category"}
+              </TableHead>
+              <TableHead className="h-8 px-2">Remarks</TableHead>
+              <TableHead className="h-8 px-2 text-right">Amount</TableHead>
+              {showActions ? (
+                <TableHead
+                  className={`h-8 px-2 ${canEdit && canDelete ? "w-[88px]" : "w-[48px]"}`}
+                />
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.map((row) => (
               <TableRow key={row.donation_id}>
-                <TableCell>{formatDate(row.donation_date)}</TableCell>
+                <TableCell className="px-2 py-1.5">
+                  {formatDate(row.donation_date)}
+                </TableCell>
                 {!isCollection && (
-                  <TableCell>{row.donor_name || "—"}</TableCell>
+                  <TableCell className="px-2 py-1.5">
+                    {row.donor_name || "—"}
+                  </TableCell>
                 )}
-                <TableCell>{row.category_name || "—"}</TableCell>
-                <TableCell className="max-w-[200px] truncate">
+                <TableCell className="px-2 py-1.5">
+                  {row.category_name || "—"}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate px-2 py-1.5">
                   {row.remarks || "—"}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="px-2 py-1.5 text-right tabular-nums">
                   {formatMoney(row.amount)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <EditDonationDialog
-                      row={row}
-                      categories={categories}
-                      mode={mode}
-                    />
-                    <DeleteDonationButton
-                      donationId={row.donation_id}
-                      mode={mode}
-                    />
-                  </div>
-                </TableCell>
+                {showActions ? (
+                  <TableCell className="px-2 py-1.5">
+                    <div className="flex justify-end gap-1">
+                      {canEdit ? (
+                        <EditDonationDialog
+                          row={row}
+                          categories={categories}
+                          mode={mode}
+                        />
+                      ) : null}
+                      {canDelete ? (
+                        <DeleteDonationButton
+                          donationId={row.donation_id}
+                          mode={mode}
+                          label={`${formatMoney(row.amount)} · ${row.category_name || "Uncategorized"} · ${formatDate(row.donation_date)}`}
+                        />
+                      ) : null}
+                    </div>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>

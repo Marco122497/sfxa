@@ -64,10 +64,10 @@ export async function AdminCategoriesSection({
   const categories = await loadCategories(kind);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <CategoryPageHeader title={title} description={description} />
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <CategoryManager kind={kind} categories={categories} />
         </CardContent>
       </Card>

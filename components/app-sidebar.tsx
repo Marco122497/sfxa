@@ -278,7 +278,9 @@ export function AppSidebar({
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
                 <span className="font-medium">SFXA Finance</span>
-                <span className="text-xs text-muted-foreground">{profile.role}</span>
+                <span className="text-xs text-muted-foreground">
+                  v1.0.0.0.1 beta
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -13,7 +13,7 @@ export default async function TreasurerBudgetAllocationPage() {
     await getBudgetModuleData();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <BudgetPageHeader
         title="Budget Allocation"
         description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
@@ -25,8 +25,8 @@ export default async function TreasurerBudgetAllocationPage() {
           in Supabase, then refresh.
         </p>
       )}
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <BudgetManager budgets={rows} categories={categories} />
         </CardContent>
       </Card>

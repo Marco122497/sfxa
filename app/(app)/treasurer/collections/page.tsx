@@ -51,13 +51,13 @@ export default async function TreasurerCollectionsPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <TreasurerPageHeader
         title="Collection Management"
         description="Record parish collections by type from donation categories."
       />
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <DonationManager
             mode="collection"
             donations={rows}

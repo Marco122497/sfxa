@@ -48,13 +48,13 @@ export default async function AdminCollectionsPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <FinancePageHeader
         title="Collections"
         description="Record parish collections by type from donation categories."
       />
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <DonationManager
             mode="collection"
             donations={rows}
@@ -62,6 +62,8 @@ export default async function AdminCollectionsPage() {
             defaultCategoryId={collectionCategories[0]?.category_id}
             title="Collection history"
             emptyMessage="No collection entries yet."
+            canEdit
+            canDelete
           />
         </CardContent>
       </Card>

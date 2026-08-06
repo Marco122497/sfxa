@@ -17,7 +17,7 @@ export default async function AdminBudgetsPage() {
     await getBudgetModuleData();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <FinancePageHeader
         title="Budget Allocation"
         description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
@@ -29,17 +29,17 @@ export default async function AdminBudgetsPage() {
           in Supabase, then refresh.
         </p>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card size="sm">
+          <CardHeader className="pb-1">
             <CardTitle>Total Budget</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">
             {formatMoney(totals.allocated)}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
+        <Card size="sm">
+          <CardHeader className="pb-1">
             <CardTitle>Remaining Budget</CardTitle>
             <CardDescription>Budget minus recorded expenses</CardDescription>
           </CardHeader>
@@ -48,9 +48,14 @@ export default async function AdminBudgetsPage() {
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardContent className="pt-6">
-          <BudgetManager budgets={rows} categories={categories} />
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
+          <BudgetManager
+            budgets={rows}
+            categories={categories}
+            canEdit
+            canDelete
+          />
         </CardContent>
       </Card>
     </div>

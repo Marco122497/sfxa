@@ -1,15 +1,19 @@
 import {
-  ArrowDownRightIcon,
-  ArrowUpRightIcon,
   BanknoteIcon,
-  PiggyBankIcon,
+  HandCoinsIcon,
+  ShoppingBasketIcon,
   UsersIcon,
   WalletIcon,
+  WalletCardsIcon,
 } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminDashboardData } from "@/lib/admin/dashboard";
 import { formatDate, formatMoney } from "@/lib/format";
+import {
+  IncomeExpenseBarChart,
+  ExpensesByCategoryPieChart,
+} from "@/components/administrator/dashboard-charts";
 import {
   Card,
   CardContent,
@@ -28,29 +32,34 @@ import {
 
 export default async function AdministratorDashboardPage() {
   const { profile } = await requireAdmin();
-  const { stats, recentTransactions, monthlySummary } =
-    await getAdminDashboardData();
+  const {
+    stats,
+    monthlySummary,
+    expensesByCategory,
+    recentFinancialActivities,
+    recentUserActivities,
+  } = await getAdminDashboardData();
 
   const cards = [
     {
-      title: "Total Income",
-      value: formatMoney(stats.totalIncome),
-      icon: ArrowUpRightIcon,
+      title: "Total Donations",
+      value: formatMoney(stats.totalDonations),
+      icon: HandCoinsIcon,
+    },
+    {
+      title: "Total Collections",
+      value: formatMoney(stats.totalCollections),
+      icon: ShoppingBasketIcon,
     },
     {
       title: "Total Expenses",
       value: formatMoney(stats.totalExpenses),
-      icon: ArrowDownRightIcon,
+      icon: WalletCardsIcon,
     },
     {
-      title: "Net Income",
-      value: formatMoney(stats.netIncome),
+      title: "Current Balance",
+      value: formatMoney(stats.currentBalance),
       icon: BanknoteIcon,
-    },
-    {
-      title: "Total Budget",
-      value: formatMoney(stats.totalBudget),
-      icon: PiggyBankIcon,
     },
     {
       title: "Remaining Budget",
@@ -59,7 +68,8 @@ export default async function AdministratorDashboardPage() {
     },
     {
       title: "Total Users",
-      value: `${stats.totalUsers} (${stats.activeUsers} active)`,
+      value: String(stats.totalUsers),
+      description: `${stats.activeUsers} active`,
       icon: UsersIcon,
     },
   ];
@@ -89,44 +99,76 @@ export default async function AdministratorDashboardPage() {
               <div className="text-2xl font-semibold tracking-tight">
                 {card.value}
               </div>
+              {"description" in card && card.description ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {card.description}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
+      <div className="grid gap-4 xl:grid-cols-5">
+        <Card className="xl:col-span-3">
           <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
+            <CardTitle>Income vs. Expenses</CardTitle>
             <CardDescription>
-              Latest donations and expenses across the parish.
+              Monthly income vs. expenses — illustrative comparison of parish
+              income and expenses by month.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {recentTransactions.length === 0 ? (
+            <IncomeExpenseBarChart data={monthlySummary} />
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Expenses by Category</CardTitle>
+            <CardDescription>
+              Where parish funds are being spent.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ExpensesByCategoryPieChart data={expensesByCategory} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Financial Activities</CardTitle>
+            <CardDescription>
+              Latest donations, collections, expenses, and budget changes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentFinancialActivities.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No transactions yet. Treasurer entries will appear here.
+                No financial activity yet.
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
                     <TableHead>Date</TableHead>
+                    <TableHead>Transaction</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentTransactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell>{tx.type}</TableCell>
-                      <TableCell className="max-w-[180px] truncate">
-                        {tx.label}
+                  {recentFinancialActivities.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(row.date)}
                       </TableCell>
-                      <TableCell>{formatDate(tx.date)}</TableCell>
+                      <TableCell className="max-w-[220px] truncate">
+                        {row.transaction}
+                      </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatMoney(tx.amount)}
+                        {formatMoney(row.amount)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -138,34 +180,36 @@ export default async function AdministratorDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Summary</CardTitle>
+            <CardTitle>Recent User Activities</CardTitle>
             <CardDescription>
-              Income vs expenses for recent months.
+              Latest actions recorded in the audit trail.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {monthlySummary.length === 0 ? (
+            {recentUserActivities.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No monthly data yet.
+                No user activity yet.
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead className="text-right">Income</TableHead>
-                    <TableHead className="text-right">Expenses</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Activity</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {monthlySummary.map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell>{row.month}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.income)}
+                  {recentUserActivities.map((row) => (
+                    <TableRow key={row.id}>
+                      <TableCell className="whitespace-nowrap font-medium">
+                        {row.user}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.expenses)}
+                      <TableCell className="max-w-[220px] truncate">
+                        {row.activity}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {formatDate(row.date)}
                       </TableCell>
                     </TableRow>
                   ))}

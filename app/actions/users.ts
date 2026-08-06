@@ -163,6 +163,146 @@ export async function createUser(
   return { success: "User created successfully." };
 }
 
+export async function updateUser(
+  _prev: UserActionState,
+  formData: FormData
+): Promise<UserActionState> {
+  const { user: actor } = await requireAdmin();
+
+  const userId = String(formData.get("user_id") || "").trim();
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+  const first_name = String(formData.get("first_name") || "").trim();
+  const middle_name = String(formData.get("middle_name") || "").trim() || null;
+  const last_name = String(formData.get("last_name") || "").trim();
+  const suffix = String(formData.get("suffix") || "").trim() || null;
+  const employee_no = String(formData.get("employee_no") || "").trim() || null;
+  const role = String(formData.get("role") || "").trim() as UserRole;
+  const status = String(formData.get("status") || "1") === "1";
+
+  if (!userId || !email || !first_name || !last_name || !role) {
+    return { error: "Please fill in all required fields." };
+  }
+
+  if (!ROLES.includes(role)) {
+    return { error: "Please select a valid role." };
+  }
+
+  if (password && password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  if (userId === actor.id && !status) {
+    return { error: "You cannot deactivate your own account." };
+  }
+
+  if (userId === actor.id && role !== "Administrator") {
+    return { error: "You cannot change your own role away from Administrator." };
+  }
+
+  const full_name = buildFullName({
+    first_name,
+    middle_name,
+    last_name,
+    suffix,
+  });
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return {
+      error:
+        "User management requires SUPABASE_SERVICE_ROLE_KEY (legacy eyJ… key) in .env.local.",
+    };
+  }
+
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!existing) {
+    return { error: "User not found." };
+  }
+
+  const authUpdate: {
+    email: string;
+    email_confirm?: boolean;
+    password?: string;
+    user_metadata: Record<string, unknown>;
+  } = {
+    email,
+    email_confirm: true,
+    user_metadata: {
+      first_name,
+      middle_name,
+      last_name,
+      suffix,
+      employee_no,
+      full_name,
+      role,
+    },
+  };
+
+  if (password) {
+    authUpdate.password = password;
+  }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(
+    userId,
+    authUpdate
+  );
+
+  if (authError) {
+    const message = authError.message || "Failed to update user account.";
+    if (/jwt|kid|es256|unverifiable|bad_jwt/i.test(message)) {
+      return {
+        error:
+          "Invalid service role key. Use the Legacy service_role JWT (eyJ…) in .env.local.",
+      };
+    }
+    if (/already|registered|exists|email/i.test(message)) {
+      return { error: "That email is already in use by another account." };
+    }
+    return { error: message };
+  }
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({
+      employee_no,
+      first_name,
+      middle_name,
+      last_name,
+      suffix,
+      full_name,
+      role,
+      status,
+    })
+    .eq("id", userId);
+
+  if (profileError) {
+    if (profileError.code === "23505") {
+      return { error: "Employee number is already in use." };
+    }
+    return { error: `Account updated but profile failed: ${profileError.message}` };
+  }
+
+  await writeAudit(
+    admin,
+    actor.id,
+    "UPDATE_USER",
+    `Updated user ${full_name} (${email}) as ${role}`
+  );
+
+  revalidatePath("/administrator/users");
+  revalidatePath("/administrator");
+  revalidatePath("/profile");
+  return { success: "User updated successfully." };
+}
+
 export async function deleteUser(
   _prev: UserActionState,
   formData: FormData

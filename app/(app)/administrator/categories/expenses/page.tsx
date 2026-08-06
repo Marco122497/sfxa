@@ -21,7 +21,7 @@ export default async function AdminExpenseCategoriesPage() {
     ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <CategoryPageHeader
         title="Expense Categories"
         description="Add a general category first (also used for budgets). Then add specific categories under it."
@@ -33,8 +33,8 @@ export default async function AdminExpenseCategoriesPage() {
           in Supabase, then refresh.
         </p>
       )}
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <ExpenseCategoryManager
             generals={(generals ?? []).map((row) => ({
               id: row.expense_category_id,

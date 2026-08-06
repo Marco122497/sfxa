@@ -8,7 +8,7 @@ export function FinancePageHeader({
   description: string;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
           {title}

@@ -90,7 +90,7 @@ export default async function TreasurerExpensesPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <TreasurerPageHeader
         title="Expense Management"
         description="Record spending with a general category and a specific category under it."
@@ -102,8 +102,8 @@ export default async function TreasurerExpensesPage() {
           in Supabase, then refresh.
         </p>
       )}
-      <Card>
-        <CardContent className="pt-6">
+      <Card size="sm">
+        <CardContent className="px-3 py-0">
           <ExpenseManager
             expenses={rows}
             categories={(categories ?? []).map((category) => ({

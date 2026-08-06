@@ -1,14 +1,27 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { Loader2, Trash2Icon, UserRoundIcon } from "lucide-react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { Loader2, PencilIcon, Trash2Icon, UserRoundIcon } from "lucide-react";
 
 import {
   deleteUser,
+  updateUser,
   type UserActionState,
 } from "@/app/actions/users";
 import { ROLES, formatDateTime, type Profile } from "@/lib/auth/roles";
 import { formatDate } from "@/lib/format";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +30,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -109,43 +123,306 @@ function UserHoverCard({ user }: { user: Profile }) {
   );
 }
 
+function EditUserForm({
+  user,
+  isSelf,
+  onSuccess,
+}: {
+  user: Profile;
+  isSelf: boolean;
+  onSuccess: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(updateUser, initialState);
+  const formId = `edit-user-${user.id}`;
+  const [firstName, setFirstName] = useState(user.first_name);
+  const [middleName, setMiddleName] = useState(user.middle_name ?? "");
+  const [lastName, setLastName] = useState(user.last_name);
+  const [suffix, setSuffix] = useState(user.suffix ?? "");
+  const [employeeNo, setEmployeeNo] = useState(user.employee_no ?? "");
+  const [role, setRole] = useState(user.role);
+  const [email, setEmail] = useState(user.email ?? "");
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState(user.status ? "1" : "0");
+
+  useEffect(() => {
+    if (state.success) onSuccess();
+  }, [state.success, onSuccess]);
+
+  return (
+    <>
+      <form action={formAction} className="space-y-4" id={formId}>
+        <input type="hidden" name="user_id" value={user.id} />
+
+        {state.error && (
+          <Alert variant="destructive">
+            <AlertDescription>{state.error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-first_name`}>First Name</Label>
+            <Input
+              id={`${formId}-first_name`}
+              name="first_name"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-middle_name`}>Middle Name</Label>
+            <Input
+              id={`${formId}-middle_name`}
+              name="middle_name"
+              value={middleName}
+              onChange={(event) => setMiddleName(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-last_name`}>Last Name</Label>
+            <Input
+              id={`${formId}-last_name`}
+              name="last_name"
+              value={lastName}
+              onChange={(event) => setLastName(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-suffix`}>Suffix</Label>
+            <Input
+              id={`${formId}-suffix`}
+              name="suffix"
+              value={suffix}
+              onChange={(event) => setSuffix(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-employee_no`}>Employee No.</Label>
+            <Input
+              id={`${formId}-employee_no`}
+              name="employee_no"
+              value={employeeNo}
+              onChange={(event) => setEmployeeNo(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-role`}>Role</Label>
+            <select
+              id={`${formId}-role`}
+              name="role"
+              required
+              value={role}
+              disabled={isSelf}
+              className={selectClassName}
+              onChange={(event) => setRole(event.target.value as Profile["role"])}
+            >
+              {ROLES.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+            {isSelf ? <input type="hidden" name="role" value={role} /> : null}
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor={`${formId}-email`}>Email</Label>
+            <Input
+              id={`${formId}-email`}
+              name="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-password`}>New Password</Label>
+            <Input
+              id={`${formId}-password`}
+              name="password"
+              type="password"
+              minLength={8}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Leave blank to keep current"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-status`}>Status</Label>
+            <select
+              id={`${formId}-status`}
+              name="status"
+              value={status}
+              disabled={isSelf}
+              className={selectClassName}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="1">Active</option>
+              <option value="0">Inactive</option>
+            </select>
+            {isSelf ? <input type="hidden" name="status" value={status} /> : null}
+          </div>
+        </div>
+      </form>
+
+      <AlertDialogFooter>
+        <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+        <Button type="submit" form={formId} disabled={pending}>
+          {pending ? (
+            <>
+              <Loader2 className="animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <PencilIcon />
+              Save changes
+            </>
+          )}
+        </Button>
+      </AlertDialogFooter>
+    </>
+  );
+}
+
+function EditUserButton({
+  user,
+  isSelf,
+}: {
+  user: Profile;
+  isSelf: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Edit user"
+        title="Edit user"
+        onClick={() => setOpen(true)}
+      >
+        <PencilIcon />
+      </Button>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setFormKey((current) => current + 1);
+        }}
+      >
+        <AlertDialogContent className="max-w-lg sm:max-w-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Update account details for {user.full_name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {open ? (
+            <EditUserForm
+              key={formKey}
+              user={user}
+              isSelf={isSelf}
+              onSuccess={() => {
+                setOpen(false);
+                setFormKey((current) => current + 1);
+              }}
+            />
+          ) : null}
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function DeleteUserButton({
   userId,
+  userName,
   disabled,
 }: {
   userId: string;
+  userName: string;
   disabled?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(deleteUser, initialState);
+  const formId = `delete-user-${userId}`;
+
+  useEffect(() => {
+    if (state.success) setOpen(false);
+  }, [state.success]);
 
   return (
-    <form action={formAction} className="inline">
-      <input type="hidden" name="user_id" value={userId} />
-      {state.error && (
-        <span className="sr-only" role="alert">
-          {state.error}
-        </span>
-      )}
+    <>
       <Button
-        type="submit"
+        type="button"
         variant="ghost"
         size="icon-sm"
-        disabled={pending || disabled}
+        disabled={disabled}
         aria-label="Delete user"
         title={
           disabled
             ? "You cannot delete your own account"
             : state.error || "Delete user"
         }
+        onClick={() => setOpen(true)}
       >
-        {pending ? <Loader2 className="animate-spin" /> : <Trash2Icon />}
+        <Trash2Icon />
       </Button>
-      {state.error && (
-        <p className="mt-1 max-w-[180px] text-xs text-destructive">
-          {state.error}
-        </p>
-      )}
-    </form>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {userName} and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error && (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          )}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="user_id" value={userId} />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant="destructive"
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                <>
+                  <Trash2Icon />
+                  Delete
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -233,7 +510,7 @@ export function UsersTable({
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
-              <TableHead className="w-[48px]" />
+              <TableHead className="w-[88px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -249,11 +526,18 @@ export function UsersTable({
                 <TableCell>{user.role}</TableCell>
                 <TableCell>{user.status ? "Active" : "Inactive"}</TableCell>
                 <TableCell>{formatDateTime(user.last_login)}</TableCell>
-                <TableCell className="text-right">
-                  <DeleteUserButton
-                    userId={user.id}
-                    disabled={user.id === currentUserId}
-                  />
+                <TableCell>
+                  <div className="flex items-center justify-end gap-0.5">
+                    <EditUserButton
+                      user={user}
+                      isSelf={user.id === currentUserId}
+                    />
+                    <DeleteUserButton
+                      userId={user.id}
+                      userName={user.full_name}
+                      disabled={user.id === currentUserId}
+                    />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
