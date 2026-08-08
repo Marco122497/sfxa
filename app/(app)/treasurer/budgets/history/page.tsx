@@ -1,3 +1,4 @@
+import { HistoryIcon } from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/auth/roles";
@@ -87,6 +88,7 @@ export default async function TreasurerBudgetHistoryPage() {
       <BudgetPageHeader
         title="Budget History"
         description="Audit trail of budget create, update, and delete actions."
+        icon={HistoryIcon}
       />
 
       <Card>

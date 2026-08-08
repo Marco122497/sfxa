@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogOut, UserRound } from "lucide-react";
+import { LogOutIcon, UserRoundIcon } from "lucide-react";
 
 import { logout } from "@/app/actions/auth";
 import type { Profile } from "@/lib/auth/roles";
@@ -46,13 +46,13 @@ export function AppHeader({ profile }: { profile: Profile }) {
                 />
               ) : null}
               <AvatarFallback>
-                {initials || <UserRound className="size-4" />}
+                {initials || <UserRoundIcon className="size-4" />}
               </AvatarFallback>
             </Avatar>
           </Link>
           <form action={logout}>
             <Button type="submit" variant="outline" size="sm">
-              <LogOut />
+              <LogOutIcon />
               Logout
             </Button>
           </form>

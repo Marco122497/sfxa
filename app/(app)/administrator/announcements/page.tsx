@@ -1,3 +1,5 @@
+import { PageHeading } from "@/components/layout/page-heading";
+import { MegaphoneIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -18,14 +20,11 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          Announcement Management
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add, edit, publish, and delete parish announcements.
-        </p>
-      </div>
+      <PageHeading
+        title="Announcement Management"
+        description="Add, edit, publish, and delete parish announcements."
+        icon={MegaphoneIcon}
+      />
       <AnnouncementManager announcements={(data ?? []) as AnnouncementRow[]} />
     </div>
   );

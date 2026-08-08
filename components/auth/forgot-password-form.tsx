@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, MailIcon } from "lucide-react";
 
 import { forgotPassword, type AuthActionState } from "@/app/actions/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -29,7 +29,10 @@ export function ForgotPasswordForm() {
   return (
     <Card className="w-full max-w-md border-border/80 shadow-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">Forgot password</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <MailIcon className="size-5" />
+          Forgot password
+        </CardTitle>
         <CardDescription>
           Enter your account email and we will send a reset link if it exists.
         </CardDescription>
@@ -66,7 +69,10 @@ export function ForgotPasswordForm() {
                 Sending…
               </>
             ) : (
-              "Send reset link"
+              <>
+                <MailIcon />
+                Send reset link
+              </>
             )}
           </Button>
           <Link

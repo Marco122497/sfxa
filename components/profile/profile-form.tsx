@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Camera, Loader2 } from "lucide-react";
+import { CameraIcon, Loader2 } from "lucide-react";
 
 import {
   updateProfile,
@@ -130,7 +130,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
                 {picturePending ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  <Camera />
+                  <CameraIcon />
                 )}
                 {picturePending ? "Uploading…" : "Change picture"}
               </Button>

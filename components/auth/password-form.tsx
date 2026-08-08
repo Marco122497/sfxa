@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import { EyeIcon, EyeOffIcon, KeyRoundIcon, Loader2 } from "lucide-react";
 
 import {
   changePassword,
@@ -30,11 +30,13 @@ type PasswordFormProps = {
 export function PasswordForm({ mode }: PasswordFormProps) {
   const action = mode === "change" ? changePassword : resetPassword;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <Card className="w-full max-w-md border-border/80 shadow-sm">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">
+        <CardTitle className="flex items-center gap-2 text-2xl">
+          <KeyRoundIcon className="size-5" />
           {mode === "change" ? "Change password" : "Set new password"}
         </CardTitle>
         <CardDescription>
@@ -58,13 +60,29 @@ export function PasswordForm({ mode }: PasswordFormProps) {
           {mode === "change" && (
             <div className="space-y-2">
               <Label htmlFor="current_password">Current password</Label>
-              <Input
-                id="current_password"
-                name="current_password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="current_password"
+                  name="current_password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="size-4" />
+                  ) : (
+                    <EyeIcon className="size-4" />
+                  )}
+                </button>
+              </div>
             </div>
           )}
           <div className="space-y-2">
@@ -72,7 +90,7 @@ export function PasswordForm({ mode }: PasswordFormProps) {
             <Input
               id="new_password"
               name="new_password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               minLength={8}
               required
@@ -83,7 +101,7 @@ export function PasswordForm({ mode }: PasswordFormProps) {
             <Input
               id="confirm_password"
               name="confirm_password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               minLength={8}
               required
@@ -98,9 +116,15 @@ export function PasswordForm({ mode }: PasswordFormProps) {
                 Saving…
               </>
             ) : mode === "change" ? (
-              "Update password"
+              <>
+                <KeyRoundIcon />
+                Update password
+              </>
             ) : (
-              "Save new password"
+              <>
+                <KeyRoundIcon />
+                Save new password
+              </>
             )}
           </Button>
         </CardFooter>

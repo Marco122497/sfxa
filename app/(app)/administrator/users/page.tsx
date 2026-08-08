@@ -1,3 +1,5 @@
+import { PageHeading } from "@/components/layout/page-heading";
+import { UsersIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile } from "@/lib/auth/roles";
@@ -48,18 +50,12 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            User Management
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage user access and roles. Personal information is stored in
-            profiles.
-          </p>
-        </div>
-        <AddUserDialog />
-      </div>
+      <PageHeading
+        title="User Management"
+        description="Manage user access and roles. Personal information is stored in profiles."
+        icon={UsersIcon}
+        actions={<AddUserDialog />}
+      />
 
       <Card>
         <CardHeader>

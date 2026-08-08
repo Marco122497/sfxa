@@ -1,21 +1,24 @@
+import type { LucideIcon } from "lucide-react";
+
+import { PageHeading } from "@/components/layout/page-heading";
+
 export function TreasurerPageHeader({
   title,
   description,
+  icon,
   actions,
 }: {
   title: string;
   description: string;
+  icon?: LucideIcon;
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          {title}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
-      {actions}
-    </div>
+    <PageHeading
+      title={title}
+      description={description}
+      icon={icon}
+      actions={actions}
+    />
   );
 }

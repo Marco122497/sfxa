@@ -1,3 +1,4 @@
+import { PiggyBankIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { formatMoney } from "@/lib/format";
@@ -21,6 +22,7 @@ export default async function AdminBudgetsPage() {
       <FinancePageHeader
         title="Budget Allocation"
         description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
+        icon={PiggyBankIcon}
       />
       {subcategorySetupRequired && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">

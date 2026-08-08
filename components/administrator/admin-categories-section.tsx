@@ -1,3 +1,4 @@
+import { HandCoinsIcon, PiggyBankIcon, ShoppingBasketIcon, TagsIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { CategoryKind } from "@/app/actions/categories";
@@ -51,6 +52,13 @@ async function loadCategories(kind: CategoryKind) {
   }));
 }
 
+const CATEGORY_ICONS = {
+  donation: HandCoinsIcon,
+  collection: ShoppingBasketIcon,
+  expense: TagsIcon,
+  budget: PiggyBankIcon,
+} as const;
+
 export async function AdminCategoriesSection({
   kind,
   title,
@@ -65,7 +73,11 @@ export async function AdminCategoriesSection({
 
   return (
     <div className="space-y-4">
-      <CategoryPageHeader title={title} description={description} />
+      <CategoryPageHeader
+        title={title}
+        description={description}
+        icon={CATEGORY_ICONS[kind]}
+      />
       <Card size="sm">
         <CardContent className="px-3 py-0">
           <CategoryManager kind={kind} categories={categories} />

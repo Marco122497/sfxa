@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { MenuIcon, XIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -164,26 +165,11 @@ export function TransparencySiteHeader({
             onClick={() => setMobileOpen((open) => !open)}
           >
             <span className="sr-only">Menu</span>
-            <span className="flex w-5 flex-col gap-1.5">
-              <span
-                className={cn(
-                  "h-px w-full bg-current transition-transform duration-300",
-                  mobileOpen && "translate-y-[3.5px] rotate-45"
-                )}
-              />
-              <span
-                className={cn(
-                  "h-px w-full bg-current transition-opacity duration-300",
-                  mobileOpen && "opacity-0"
-                )}
-              />
-              <span
-                className={cn(
-                  "h-px w-full bg-current transition-transform duration-300",
-                  mobileOpen && "-translate-y-[3.5px] -rotate-45"
-                )}
-              />
-            </span>
+            {mobileOpen ? (
+              <XIcon className="size-5" />
+            ) : (
+              <MenuIcon className="size-5" />
+            )}
           </button>
         </div>
       </div>

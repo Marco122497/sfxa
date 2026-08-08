@@ -1,3 +1,4 @@
+import { PiggyBankIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { formatMoney } from "@/lib/format";
@@ -28,6 +29,7 @@ export default async function ParishBudgetMonitoringPage() {
       <ParishViewPageHeader
         title="Budget Monitoring"
         description="View budget allocation, utilization, and remaining balances."
+        icon={PiggyBankIcon}
       />
 
       {subcategorySetupRequired ? (

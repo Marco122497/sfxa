@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { EyeIcon, EyeOffIcon, Loader2 } from "lucide-react";
+import { EyeIcon, EyeOffIcon, Loader2, LogInIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { login, type AuthActionState } from "@/app/actions/auth";
@@ -129,7 +129,10 @@ export function LoginForm() {
                 Signing in…
               </>
             ) : (
-              "Sign in"
+              <>
+                <LogInIcon />
+                Sign in
+              </>
             )}
           </Button>
         </CardFooter>

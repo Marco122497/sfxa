@@ -1,4 +1,11 @@
 import Image from "next/image";
+import {
+  CreditCardIcon,
+  GiftIcon,
+  HeartIcon,
+  UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 import { formatMoney, formatDate } from "@/lib/format";
 import {
@@ -20,58 +27,21 @@ const TONE_STYLES: Record<
   purple: { icon: "#6b4c9a", accent: "#5a3d82", soft: "#f0eaf6" },
 };
 
+const TONE_ICONS: Record<ReportMetric["tone"], LucideIcon> = {
+  navy: UsersIcon,
+  green: HeartIcon,
+  gold: GiftIcon,
+  purple: CreditCardIcon,
+};
+
 function MetricIcon({ tone }: { tone: ReportMetric["tone"] }) {
-  const color = TONE_STYLES[tone].icon;
-  if (tone === "navy") {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
-        <path
-          d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM4.5 19c.6-2.5 2.7-4 5.5-4s4.9 1.5 5.5 4M14 15c1.8 0 3.4.7 4.5 2"
-          stroke={color}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  if (tone === "green") {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
-        <path
-          d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z"
-          stroke={color}
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
-  if (tone === "gold") {
-    return (
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
-        <path
-          d="M4 10h16l-1.5 9H5.5L4 10Zm2-3h12l1 3H5l1-3Zm5 6v4"
-          stroke={color}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
+  const Icon = TONE_ICONS[tone];
   return (
-    <svg viewBox="0 0 24 24" className="size-5" fill="none" aria-hidden>
-      <rect
-        x="3"
-        y="6"
-        width="18"
-        height="12"
-        rx="2"
-        stroke={color}
-        strokeWidth="1.8"
-      />
-      <path d="M3 10h18" stroke={color} strokeWidth="1.8" />
-    </svg>
+    <Icon
+      className="size-5"
+      style={{ color: TONE_STYLES[tone].icon }}
+      aria-hidden
+    />
   );
 }
 

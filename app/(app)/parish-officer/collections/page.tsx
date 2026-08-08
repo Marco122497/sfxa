@@ -1,3 +1,4 @@
+import { ShoppingBasketIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
@@ -77,6 +78,7 @@ export default async function ParishCollectionsPage({
       <ParishViewPageHeader
         title="Collections"
         description="Read-only view of parish collections by type."
+        icon={ShoppingBasketIcon}
         actions={
           <ReportPeriodSelect
             period={period}

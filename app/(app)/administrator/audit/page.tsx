@@ -1,3 +1,5 @@
+import { PageHeading } from "@/components/layout/page-heading";
+import { ClipboardListIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/auth/roles";
@@ -62,14 +64,11 @@ export default async function AdminAuditPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          Audit Trail
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Login history, user activities, and transaction-related events.
-        </p>
-      </div>
+      <PageHeading
+        title="Audit Trail"
+        description="Login history, user activities, and transaction-related events."
+        icon={ClipboardListIcon}
+      />
 
       <div className="flex flex-wrap gap-2 text-sm">
         <a

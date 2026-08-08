@@ -1,3 +1,4 @@
+import { HandCoinsIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
@@ -56,6 +57,7 @@ export default async function AdminDonationsPage() {
       <FinancePageHeader
         title="Donations"
         description="Add, edit, search, and review donation history."
+        icon={HandCoinsIcon}
       />
       <Card size="sm">
         <CardContent className="px-3 py-0">

@@ -1,20 +1,20 @@
+import type { LucideIcon } from "lucide-react";
+
 import { BudgetNav } from "@/components/treasurer/budget-nav";
+import { PageHeading } from "@/components/layout/page-heading";
 
 export function BudgetPageHeader({
   title,
   description,
+  icon,
 }: {
   title: string;
   description: string;
+  icon?: LucideIcon;
 }) {
   return (
     <div className="space-y-3">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          {title}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
+      <PageHeading title={title} description={description} icon={icon} />
       <BudgetNav />
     </div>
   );

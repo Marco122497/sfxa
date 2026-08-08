@@ -1,3 +1,4 @@
+import { TagsIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { CategoryPageHeader } from "@/components/administrator/category-page-header";
@@ -25,6 +26,7 @@ export default async function AdminExpenseCategoriesPage() {
       <CategoryPageHeader
         title="Expense Categories"
         description="Add a general category first (also used for budgets). Then add specific categories under it."
+        icon={TagsIcon}
       />
       {specificsError && (
         <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">

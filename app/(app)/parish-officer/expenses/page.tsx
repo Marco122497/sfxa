@@ -1,3 +1,4 @@
+import { ReceiptIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
@@ -51,6 +52,7 @@ export default async function ParishExpensesPage({
       <ParishViewPageHeader
         title="Expenses"
         description="Read-only view of expenses by general and specific category."
+        icon={ReceiptIcon}
         actions={
           <ReportPeriodSelect
             period={period}

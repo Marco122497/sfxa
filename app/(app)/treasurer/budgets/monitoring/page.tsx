@@ -1,3 +1,9 @@
+import {
+  BanknoteIcon,
+  PercentIcon,
+  PiggyBankIcon,
+  TrendingUpIcon,
+} from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { formatMoney } from "@/lib/format";
@@ -22,54 +28,51 @@ export default async function TreasurerBudgetMonitoringPage() {
   await requireTreasurer();
   const { rows, totals } = await getBudgetModuleData();
 
+  const summaryCards = [
+    {
+      title: "Budget Allocation",
+      value: formatMoney(totals.allocated),
+      icon: PiggyBankIcon,
+    },
+    {
+      title: "Budget Utilization",
+      value: formatMoney(totals.utilized),
+      icon: TrendingUpIcon,
+    },
+    {
+      title: "Remaining Budget",
+      value: formatMoney(totals.remaining),
+      icon: BanknoteIcon,
+    },
+    {
+      title: "Utilization Rate",
+      value: `${totals.utilizationPct}%`,
+      icon: PercentIcon,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <BudgetPageHeader
         title="Budget Monitoring"
         description="Track remaining budget and utilization across allocations."
+        icon={PiggyBankIcon}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Budget Allocation
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold tabular-nums">
-            {formatMoney(totals.allocated)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Budget Utilization
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold tabular-nums">
-            {formatMoney(totals.utilized)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Remaining Budget
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold tabular-nums">
-            {formatMoney(totals.remaining)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Utilization Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold tabular-nums">
-            {totals.utilizationPct}%
-          </CardContent>
-        </Card>
+        {summaryCards.map((card) => (
+          <Card key={card.title}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {card.title}
+              </CardTitle>
+              <card.icon className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="text-2xl font-semibold tabular-nums">
+              {card.value}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>

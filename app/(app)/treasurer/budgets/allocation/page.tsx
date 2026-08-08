@@ -1,3 +1,4 @@
+import { PiggyBankIcon } from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { BudgetPageHeader } from "@/components/treasurer/budget-page-header";
@@ -17,6 +18,7 @@ export default async function TreasurerBudgetAllocationPage() {
       <BudgetPageHeader
         title="Budget Allocation"
         description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
+        icon={PiggyBankIcon}
       />
       {subcategorySetupRequired && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">

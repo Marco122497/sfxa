@@ -1,3 +1,4 @@
+import { FileTextIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import {
   PARISH_REPORT_TYPES,
@@ -28,9 +29,14 @@ export default async function ParishOfficerReportsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Reports
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
+              <FileTextIcon className="size-4" aria-hidden />
+            </span>
+            <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+              Reports
+            </h1>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             View-only financial reports. Choose a report type and date range to
             review or export.

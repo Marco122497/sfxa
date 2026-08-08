@@ -1,10 +1,11 @@
 import {
   BanknoteIcon,
   HandCoinsIcon,
+  LayoutDashboardIcon,
   ShoppingBasketIcon,
   UsersIcon,
-  WalletIcon,
   WalletCardsIcon,
+  WalletIcon,
 } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
@@ -77,9 +78,14 @@ export default async function AdministratorDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-          Administrator Dashboard
-        </h1>
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
+            <LayoutDashboardIcon className="size-4" aria-hidden />
+          </span>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+            Administrator Dashboard
+          </h1>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Welcome back, {profile.first_name}. Full system overview and
           management tools.

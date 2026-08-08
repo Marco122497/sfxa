@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import {
+  EyeOffIcon,
+  GlobeIcon,
   Loader2,
   MegaphoneIcon,
   PencilIcon,
@@ -259,9 +261,15 @@ function PublishAnnouncementButton({ item }: { item: AnnouncementRow }) {
         {pending ? (
           <Loader2 className="animate-spin" />
         ) : item.is_published ? (
-          "Unpublish"
+          <>
+            <EyeOffIcon />
+            Unpublish
+          </>
         ) : (
-          "Publish"
+          <>
+            <GlobeIcon />
+            Publish
+          </>
         )}
       </Button>
     </form>

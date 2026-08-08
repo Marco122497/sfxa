@@ -2,6 +2,8 @@ import { requireTreasurer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
 import { relationName } from "@/lib/treasurer/relations";
+import { HandCoinsIcon } from "lucide-react";
+
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
 import { DonationManager } from "@/components/treasurer/donation-manager";
 import {
@@ -59,6 +61,7 @@ export default async function TreasurerDonationsPage() {
       <TreasurerPageHeader
         title="Donation Management"
         description="Add, edit, search, and review donation history."
+        icon={HandCoinsIcon}
       />
       <Card size="sm">
         <CardContent className="px-3 py-0">

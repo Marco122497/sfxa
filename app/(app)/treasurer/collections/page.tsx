@@ -1,3 +1,4 @@
+import { ShoppingBasketIcon } from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/treasurer";
@@ -55,6 +56,7 @@ export default async function TreasurerCollectionsPage() {
       <TreasurerPageHeader
         title="Collection Management"
         description="Record parish collections by type from donation categories."
+        icon={ShoppingBasketIcon}
       />
       <Card size="sm">
         <CardContent className="px-3 py-0">

@@ -1,3 +1,4 @@
+import { ShoppingBasketIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
@@ -52,6 +53,7 @@ export default async function AdminCollectionsPage() {
       <FinancePageHeader
         title="Collections"
         description="Record parish collections by type from donation categories."
+        icon={ShoppingBasketIcon}
       />
       <Card size="sm">
         <CardContent className="px-3 py-0">

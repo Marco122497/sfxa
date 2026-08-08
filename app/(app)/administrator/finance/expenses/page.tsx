@@ -1,3 +1,4 @@
+import { ReceiptIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { relationName } from "@/lib/treasurer/relations";
@@ -91,6 +92,7 @@ export default async function AdminExpensesPage() {
       <FinancePageHeader
         title="Expenses"
         description="Record spending with a general category and a specific category under it."
+        icon={ReceiptIcon}
       />
       {(subcategoriesResult.error || expensesResult.error) && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">

@@ -1,5 +1,7 @@
 "use client";
 
+import { FileSpreadsheetIcon, PrinterIcon } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 export function ReportExportButtons({
@@ -17,7 +19,11 @@ export function ReportExportButtons({
         row
           .map((cell) => {
             const value = String(cell ?? "");
-            if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+            if (
+              value.includes(",") ||
+              value.includes('"') ||
+              value.includes("\n")
+            ) {
               return `"${value.replace(/"/g, '""')}"`;
             }
             return value;
@@ -45,9 +51,11 @@ export function ReportExportButtons({
   return (
     <div className="flex flex-wrap gap-2 print:hidden">
       <Button type="button" variant="outline" onClick={exportExcel}>
+        <FileSpreadsheetIcon />
         Export Excel (CSV)
       </Button>
       <Button type="button" onClick={exportPdf}>
+        <PrinterIcon />
         Export PDF / Print
       </Button>
     </div>

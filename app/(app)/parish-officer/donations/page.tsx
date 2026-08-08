@@ -1,3 +1,4 @@
+import { HandCoinsIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
@@ -58,6 +59,7 @@ export default async function ParishDonationsPage({
       <ParishViewPageHeader
         title="Donations"
         description="Read-only view of donations."
+        icon={HandCoinsIcon}
         actions={
           <ReportPeriodSelect
             period={period}
