@@ -10,11 +10,15 @@ import {
 
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminDashboardData } from "@/lib/admin/dashboard";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import {
   IncomeExpenseBarChart,
   ExpensesByCategoryPieChart,
 } from "@/components/administrator/dashboard-charts";
+import {
+  RecentFinancialActivitiesTable,
+  RecentUserActivitiesTable,
+} from "@/components/administrator/dashboard-activity-tables";
 import {
   Card,
   CardContent,
@@ -22,14 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 export default async function AdministratorDashboardPage() {
   const { profile } = await requireAdmin();
@@ -156,30 +152,9 @@ export default async function AdministratorDashboardPage() {
                 No financial activity yet.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentFinancialActivities.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDate(row.date)}
-                      </TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {row.transaction}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <RecentFinancialActivitiesTable
+                rows={recentFinancialActivities}
+              />
             )}
           </CardContent>
         </Card>
@@ -197,30 +172,7 @@ export default async function AdministratorDashboardPage() {
                 No user activity yet.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Activity</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentUserActivities.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell className="whitespace-nowrap font-medium">
-                        {row.user}
-                      </TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {row.activity}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {formatDate(row.date)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <RecentUserActivitiesTable rows={recentUserActivities} />
             )}
           </CardContent>
         </Card>

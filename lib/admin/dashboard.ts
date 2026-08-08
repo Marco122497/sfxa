@@ -146,7 +146,7 @@ export async function getAdminDashboardData() {
         "audit_id, action, description, created_at, profiles(full_name, role)"
       )
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(8),
   ]);
 
   let expenses = expensesResult.data as
@@ -344,8 +344,8 @@ export async function getAdminDashboardData() {
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 8);
 
-  const recentUserActivities: RecentUserActivity[] = (recentAudits ?? []).map(
-    (row) => ({
+  const recentUserActivities: RecentUserActivity[] = (recentAudits ?? [])
+    .map((row) => ({
       id: String(row.audit_id),
       user:
         profileField(row.profiles, "role") ||
@@ -353,8 +353,8 @@ export async function getAdminDashboardData() {
         "System",
       activity: humanizeActivity(row.action, row.description),
       date: String(row.created_at).slice(0, 10),
-    })
-  );
+    }))
+    .slice(0, 8);
 
   return {
     stats,
