@@ -56,7 +56,7 @@ export default async function AdminDonationsPage() {
     <div className="space-y-4">
       <FinancePageHeader
         title="Donations"
-        description="Add, edit, search, and review donation history."
+        description="View and manage parish donations under Financial Management."
         icon={HandCoinsIcon}
       />
       <Card size="sm">

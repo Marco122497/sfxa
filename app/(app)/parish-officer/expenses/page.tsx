@@ -51,7 +51,7 @@ export default async function ParishExpensesPage({
     <div className="space-y-6">
       <ParishViewPageHeader
         title="Expenses"
-        description="Read-only view of expenses by general and specific category."
+        description="View parish expenses. Read-only — no add, edit, or delete."
         icon={ReceiptIcon}
         actions={
           <ReportPeriodSelect

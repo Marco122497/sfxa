@@ -3,6 +3,7 @@ import { ClipboardListIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/auth/roles";
+import { AuditPagination } from "@/components/administrator/audit-pagination";
 import {
   Card,
   CardContent,
@@ -19,74 +20,127 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const PAGE_SIZES = [10, 25, 50, 100] as const;
+
+function parseTab(value?: string) {
+  if (value === "logins" || value === "transactions" || value === "activity") {
+    return value;
+  }
+  return "activity";
+}
+
+function parsePage(value?: string) {
+  const n = Number(value);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
+function parsePerPage(value?: string) {
+  const n = Number(value);
+  return (PAGE_SIZES as readonly number[]).includes(n) ? n : 25;
+}
+
+function tabHref(tab: string) {
+  return `/administrator/audit?tab=${tab}&page=1&perPage=25`;
+}
+
+function profileName(value: unknown) {
+  if (Array.isArray(value)) return value[0]?.full_name || "—";
+  if (value && typeof value === "object" && "full_name" in value) {
+    return String((value as { full_name?: string }).full_name || "—");
+  }
+  return "—";
+}
+
 export default async function AdminAuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; page?: string; perPage?: string }>;
 }) {
   await requireAdmin();
-  const { tab = "activity" } = await searchParams;
+  const params = await searchParams;
+  const tab = parseTab(params.tab);
+  const pageSize = parsePerPage(params.perPage);
+  const requestedPage = parsePage(params.page);
   const supabase = await createClient();
 
-  const [{ data: loginHistory }, { data: auditLogs }, { data: transactions }] =
-    await Promise.all([
-      supabase
-        .from("login_history")
-        .select(
-          "login_id, login_time, logout_time, ip_address, device_info, profiles(full_name, role)"
-        )
-        .order("login_time", { ascending: false })
-        .limit(100),
-      supabase
-        .from("audit_logs")
-        .select(
-          "audit_id, action, table_name, description, ip_address, created_at, profiles(full_name)"
-        )
-        .order("created_at", { ascending: false })
-        .limit(100),
-      supabase
-        .from("audit_logs")
-        .select(
-          "audit_id, action, table_name, description, created_at, profiles(full_name)"
-        )
-        .in("table_name", ["donations", "expenses", "budgets", "announcements"])
-        .order("created_at", { ascending: false })
-        .limit(100),
-    ]);
+  const from = (requestedPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  function profileName(value: unknown) {
-    if (Array.isArray(value)) return value[0]?.full_name || "—";
-    if (value && typeof value === "object" && "full_name" in value) {
-      return String((value as { full_name?: string }).full_name || "—");
-    }
-    return "—";
+  let rows: Array<Record<string, unknown>> = [];
+  let totalItems = 0;
+
+  if (tab === "logins") {
+    const { data, count } = await supabase
+      .from("login_history")
+      .select(
+        "login_id, login_time, logout_time, ip_address, device_info, profiles(full_name, role)",
+        { count: "exact" }
+      )
+      .order("login_time", { ascending: false })
+      .range(from, to);
+    rows = data ?? [];
+    totalItems = count ?? 0;
+  } else if (tab === "transactions") {
+    const { data, count } = await supabase
+      .from("audit_logs")
+      .select(
+        "audit_id, action, table_name, description, created_at, profiles(full_name)",
+        { count: "exact" }
+      )
+      .in("table_name", ["donations", "expenses", "budgets", "announcements"])
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    rows = data ?? [];
+    totalItems = count ?? 0;
+  } else {
+    const { data, count } = await supabase
+      .from("audit_logs")
+      .select(
+        "audit_id, action, table_name, description, ip_address, created_at, profiles(full_name)",
+        { count: "exact" }
+      )
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    rows = data ?? [];
+    totalItems = count ?? 0;
   }
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+  const page = Math.min(requestedPage, totalPages);
 
   return (
     <div className="space-y-6">
       <PageHeading
         title="Audit Trail"
-        description="Login history, user activities, and transaction-related events."
+        description="See who performed financial and system actions, and when."
         icon={ClipboardListIcon}
       />
 
       <div className="flex flex-wrap gap-2 text-sm">
         <a
-          href="/administrator/audit?tab=logins"
-          className={tab === "logins" ? "font-semibold underline" : "underline-offset-4 hover:underline"}
+          href={tabHref("logins")}
+          className={
+            tab === "logins"
+              ? "font-semibold underline"
+              : "underline-offset-4 hover:underline"
+          }
         >
           Login History
         </a>
         <span className="text-muted-foreground">·</span>
         <a
-          href="/administrator/audit?tab=activity"
-          className={tab === "activity" ? "font-semibold underline" : "underline-offset-4 hover:underline"}
+          href={tabHref("activity")}
+          className={
+            tab === "activity"
+              ? "font-semibold underline"
+              : "underline-offset-4 hover:underline"
+          }
         >
           User Activities
         </a>
         <span className="text-muted-foreground">·</span>
         <a
-          href="/administrator/audit?tab=transactions"
+          href={tabHref("transactions")}
           className={
             tab === "transactions"
               ? "font-semibold underline"
@@ -103,7 +157,7 @@ export default async function AdminAuditPage({
             <CardTitle>Login History</CardTitle>
             <CardDescription>Recent sign-in sessions</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -115,19 +169,42 @@ export default async function AdminAuditPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(loginHistory ?? []).map((row) => (
-                  <TableRow key={row.login_id}>
-                    <TableCell>{profileName(row.profiles)}</TableCell>
-                    <TableCell>{formatDateTime(row.login_time)}</TableCell>
-                    <TableCell>{formatDateTime(row.logout_time)}</TableCell>
-                    <TableCell>{row.ip_address || "—"}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">
-                      {row.device_info || "—"}
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No login history found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <TableRow key={String(row.login_id)}>
+                      <TableCell>{profileName(row.profiles)}</TableCell>
+                      <TableCell>
+                        {formatDateTime(row.login_time as string)}
+                      </TableCell>
+                      <TableCell>
+                        {formatDateTime(row.logout_time as string | null)}
+                      </TableCell>
+                      <TableCell>
+                        {(row.ip_address as string | null) || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate">
+                        {(row.device_info as string | null) || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+            <AuditPagination
+              tab={tab}
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalItems}
+            />
           </CardContent>
         </Card>
       ) : tab === "transactions" ? (
@@ -138,7 +215,7 @@ export default async function AdminAuditPage({
               Audit events related to finance and announcements
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -149,18 +226,37 @@ export default async function AdminAuditPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(transactions ?? []).map((row) => (
-                  <TableRow key={row.audit_id}>
-                    <TableCell>{formatDateTime(row.created_at)}</TableCell>
-                    <TableCell>{profileName(row.profiles)}</TableCell>
-                    <TableCell>{row.action}</TableCell>
-                    <TableCell className="max-w-[320px] truncate">
-                      {row.description || "—"}
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No transaction history found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <TableRow key={String(row.audit_id)}>
+                      <TableCell>
+                        {formatDateTime(row.created_at as string)}
+                      </TableCell>
+                      <TableCell>{profileName(row.profiles)}</TableCell>
+                      <TableCell>{String(row.action)}</TableCell>
+                      <TableCell className="max-w-[320px] truncate">
+                        {(row.description as string | null) || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+            <AuditPagination
+              tab={tab}
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalItems}
+            />
           </CardContent>
         </Card>
       ) : (
@@ -169,7 +265,7 @@ export default async function AdminAuditPage({
             <CardTitle>User Activities</CardTitle>
             <CardDescription>All recorded audit events</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -181,19 +277,40 @@ export default async function AdminAuditPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(auditLogs ?? []).map((row) => (
-                  <TableRow key={row.audit_id}>
-                    <TableCell>{formatDateTime(row.created_at)}</TableCell>
-                    <TableCell>{profileName(row.profiles)}</TableCell>
-                    <TableCell>{row.action}</TableCell>
-                    <TableCell>{row.table_name || "—"}</TableCell>
-                    <TableCell className="max-w-[280px] truncate">
-                      {row.description || "—"}
+                {rows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      No user activities found.
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  rows.map((row) => (
+                    <TableRow key={String(row.audit_id)}>
+                      <TableCell>
+                        {formatDateTime(row.created_at as string)}
+                      </TableCell>
+                      <TableCell>{profileName(row.profiles)}</TableCell>
+                      <TableCell>{String(row.action)}</TableCell>
+                      <TableCell>
+                        {(row.table_name as string | null) || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[280px] truncate">
+                        {(row.description as string | null) || "—"}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+            <AuditPagination
+              tab={tab}
+              page={page}
+              pageSize={pageSize}
+              totalItems={totalItems}
+            />
           </CardContent>
         </Card>
       )}

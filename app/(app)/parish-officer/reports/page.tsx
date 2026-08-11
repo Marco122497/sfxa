@@ -34,12 +34,11 @@ export default async function ParishOfficerReportsPage({
               <FileTextIcon className="size-4" aria-hidden />
             </span>
             <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-              Reports
+              Financial Reports
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            View-only financial reports. Choose a report type and date range to
-            review or export.
+            View approved monthly, quarterly, and annual financial reports.
           </p>
         </div>
         <ReportExportButtons

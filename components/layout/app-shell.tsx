@@ -47,13 +47,16 @@ function AppShellContent({
             />
             <AppBreadcrumb dashboardHref={dashboardHref} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ModeToggle />
-            <NavNotifications notifications={notifications} />
+            <NavNotifications
+              notifications={notifications}
+              userId={profile.id}
+            />
             <NavUser profile={profile} />
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6">
           {isPending ? <AppPageSkeleton /> : children}
         </div>
       </SidebarInset>

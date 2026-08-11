@@ -31,11 +31,11 @@ export default async function TreasurerReportsPage({
               <FileTextIcon className="size-4" aria-hidden />
             </span>
             <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-              Reports
+              Financial Reports
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Choose a report type and date range, then export to Excel or PDF.
+            Generate and view financial reports, then export to Excel or PDF.
           </p>
         </div>
         <ReportExportButtons

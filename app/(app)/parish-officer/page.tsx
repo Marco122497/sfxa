@@ -84,12 +84,12 @@ export default async function ParishOfficerDashboardPage() {
             <LayoutDashboardIcon className="size-4" aria-hidden />
           </span>
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Parish Officer Dashboard
+            Dashboard
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Welcome back, {profile.first_name}. Read-only overview of parish
-          finances and approved reports.
+          Overall parish financial status for {profile.first_name}. View-only —
+          no record editing.
         </p>
       </div>
 

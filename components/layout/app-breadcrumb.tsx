@@ -15,15 +15,17 @@ import {
 const pageLabels: Record<string, string> = {
   profile: "Profile",
   "change-password": "Change password",
-  users: "Users",
+  users: "User Management",
   announcements: "Announcements",
   audit: "Audit Trail",
-  reports: "Reports",
-  finance: "Finance",
+  reports: "Financial Reports",
+  finance: "Financial Management",
   donations: "Donations",
   collections: "Collections",
   expenses: "Expenses",
-  budgets: "Budgets",
+  budgets: "Budget Management",
+  categories: "Categories",
+  allocation: "Budget Management",
 };
 
 const dashboardLabels: Record<string, string> = {

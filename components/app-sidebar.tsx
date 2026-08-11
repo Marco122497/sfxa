@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BanknoteIcon,
+  ChevronRightIcon,
   ClipboardListIcon,
   FileTextIcon,
   HandCoinsIcon,
@@ -24,6 +25,11 @@ import type { Profile, UserRole } from "@/lib/auth/roles";
 import { getDashboardPath } from "@/lib/auth/roles";
 import { useNavigationPending } from "@/components/layout/navigation-pending";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -32,14 +38,24 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
+
+type NavChild = {
+  title: string;
+  url: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
 
 type NavItem = {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+  children?: NavChild[];
 };
 
 function getNavItems(role: UserRole, home: string): NavItem[] {
@@ -49,11 +65,25 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
 
   if (role === "Administrator") {
     items.push(
-      { title: "Users", url: "/administrator/users", icon: UsersIcon },
       {
-        title: "Finance",
+        title: "Financial Management",
         url: "/administrator/finance/donations",
         icon: WalletIcon,
+      },
+      {
+        title: "Budget Management",
+        url: "/administrator/finance/budgets",
+        icon: PiggyBankIcon,
+      },
+      {
+        title: "Financial Reports",
+        url: "/administrator/reports",
+        icon: FileTextIcon,
+      },
+      {
+        title: "User Management",
+        url: "/administrator/users",
+        icon: UsersIcon,
       },
       {
         title: "Categories",
@@ -69,61 +99,114 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
         title: "Audit Trail",
         url: "/administrator/audit",
         icon: ClipboardListIcon,
-      },
-      { title: "Reports", url: "/administrator/reports", icon: FileTextIcon }
+      }
     );
   }
 
   if (role === "Treasurer") {
     items.push(
       {
-        title: "Donations",
-        url: "/treasurer/donations",
-        icon: HandCoinsIcon,
-      },
-      {
-        title: "Collections",
+        title: "Financial Transactions",
         url: "/treasurer/collections",
-        icon: BanknoteIcon,
+        icon: WalletIcon,
+        children: [
+          {
+            title: "Collections",
+            url: "/treasurer/collections",
+            icon: BanknoteIcon,
+          },
+          {
+            title: "Donations",
+            url: "/treasurer/donations",
+            icon: HandCoinsIcon,
+          },
+          {
+            title: "Expenses",
+            url: "/treasurer/expenses",
+            icon: ReceiptIcon,
+          },
+        ],
       },
       {
-        title: "Expenses",
-        url: "/treasurer/expenses",
-        icon: ReceiptIcon,
-      },
-      {
-        title: "Budgets",
+        title: "Budget Management",
         url: "/treasurer/budgets/allocation",
         icon: PiggyBankIcon,
       },
-      { title: "Reports", url: "/treasurer/reports", icon: FileTextIcon }
+      {
+        title: "Financial Reports",
+        url: "/treasurer/reports",
+        icon: FileTextIcon,
+      },
+      {
+        title: "Announcements",
+        url: "/treasurer/announcements",
+        icon: MegaphoneIcon,
+      },
+      {
+        title: "Profile",
+        url: "/profile",
+        icon: UserRoundIcon,
+      },
+      {
+        title: "Change password",
+        url: "/change-password",
+        icon: KeyRoundIcon,
+      }
     );
+    return items;
   }
 
   if (role === "Parish Officer") {
     items.push(
       {
-        title: "Donations",
-        url: "/parish-officer/donations",
-        icon: HandCoinsIcon,
-      },
-      {
-        title: "Collections",
+        title: "Financial Overview",
         url: "/parish-officer/collections",
-        icon: BanknoteIcon,
-      },
-      {
-        title: "Expenses",
-        url: "/parish-officer/expenses",
-        icon: ReceiptIcon,
+        icon: WalletIcon,
+        children: [
+          {
+            title: "Collections",
+            url: "/parish-officer/collections",
+            icon: BanknoteIcon,
+          },
+          {
+            title: "Donations",
+            url: "/parish-officer/donations",
+            icon: HandCoinsIcon,
+          },
+          {
+            title: "Expenses",
+            url: "/parish-officer/expenses",
+            icon: ReceiptIcon,
+          },
+        ],
       },
       {
         title: "Budget Monitoring",
         url: "/parish-officer/budget",
         icon: PiggyBankIcon,
       },
-      { title: "Reports", url: "/parish-officer/reports", icon: FileTextIcon }
+      {
+        title: "Financial Reports",
+        url: "/parish-officer/reports",
+        icon: FileTextIcon,
+      },
+      {
+        title: "Announcements",
+        url: "/parish-officer/announcements",
+        icon: MegaphoneIcon,
+      },
+      {
+        title: "Profile",
+        url: "/profile",
+        icon: UserRoundIcon,
+      },
+      {
+        title: "Change password",
+        url: "/change-password",
+        icon: KeyRoundIcon,
+      }
     );
+    return items;
   }
 
   items.push(
@@ -138,45 +221,54 @@ function getPrefetchUrls(role: UserRole, home: string) {
   const urls = [home, "/profile", "/change-password"];
   if (role === "Administrator") {
     urls.push(
-      "/administrator/users",
       "/administrator/finance/donations",
       "/administrator/finance/collections",
       "/administrator/finance/expenses",
       "/administrator/finance/budgets",
+      "/administrator/reports",
+      "/administrator/users",
       "/administrator/categories/donations",
       "/administrator/categories/collections",
       "/administrator/categories/expenses",
       "/administrator/announcements",
-      "/administrator/audit",
-      "/administrator/reports"
+      "/administrator/audit"
     );
   }
   if (role === "Treasurer") {
     urls.push(
-      "/treasurer/donations",
       "/treasurer/collections",
+      "/treasurer/donations",
       "/treasurer/expenses",
       "/treasurer/budgets/allocation",
       "/treasurer/budgets/monitoring",
       "/treasurer/budgets/history",
-      "/treasurer/reports"
+      "/treasurer/reports",
+      "/treasurer/announcements"
     );
   }
   if (role === "Parish Officer") {
     urls.push(
-      "/parish-officer/donations",
       "/parish-officer/collections",
+      "/parish-officer/donations",
       "/parish-officer/expenses",
       "/parish-officer/budget",
-      "/parish-officer/reports"
+      "/parish-officer/reports",
+      "/parish-officer/announcements"
     );
   }
   return urls;
 }
 
 function navGroup(pathname: string) {
-  if (pathname.startsWith("/administrator/finance")) return "admin-finance";
-  if (pathname.startsWith("/administrator/categories")) return "admin-categories";
+  if (
+    pathname.startsWith("/administrator/finance/") &&
+    !pathname.startsWith("/administrator/finance/budgets")
+  ) {
+    return "admin-finance";
+  }
+  if (pathname.startsWith("/administrator/categories")) {
+    return "admin-categories";
+  }
   if (
     pathname.startsWith("/treasurer/donations") ||
     pathname.startsWith("/treasurer/collections") ||
@@ -207,8 +299,15 @@ function isSoftNavigation(from: string, to: string) {
 function isItemActive(pathname: string, itemUrl: string, home: string) {
   if (pathname === itemUrl) return true;
 
-  if (itemUrl.includes("/finance/")) {
-    return pathname.startsWith("/administrator/finance");
+  if (itemUrl.includes("/finance/donations")) {
+    return (
+      pathname.startsWith("/administrator/finance/") &&
+      !pathname.startsWith("/administrator/finance/budgets")
+    );
+  }
+
+  if (itemUrl.includes("/finance/budgets")) {
+    return pathname.startsWith("/administrator/finance/budgets");
   }
 
   if (itemUrl.startsWith("/administrator/categories")) {
@@ -224,6 +323,110 @@ function isItemActive(pathname: string, itemUrl: string, home: string) {
   }
 
   return pathname.startsWith(`${itemUrl}/`) || pathname.startsWith(`${itemUrl}?`);
+}
+
+function isParentActive(pathname: string, item: NavItem) {
+  if (!item.children?.length) return isItemActive(pathname, item.url, "");
+  return item.children.some(
+    (child) =>
+      pathname === child.url ||
+      pathname.startsWith(`${child.url}/`) ||
+      pathname.startsWith(`${child.url}?`)
+  );
+}
+
+function CollapsibleNavItem({
+  item,
+  home,
+  activePath,
+  isLoading,
+  parentActive,
+  isPending,
+  pendingHref,
+  isSoftPending,
+  softPendingHref,
+  onNavigate,
+  onPrefetch,
+}: {
+  item: NavItem;
+  home: string;
+  activePath: string;
+  isLoading: boolean;
+  parentActive: boolean;
+  isPending: boolean;
+  pendingHref: string | null;
+  isSoftPending: boolean;
+  softPendingHref: string | null;
+  onNavigate: (url: string) => void;
+  onPrefetch: (url: string) => void;
+}) {
+  const [open, setOpen] = useState(parentActive);
+
+  useEffect(() => {
+    setOpen(parentActive);
+  }, [parentActive]);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger
+          render={
+            <SidebarMenuButton
+              isActive={parentActive}
+              className={isLoading ? "opacity-80" : undefined}
+            />
+          }
+        >
+          {isLoading ? (
+            <Loader2 className="size-4 shrink-0 animate-spin" />
+          ) : (
+            <item.icon className="size-4 shrink-0" />
+          )}
+          <span>{item.title}</span>
+          <ChevronRightIcon
+            className={`ml-auto size-4 shrink-0 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {item.children!.map((child) => {
+              const childActive = isItemActive(activePath, child.url, home);
+              const childLoading =
+                (isPending &&
+                  pendingHref !== null &&
+                  isItemActive(pendingHref, child.url, home)) ||
+                (isSoftPending && softPendingHref === child.url);
+              const ChildIcon = child.icon;
+
+              return (
+                <SidebarMenuSubItem key={child.url}>
+                  <SidebarMenuSubButton
+                    isActive={childActive}
+                    render={<button type="button" />}
+                    onMouseEnter={() => onPrefetch(child.url)}
+                    onFocus={() => onPrefetch(child.url)}
+                    onClick={() => onNavigate(child.url)}
+                    className={
+                      childLoading
+                        ? "w-full cursor-pointer opacity-80"
+                        : "w-full cursor-pointer"
+                    }
+                  >
+                    {childLoading ? (
+                      <Loader2 className="size-4 shrink-0 animate-spin" />
+                    ) : (
+                      <ChildIcon className="size-4 shrink-0" />
+                    )}
+                    <span>{child.title}</span>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  );
 }
 
 export function AppSidebar({
@@ -293,26 +496,50 @@ export function AppSidebar({
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => {
-              const isActive = isItemActive(activePath, item.url, home);
+              const hasChildren = Boolean(item.children?.length);
+              const parentActive = hasChildren
+                ? isParentActive(activePath, item)
+                : isItemActive(activePath, item.url, home);
               const isLoading =
                 (isPending &&
                   pendingHref !== null &&
-                  isItemActive(pendingHref, item.url, home)) ||
+                  (hasChildren
+                    ? isParentActive(pendingHref, item)
+                    : isItemActive(pendingHref, item.url, home))) ||
                 (isSoftPending && softPendingHref === item.url);
+
+              if (hasChildren) {
+                return (
+                  <CollapsibleNavItem
+                    key={item.title}
+                    item={item}
+                    home={home}
+                    activePath={activePath}
+                    isLoading={isLoading}
+                    parentActive={parentActive}
+                    isPending={isPending}
+                    pendingHref={pendingHref}
+                    isSoftPending={isSoftPending}
+                    softPendingHref={softPendingHref}
+                    onNavigate={onNavigate}
+                    onPrefetch={(url) => router.prefetch(url)}
+                  />
+                );
+              }
 
               return (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
-                    isActive={isActive}
+                    isActive={parentActive}
                     onMouseEnter={() => router.prefetch(item.url)}
                     onFocus={() => router.prefetch(item.url)}
                     onClick={() => onNavigate(item.url)}
                     className={isLoading ? "opacity-80" : undefined}
                   >
                     {isLoading ? (
-                      <Loader2 className="animate-spin" />
+                      <Loader2 className="size-4 shrink-0 animate-spin" />
                     ) : (
-                      <item.icon />
+                      <item.icon className="size-4 shrink-0" />
                     )}
                     <span>{item.title}</span>
                   </SidebarMenuButton>

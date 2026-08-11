@@ -40,12 +40,12 @@ export type BudgetStatusRow = {
 };
 
 const EXPENSE_CHART_COLORS = [
-  "#D99A2B",
-  "#4F7D4A",
-  "#B85C38",
-  "#7A4E7D",
-  "#D06B64",
-  "#75843A",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-3)",
 ];
 
 function toDateKey(date: Date) {

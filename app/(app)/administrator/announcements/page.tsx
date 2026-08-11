@@ -21,8 +21,8 @@ export default async function AdminAnnouncementsPage() {
   return (
     <div className="space-y-6">
       <PageHeading
-        title="Announcement Management"
-        description="Add, edit, publish, and delete parish announcements."
+        title="Announcements"
+        description="Manage announcements shown to congregational members."
         icon={MegaphoneIcon}
       />
       <AnnouncementManager announcements={(data ?? []) as AnnouncementRow[]} />

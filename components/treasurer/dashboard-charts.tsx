@@ -26,7 +26,7 @@ import {
 const dailyIncomeConfig = {
   income: {
     label: "Income",
-    color: "#4F7D4A",
+    color: "var(--chart-1)",
   },
 } satisfies ChartConfig;
 

@@ -77,7 +77,7 @@ export default async function ParishCollectionsPage({
     <div className="space-y-6">
       <ParishViewPageHeader
         title="Collections"
-        description="Read-only view of parish collections by type."
+        description="View parish collections and income by type. Read-only — no add, edit, or delete."
         icon={ShoppingBasketIcon}
         actions={
           <ReportPeriodSelect

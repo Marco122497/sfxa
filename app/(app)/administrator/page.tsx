@@ -83,8 +83,7 @@ export default async function AdministratorDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Welcome back, {profile.first_name}. Full system overview and
-          management tools.
+          Overall financial and system overview for {profile.first_name}.
         </p>
       </div>
 

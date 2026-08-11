@@ -34,12 +34,12 @@ export default async function AdminReportsPage({
               <FileTextIcon className="size-4" aria-hidden />
             </span>
             <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-              Reports
+              Financial Reports
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Financial summary, donations, collections, expenses, budget
-            utilization, and audit trail reports.
+            Generate and view financial reports for donations, collections,
+            expenses, budget utilization, and audit activity.
           </p>
         </div>
         <ReportExportButtons

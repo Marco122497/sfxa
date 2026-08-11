@@ -91,7 +91,7 @@ export default async function AdminExpensesPage() {
     <div className="space-y-4">
       <FinancePageHeader
         title="Expenses"
-        description="Record spending with a general category and a specific category under it."
+        description="View and manage parish expenses under Financial Management."
         icon={ReceiptIcon}
       />
       {(subcategoriesResult.error || expensesResult.error) && (

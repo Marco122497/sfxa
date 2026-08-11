@@ -52,7 +52,7 @@ export default async function AdminUsersPage() {
     <div className="space-y-6">
       <PageHeading
         title="User Management"
-        description="Manage user access and roles. Personal information is stored in profiles."
+        description="Manage Administrator, Treasurer, and Parish Officer accounts."
         icon={UsersIcon}
         actions={<AddUserDialog />}
       />

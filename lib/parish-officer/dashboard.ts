@@ -34,11 +34,11 @@ export type ParishFinancialActivity = {
 };
 
 const INCOME_CHART_COLORS = [
-  "#4F7D4A",
-  "#D99A2B",
-  "#B85C38",
-  "#7A4E7D",
-  "#75843A",
+  "var(--chart-4)",
+  "var(--chart-1)",
+  "var(--chart-5)",
+  "var(--chart-2)",
+  "var(--chart-3)",
 ];
 
 const INCOME_SOURCE_ORDER = [

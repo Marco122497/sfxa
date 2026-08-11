@@ -52,7 +52,7 @@ export default async function AdminCollectionsPage() {
     <div className="space-y-4">
       <FinancePageHeader
         title="Collections"
-        description="Record parish collections by type from donation categories."
+        description="View and manage parish collections under Financial Management."
         icon={ShoppingBasketIcon}
       />
       <Card size="sm">
