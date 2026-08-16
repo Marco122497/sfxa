@@ -1,7 +1,10 @@
 export const FINANCE_TABS = [
-  { href: "/administrator/finance/donations", label: "Donations" },
   { href: "/administrator/finance/collections", label: "Collections" },
+  { href: "/administrator/finance/donations", label: "Donations" },
+  { href: "/administrator/finance/income", label: "Income" },
   { href: "/administrator/finance/expenses", label: "Expenses" },
+  { href: "/administrator/finance/disbursements", label: "Disbursements" },
+  { href: "/administrator/finance/budgets", label: "Budget" },
 ] as const;
 
 export type FinanceTabHref = (typeof FINANCE_TABS)[number]["href"];

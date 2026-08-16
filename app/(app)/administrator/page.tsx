@@ -1,20 +1,26 @@
 import {
+  ArrowDownToLineIcon,
+  ArrowUpFromLineIcon,
   BanknoteIcon,
-  HandCoinsIcon,
   LayoutDashboardIcon,
-  ShoppingBasketIcon,
-  UsersIcon,
-  WalletCardsIcon,
+  ReceiptIcon,
+  ScaleIcon,
   WalletIcon,
 } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminDashboardData } from "@/lib/admin/dashboard";
+import {
+  getCashFlowStatement,
+  getIncomeSourceSlices,
+  getMonthlyCashFlow,
+} from "@/lib/cash-flow";
 import { formatMoney } from "@/lib/format";
 import {
-  IncomeExpenseBarChart,
-  ExpensesByCategoryPieChart,
-} from "@/components/administrator/dashboard-charts";
+  CashFlowBarChart,
+  IncomeSourcesPieChart,
+} from "@/components/finance/cash-flow-charts";
+import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import {
   RecentFinancialActivitiesTable,
   RecentUserActivitiesTable,
@@ -29,45 +35,48 @@ import {
 
 export default async function AdministratorDashboardPage() {
   const { profile } = await requireAdmin();
-  const {
-    stats,
-    monthlySummary,
-    expensesByCategory,
-    recentFinancialActivities,
-    recentUserActivities,
-  } = await getAdminDashboardData();
+  const [
+    { recentFinancialActivities, recentUserActivities },
+    statement,
+    monthly,
+    sources,
+  ] = await Promise.all([
+    getAdminDashboardData(),
+    getCashFlowStatement(),
+    getMonthlyCashFlow(),
+    getIncomeSourceSlices(),
+  ]);
 
   const cards = [
     {
-      title: "Total Donations",
-      value: formatMoney(stats.totalDonations),
-      icon: HandCoinsIcon,
-    },
-    {
-      title: "Total Collections",
-      value: formatMoney(stats.totalCollections),
-      icon: ShoppingBasketIcon,
-    },
-    {
-      title: "Total Expenses",
-      value: formatMoney(stats.totalExpenses),
-      icon: WalletCardsIcon,
-    },
-    {
-      title: "Current Balance",
-      value: formatMoney(stats.currentBalance),
-      icon: BanknoteIcon,
-    },
-    {
-      title: "Remaining Budget",
-      value: formatMoney(stats.remainingBudget),
+      title: "Total Income",
+      value: formatMoney(statement.totalInflows),
       icon: WalletIcon,
     },
     {
-      title: "Total Users",
-      value: String(stats.totalUsers),
-      description: `${stats.activeUsers} active`,
-      icon: UsersIcon,
+      title: "Total Expenses",
+      value: formatMoney(statement.totalOutflows),
+      icon: ReceiptIcon,
+    },
+    {
+      title: "Cash Inflow",
+      value: formatMoney(statement.totalInflows),
+      icon: ArrowDownToLineIcon,
+    },
+    {
+      title: "Cash Outflow",
+      value: formatMoney(statement.totalOutflows),
+      icon: ArrowUpFromLineIcon,
+    },
+    {
+      title: "Net Cash Flow",
+      value: formatMoney(statement.netCashFlow),
+      icon: ScaleIcon,
+    },
+    {
+      title: "Current Balance",
+      value: formatMoney(statement.endingBalance),
+      icon: BanknoteIcon,
     },
   ];
 
@@ -83,7 +92,8 @@ export default async function AdministratorDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Overall financial and system overview for {profile.first_name}.
+          Overall financial summary for {profile.first_name}: income, expenses,
+          cash flow, and current balance.
         </p>
       </div>
 
@@ -100,11 +110,6 @@ export default async function AdministratorDashboardPage() {
               <div className="text-2xl font-semibold tracking-tight">
                 {card.value}
               </div>
-              {"description" in card && card.description ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {card.description}
-                </p>
-              ) : null}
             </CardContent>
           </Card>
         ))}
@@ -113,29 +118,45 @@ export default async function AdministratorDashboardPage() {
       <div className="grid gap-4 xl:grid-cols-5">
         <Card className="xl:col-span-3">
           <CardHeader>
-            <CardTitle>Income vs. Expenses</CardTitle>
+            <CardTitle>Cash Flow</CardTitle>
             <CardDescription>
-              Monthly income vs. expenses — illustrative comparison of parish
-              income and expenses by month.
+              Cash inflow, outflow, and net cash flow by month.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <IncomeExpenseBarChart data={monthlySummary} />
+            <CashFlowBarChart data={monthly} />
           </CardContent>
         </Card>
 
         <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
+            <CardTitle>Income Sources</CardTitle>
             <CardDescription>
-              Where parish funds are being spent.
+              Donations, collections, church services, and other income.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ExpensesByCategoryPieChart data={expensesByCategory} />
+            <IncomeSourcesPieChart data={sources} />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Statement summary</CardTitle>
+          <CardDescription>
+            Statement of Cash Flows for the current month. Open the full
+            statement for line-item detail.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CashFlowStatementView
+            statement={statement}
+            compact
+            fullHref="/administrator/statements"
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>

@@ -96,7 +96,7 @@ export default async function TreasurerBudgetHistoryPage() {
           <CardTitle>Change history</CardTitle>
           <CardDescription>
             {error
-              ? "History table is not available yet. Run sql/phase6-budget.sql in Supabase."
+              ? "History table is not available yet. Run sql/phase5-budget.sql in Supabase."
               : "Most recent budget changes across the parish."}
           </CardDescription>
         </CardHeader>

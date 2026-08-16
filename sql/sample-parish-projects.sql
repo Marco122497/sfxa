@@ -1,4 +1,6 @@
 -- Optional sample parish projects for the public transparency page
+-- Run after sql/phase6-transparency.sql
+
 INSERT INTO parish_projects (project_name, description, budget, status, start_date, end_date)
 SELECT *
 FROM (

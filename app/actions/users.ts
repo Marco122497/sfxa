@@ -159,6 +159,9 @@ export async function createUser(
   );
 
   revalidatePath("/administrator/users");
+  revalidatePath("/administrator/users/treasurers");
+  revalidatePath("/administrator/users/members");
+  revalidatePath("/administrator/chapels");
   revalidatePath("/administrator");
   return { success: "User created successfully." };
 }
@@ -298,6 +301,9 @@ export async function updateUser(
   );
 
   revalidatePath("/administrator/users");
+  revalidatePath("/administrator/users/treasurers");
+  revalidatePath("/administrator/users/members");
+  revalidatePath("/administrator/chapels");
   revalidatePath("/administrator");
   revalidatePath("/profile");
   return { success: "User updated successfully." };
@@ -383,6 +389,8 @@ export async function deleteUser(
   }
 
   revalidatePath("/administrator/users");
+  revalidatePath("/administrator/users/treasurers");
+  revalidatePath("/administrator/users/members");
   revalidatePath("/administrator");
   return { success: "User deleted." };
 }

@@ -61,7 +61,7 @@ export async function getBudgetModuleData() {
       .order("subcategory_name"),
   ]);
 
-  // Before phase10 the budgets table has no subcategory column; fall back.
+  // Before sql/phase5-budget.sql the budgets table has no subcategory column; fall back.
   let budgets = budgetsResult.data as
     | {
         budget_id: number;

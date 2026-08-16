@@ -42,6 +42,12 @@ export function NavigationPendingProvider({
   }, [pathname]);
 
   useEffect(() => {
+    if (!pendingHref) return;
+    const timeout = window.setTimeout(() => setPendingHref(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [pendingHref]);
+
+  useEffect(() => {
     if (wasPending.current && !isPending) {
       setPendingHref(null);
     }

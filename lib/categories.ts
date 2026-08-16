@@ -4,6 +4,9 @@ export const COLLECTION_CATEGORY_NAMES = [
   "Special Collection",
   "Fiesta Collection",
   "Other Collection",
+  "Regular Collection",
+  "Sunday Offering",
+  "Chapel Collection",
 ] as const;
 
 export type CollectionCategoryName =
@@ -15,24 +18,26 @@ export function isCollectionCategoryName(name: string | null | undefined) {
   return (
     COLLECTION_CATEGORY_NAMES.some(
       (item) => item.toLowerCase() === normalized
-    ) || normalized.includes("collection")
+    ) ||
+    normalized.includes("collection") ||
+    normalized.includes("offering")
   );
 }
 
 export const CATEGORY_TABS = [
   {
-    href: "/administrator/categories/donations",
-    label: "Donation",
-    kind: "donation" as const,
+    href: "/administrator/categories/income",
+    label: "Income Categories",
+    kind: "income" as const,
   },
   {
-    href: "/administrator/categories/collections",
-    label: "Collection",
-    kind: "collection" as const,
+    href: "/administrator/categories/income-services",
+    label: "Income Services",
+    kind: "income-services" as const,
   },
   {
     href: "/administrator/categories/expenses",
-    label: "Expense",
+    label: "Expense Categories",
     kind: "expense" as const,
   },
 ] as const;

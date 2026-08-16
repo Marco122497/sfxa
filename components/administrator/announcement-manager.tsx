@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import {
   EyeOffIcon,
   GlobeIcon,
@@ -18,7 +18,13 @@ import {
   updateAnnouncement,
   type AnnouncementActionState,
 } from "@/app/actions/announcements";
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import { formatDateTime } from "@/lib/auth/roles";
+import {
+  parishContentKind,
+  stripParishPrefix,
+  type ParishContentKind,
+} from "@/lib/parish-content";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -59,16 +65,19 @@ export type AnnouncementRow = {
   updated_at: string;
 };
 
-function AddAnnouncementDialog() {
+const selectClassName =
+  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+
+function AddAnnouncementDialog({ kind }: { kind?: ParishContentKind }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     createAnnouncement,
     initialState
   );
+  const lockedKind = kind;
+  const noun = lockedKind === "notice" ? "notice" : "activity";
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog
@@ -80,16 +89,20 @@ function AddAnnouncementDialog() {
     >
       <AlertDialogTrigger render={<Button type="button" />}>
         <PlusIcon />
-        Add announcement
+        Create {noun}
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
           <AlertDialogMedia className="bg-muted">
             <MegaphoneIcon />
           </AlertDialogMedia>
-          <AlertDialogTitle>Add announcement?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {lockedKind === "notice" ? "Create notice" : "Create activity"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Create a parish announcement. Publish when ready for staff to see.
+            {lockedKind === "notice"
+              ? "Create a parish notice. Publish when members should see it."
+              : "Create a parish activity. Publish when members should see it."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id="add-announcement-form" className="space-y-4">
@@ -97,6 +110,23 @@ function AddAnnouncementDialog() {
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
+          )}
+          {lockedKind ? (
+            <input type="hidden" name="kind" value={lockedKind} />
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="add-announcement-kind">Type</Label>
+              <select
+                id="add-announcement-kind"
+                name="kind"
+                required
+                defaultValue="activity"
+                className={selectClassName}
+              >
+                <option value="activity">Parish Activity</option>
+                <option value="notice">Parish Notice</option>
+              </select>
+            </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="add-announcement-title">Title</Label>
@@ -130,7 +160,7 @@ function AddAnnouncementDialog() {
                 Saving…
               </>
             ) : (
-              "Save announcement"
+              "Save"
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -139,7 +169,13 @@ function AddAnnouncementDialog() {
   );
 }
 
-function EditAnnouncementDialog({ item }: { item: AnnouncementRow }) {
+function EditAnnouncementDialog({
+  item,
+  kind,
+}: {
+  item: AnnouncementRow;
+  kind?: ParishContentKind;
+}) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
     updateAnnouncement,
@@ -147,9 +183,7 @@ function EditAnnouncementDialog({ item }: { item: AnnouncementRow }) {
   );
   const formId = `edit-announcement-${item.announcement_id}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog
@@ -173,9 +207,12 @@ function EditAnnouncementDialog({ item }: { item: AnnouncementRow }) {
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle>Edit announcement</AlertDialogTitle>
+          <AlertDialogTitle>
+            {kind === "notice" ? "Edit notice" : "Edit activity"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Update the title and content of this announcement.
+            Update the title and content of this{" "}
+            {kind === "notice" ? "notice" : "activity"}.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id={formId} className="space-y-4">
@@ -189,6 +226,23 @@ function EditAnnouncementDialog({ item }: { item: AnnouncementRow }) {
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
+          {kind ? (
+            <input type="hidden" name="kind" value={kind} />
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor={`edit-kind-${item.announcement_id}`}>Type</Label>
+              <select
+                id={`edit-kind-${item.announcement_id}`}
+                name="kind"
+                required
+                defaultValue={parishContentKind(item.title)}
+                className={selectClassName}
+              >
+                <option value="activity">Parish Activity</option>
+                <option value="notice">Parish Notice</option>
+              </select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor={`edit-title-${item.announcement_id}`}>Title</Label>
             <Input
@@ -196,7 +250,7 @@ function EditAnnouncementDialog({ item }: { item: AnnouncementRow }) {
               id={`edit-title-${item.announcement_id}`}
               name="title"
               required
-              defaultValue={item.title}
+              defaultValue={stripParishPrefix(item.title)}
             />
           </div>
           <div className="space-y-2">
@@ -237,6 +291,7 @@ function PublishAnnouncementButton({ item }: { item: AnnouncementRow }) {
     publishAnnouncement,
     initialState
   );
+  useRefreshOnSuccess(state.success);
 
   return (
     <form action={formAction} className="inline">
@@ -284,9 +339,7 @@ function DeleteAnnouncementButton({ item }: { item: AnnouncementRow }) {
   );
   const formId = `delete-announcement-${item.announcement_id}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -311,10 +364,10 @@ function DeleteAnnouncementButton({ item }: { item: AnnouncementRow }) {
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <Trash2Icon />
             </AlertDialogMedia>
-            <AlertDialogTitle>Delete announcement?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this item?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove “{item.title}”. This cannot be
-              undone.
+              This will permanently remove “{stripParishPrefix(item.title)}”.
+              This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           {state.error && (
@@ -358,25 +411,33 @@ function DeleteAnnouncementButton({ item }: { item: AnnouncementRow }) {
 
 export function AnnouncementManager({
   announcements,
+  kind,
 }: {
   announcements: AnnouncementRow[];
+  kind?: ParishContentKind;
 }) {
+  const noun = kind === "notice" ? "notice" : kind === "activity" ? "activity" : "item";
+  const showType = !kind;
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          {announcements.length} announcement
+          {announcements.length} {noun}
           {announcements.length === 1 ? "" : "s"}
         </p>
-        <AddAnnouncementDialog />
+        <AddAnnouncementDialog kind={kind} />
       </div>
 
       {announcements.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No announcements yet.</p>
+        <p className="text-sm text-muted-foreground">
+          No {kind === "notice" ? "notices" : kind === "activity" ? "activities" : "parish information"} yet.
+        </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
+              {showType ? <TableHead>Type</TableHead> : null}
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Updated</TableHead>
@@ -387,9 +448,18 @@ export function AnnouncementManager({
           <TableBody>
             {announcements.map((item) => (
               <TableRow key={item.announcement_id}>
+                {showType ? (
+                  <TableCell>
+                    {parishContentKind(item.title) === "activity"
+                      ? "Activity"
+                      : "Notice"}
+                  </TableCell>
+                ) : null}
                 <TableCell>
                   <div className="max-w-[320px]">
-                    <p className="truncate font-medium">{item.title}</p>
+                    <p className="truncate font-medium">
+                      {stripParishPrefix(item.title)}
+                    </p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                       {item.content}
                     </p>
@@ -406,7 +476,7 @@ export function AnnouncementManager({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
-                    <EditAnnouncementDialog item={item} />
+                    <EditAnnouncementDialog item={item} kind={kind} />
                     <PublishAnnouncementButton item={item} />
                     <DeleteAnnouncementButton item={item} />
                   </div>

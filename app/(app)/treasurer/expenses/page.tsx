@@ -93,14 +93,14 @@ export default async function TreasurerExpensesPage() {
   return (
     <div className="space-y-4">
       <TreasurerPageHeader
-        title="Expense Management"
+        title="Release Expenses"
         description="Record spending with a general category and a specific category under it."
         icon={ReceiptIcon}
       />
       {(subcategoriesResult.error || expensesResult.error) && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
           Specific categories need a database update. Run{" "}
-          <code className="text-xs">sql/phase9-expense-subcategories.sql</code>{" "}
+          <code className="text-xs">sql/phase3-categories.sql</code>{" "}
           in Supabase, then refresh.
         </p>
       )}

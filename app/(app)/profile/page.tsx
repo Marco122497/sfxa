@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { requireUser } from "@/lib/auth/session";
 
 export default async function ProfilePage() {
-  const { profile } = await requireUser();
+  const { profile, user } = await requireUser();
 
   return (
     <div className="space-y-6">
@@ -14,7 +14,7 @@ export default async function ProfilePage() {
         description="View and update your personal information."
         icon={UserRoundIcon}
       />
-      <ProfileForm profile={profile} />
+      <ProfileForm profile={profile} email={user.email ?? ""} />
     </div>
   );
 }

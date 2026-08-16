@@ -35,7 +35,7 @@ export default async function ParishBudgetMonitoringPage() {
       {subcategorySetupRequired ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
           Specific budget allocations need a database update. Run{" "}
-          <code className="text-xs">sql/phase10-budget-subcategories.sql</code>{" "}
+          <code className="text-xs">sql/phase5-budget.sql</code>{" "}
           in Supabase, then refresh.
         </p>
       ) : null}

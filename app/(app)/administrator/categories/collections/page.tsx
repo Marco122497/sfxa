@@ -1,11 +1,5 @@
-import { AdminCategoriesSection } from "@/components/administrator/admin-categories-section";
+import { redirect } from "next/navigation";
 
-export default function AdminCollectionCategoriesPage() {
-  return (
-    <AdminCategoriesSection
-      kind="collection"
-      title="Collection Categories"
-      description="Manage parish collection types (Sunday, Fiesta, Special, and other collections)."
-    />
-  );
+export default function AdminCollectionCategoriesRedirectPage() {
+  redirect("/administrator/categories/income-services");
 }

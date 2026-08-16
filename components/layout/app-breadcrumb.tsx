@@ -17,21 +17,42 @@ const pageLabels: Record<string, string> = {
   "change-password": "Change password",
   users: "User Management",
   announcements: "Announcements",
-  audit: "Audit Trail",
-  reports: "Financial Reports",
-  finance: "Financial Management",
+  audit: "Audit Logs",
+  reports: "Reports",
+  finance: "Financial Monitoring",
   donations: "Donations",
-  collections: "Collections",
+  collections: "Collections / Offerings",
   expenses: "Expenses",
-  budgets: "Budget Management",
+  budgets: "Budget",
   categories: "Categories",
-  allocation: "Budget Management",
+  income: "Income Categories",
+  chapels: "Chapel Access",
+  treasurers: "Treasurers",
+  members: "Parish Members",
+  activities: "Parish Activities",
+  notices: "Parish Notices",
+  parish: "Parish Information",
+  transparency: "Financial Transparency",
+  summary: "Financial Summary",
+  "income-services": "Income Services",
+  statements: "Financial Statements",
+  settings: "Settings",
+  receive: "Receive Funds",
+  release: "Release Funds",
+  services: "Church Services",
+  other: "Other Income",
+  disbursements: "Disbursements",
+  "cash-flow": "Cash Flow",
+  donate: "Donate Online",
+  "my-donations": "My Donations",
+  history: "Donation History",
+  "parish-info": "Parish Information",
 };
 
 const dashboardLabels: Record<string, string> = {
   administrator: "Administrator Dashboard",
   treasurer: "Treasurer Dashboard",
-  "parish-officer": "Parish Officer Dashboard",
+  "parish-officer": "Parish Member Dashboard",
 };
 
 export function AppBreadcrumb({ dashboardHref }: { dashboardHref: string }) {
@@ -55,10 +76,19 @@ export function AppBreadcrumb({ dashboardHref }: { dashboardHref: string }) {
   const dashboardLabel =
     dashboardLabels[dashboardHref.replace("/", "")] ?? "Dashboard";
   const leaf = segments[segments.length - 1] ?? "";
-  const pageLabel =
+  let pageLabel =
     pageLabels[leaf] ||
     pageLabels[segments[1] ?? ""] ||
     leaf.replace(/-/g, " ");
+  if (leaf === "income" && segments.includes("finance")) {
+    pageLabel = "Income";
+  }
+  if (leaf === "income" && segments.includes("categories")) {
+    pageLabel = "Income Categories";
+  }
+  if (leaf === "activities" && segments[0] === "parish-officer") {
+    pageLabel = "Upcoming Parish Activities";
+  }
 
   return (
     <Breadcrumb>

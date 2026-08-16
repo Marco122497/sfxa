@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import {
@@ -10,6 +10,7 @@ import {
   type CategoryActionState,
   type CategoryKind,
 } from "@/app/actions/categories";
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -83,9 +84,7 @@ function AddCategoryDialog({ kind }: { kind: CategoryKind }) {
   );
   const copy = KIND_COPY[kind];
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -141,9 +140,7 @@ function EditCategoryDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -227,9 +224,7 @@ function DeleteCategoryButton({
   );
   const formId = `delete-category-${kind}-${categoryId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

@@ -69,12 +69,13 @@ async function getIp() {
 
 function revalidateCategories() {
   revalidatePath("/administrator/categories");
-  revalidatePath("/administrator/categories/donations");
-  revalidatePath("/administrator/categories/collections");
+  revalidatePath("/administrator/categories/income");
+  revalidatePath("/administrator/categories/income-services");
   revalidatePath("/administrator/categories/expenses");
   revalidatePath("/administrator/categories/budgets");
   revalidatePath("/treasurer/donations");
   revalidatePath("/treasurer/collections");
+  revalidatePath("/treasurer/receive/other");
   revalidatePath("/treasurer/expenses");
   revalidatePath("/treasurer/budgets");
   revalidatePath("/treasurer/budgets/categories");
@@ -327,7 +328,7 @@ export async function createExpenseSubcategory(
     if (/relation|does not exist|expense_subcategories/i.test(error.message)) {
       return {
         error:
-          "Specific categories table is missing. Run sql/phase9-expense-subcategories.sql in Supabase.",
+          "Specific categories table is missing. Run sql/phase3-categories.sql in Supabase.",
       };
     }
     return { error: error.message };

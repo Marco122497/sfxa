@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import {
   createDonation,
   deleteDonation,
@@ -87,7 +88,7 @@ function DonationFormFields({
       )}
       <div className={`space-y-2${isCollection ? " sm:col-span-2" : ""}`}>
         <Label htmlFor={`${idPrefix}-category`}>
-          {isCollection ? "Collection type" : "Category"}
+          {isCollection ? "Collection type" : "Donation type"}
         </Label>
         <select
           id={`${idPrefix}-category`}
@@ -95,7 +96,11 @@ function DonationFormFields({
           required
           defaultValue={defaults?.category_id ?? categories[0]?.category_id ?? ""}
           className={selectClassName}
+          disabled={categories.length === 0}
         >
+          {categories.length === 0 ? (
+            <option value="">No types configured</option>
+          ) : null}
           {categories.map((category) => (
             <option key={category.category_id} value={category.category_id}>
               {category.category_name}
@@ -156,9 +161,7 @@ function AddDonationDialog({
   );
   const isCollection = mode === "collection";
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -173,8 +176,8 @@ function AddDonationDialog({
           </AlertDialogTitle>
           <AlertDialogDescription>
             {isCollection
-              ? "Choose the collection type (e.g. Sunday 1st or 2nd Mass), then enter the amount."
-              : "Record a donation entry."}
+              ? "Choose a collection type from Income Services, then enter the amount."
+              : "Choose a donation type from Income Services, then enter the amount."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id="add-donation-form" className="space-y-4">
@@ -183,18 +186,31 @@ function AddDonationDialog({
               <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
-          <DonationFormFields
-            categories={categories}
-            idPrefix="add"
-            mode={mode}
-            defaults={{
-              category_id: defaultCategoryId ?? categories[0]?.category_id,
-            }}
-          />
+          {categories.length === 0 ? (
+            <Alert>
+              <AlertDescription>
+                No {isCollection ? "collection" : "donation"} types found.
+                Add them under Categories → Income Services first.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <DonationFormFields
+              categories={categories}
+              idPrefix="add"
+              mode={mode}
+              defaults={{
+                category_id: defaultCategoryId ?? categories[0]?.category_id,
+              }}
+            />
+          )}
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button type="submit" form="add-donation-form" disabled={pending}>
+          <Button
+            type="submit"
+            form="add-donation-form"
+            disabled={pending || categories.length === 0}
+          >
             {pending ? (
               <>
                 <Loader2 className="animate-spin" />
@@ -226,9 +242,7 @@ function EditDonationDialog({
   );
   const isCollection = mode === "collection";
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -268,7 +282,18 @@ function EditDonationDialog({
           )}
           <DonationFormFields
             key={JSON.stringify(row)}
-            categories={categories}
+            categories={
+              row.category_id &&
+              !categories.some((item) => item.category_id === row.category_id)
+                ? [
+                    ...categories,
+                    {
+                      category_id: row.category_id,
+                      category_name: row.category_name || "Inactive type",
+                    },
+                  ]
+                : categories
+            }
             idPrefix={`edit-${row.donation_id}`}
             mode={mode}
             defaults={row}
@@ -314,9 +339,7 @@ function DeleteDonationButton({
   const entity = isCollection ? "collection" : "donation";
   const formId = `delete-donation-${donationId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

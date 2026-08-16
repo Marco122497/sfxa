@@ -167,7 +167,7 @@ export function TransparencySite({
           <p className="border border-[#8a6a2a]/30 bg-[#efe4c4] px-4 py-3 text-sm text-[#4a3a18]">
             Public summaries need setup. Run{" "}
             <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs">
-              sql/phase5-public.sql
+              sql/phase6-transparency.sql
             </code>{" "}
             in Supabase, then refresh.
           </p>

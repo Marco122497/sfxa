@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import {
@@ -12,6 +12,7 @@ import {
   updateExpenseSubcategory,
   type CategoryActionState,
 } from "@/app/actions/categories";
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -60,9 +61,7 @@ function AddGeneralDialog() {
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -120,9 +119,7 @@ function EditGeneralDialog({ row }: { row: ExpenseGeneralCategory }) {
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -204,9 +201,7 @@ function DeleteGeneralButton({
   );
   const formId = `delete-general-${categoryId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -284,9 +279,7 @@ function AddSpecificDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   const disabled = generals.length === 0;
 
@@ -370,9 +363,7 @@ function EditSpecificDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   const generalName =
     generals.find((g) => g.id === row.expense_category_id)?.name ?? "—";
@@ -458,9 +449,7 @@ function DeleteSpecificButton({
   );
   const formId = `delete-specific-${subcategoryId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

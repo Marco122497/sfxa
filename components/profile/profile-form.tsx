@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { CameraIcon, Loader2 } from "lucide-react";
 
 import {
@@ -10,9 +11,11 @@ import {
 } from "@/app/actions/profile";
 import type { Profile } from "@/lib/auth/roles";
 import { formatDateTime } from "@/lib/auth/roles";
+import { displayRoleName } from "@/lib/income";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -52,7 +55,13 @@ function profileToForm(profile: Profile) {
   };
 }
 
-export function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({
+  profile,
+  email,
+}: {
+  profile: Profile;
+  email: string;
+}) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(() => profileToForm(profile));
   const [profileState, profileAction, profilePending] = useActionState(
@@ -161,6 +170,13 @@ export function ProfileForm({ profile }: { profile: Profile }) {
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={email || "—"} readOnly />
+                <p className="text-xs text-muted-foreground">
+                  Used to sign in. Contact an administrator to change it.
+                </p>
+              </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="employee_no">Employee No.</Label>
                 <Input
@@ -276,7 +292,9 @@ export function ProfileForm({ profile }: { profile: Profile }) {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Role</p>
-                <p className="text-sm text-muted-foreground">{profile.role}</p>
+                <p className="text-sm text-muted-foreground">
+                  {displayRoleName(profile.role)}
+                </p>
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium">Status</p>
@@ -298,16 +316,24 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               </div>
             </div>
 
-            <Button type="submit" disabled={profilePending}>
-              {profilePending ? (
-                <>
-                  <Loader2 className="animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                "Save changes"
-              )}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={profilePending}>
+                {profilePending ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+              <Link
+                href="/change-password"
+                className={cn(buttonVariants({ variant: "outline" }))}
+              >
+                Change password
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>

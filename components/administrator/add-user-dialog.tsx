@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { Loader2, UserPlusIcon } from "lucide-react";
 
 import { createUser, type UserActionState } from "@/app/actions/users";
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import { ROLES } from "@/lib/auth/roles";
+import { displayRoleName } from "@/lib/income";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -25,14 +27,14 @@ const initialState: UserActionState = {};
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
-function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
+function AddUserForm({
+  onSuccess,
+}: {
+  onSuccess: () => void;
+}) {
   const [state, formAction, pending] = useActionState(createUser, initialState);
 
-  useEffect(() => {
-    if (state.success) {
-      onSuccess();
-    }
-  }, [state.success, onSuccess]);
+  useRefreshOnSuccess(state.success, onSuccess);
 
   return (
     <>
@@ -70,12 +72,13 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               id="add-role"
               name="role"
               required
-              defaultValue="Parish Officer"
+              defaultValue=""
               className={selectClassName}
             >
+              <option value="">Select role</option>
               {ROLES.map((role) => (
                 <option key={role} value={role}>
-                  {role}
+                  {displayRoleName(role)}
                 </option>
               ))}
             </select>
@@ -129,7 +132,11 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-export function AddUserDialog() {
+export function AddUserDialog({
+  label,
+}: {
+  label?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
@@ -137,14 +144,14 @@ export function AddUserDialog() {
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger render={<Button type="button" />}>
         <UserPlusIcon />
-        Add User
+        {label ?? "Add User"}
       </AlertDialogTrigger>
 
       <AlertDialogContent className="max-w-lg sm:max-w-xl">
         <AlertDialogHeader>
-          <AlertDialogTitle>Add User</AlertDialogTitle>
+          <AlertDialogTitle>{label ?? "Add User"}</AlertDialogTitle>
           <AlertDialogDescription>
-            Create a staff account. Personal details are stored in profiles.
+            Create an Administrator, Treasurer, or Parish Member account.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -9,6 +9,8 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+
 import {
   createExpense,
   deleteExpense,
@@ -229,9 +231,7 @@ function AddExpenseDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -291,9 +291,7 @@ function EditExpenseDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -381,9 +379,7 @@ function DeleteExpenseButton({
   );
   const formId = `delete-expense-${expenseId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

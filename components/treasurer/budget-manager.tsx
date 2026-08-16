@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import {
   createBudget,
   deleteBudget,
@@ -200,9 +201,7 @@ function AddBudgetDialog({ categories }: { categories: BudgetCategory[] }) {
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -257,9 +256,7 @@ function EditBudgetDialog({
     initialState
   );
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -336,9 +333,7 @@ function DeleteBudgetButton({
   );
   const formId = `delete-budget-${budgetId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

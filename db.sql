@@ -1,5 +1,7 @@
--- SFXA Finance — Database Schema
--- Run in Supabase SQL Editor (PostgreSQL)
+-- SFXA Finance — Phase 1 core schema
+-- Run in Supabase SQL Editor (PostgreSQL).
+-- Then run sql/phase2-admin.sql through sql/phase6-transparency.sql
+-- (see sql/README.md). Safe to re-run.
 
 -- ============================================================
 -- PROFILES (extends auth.users)
@@ -127,14 +129,8 @@ CREATE TABLE IF NOT EXISTS donation_categories (
     category_name VARCHAR(100) UNIQUE NOT NULL
 );
 
-INSERT INTO donation_categories (category_name)
-VALUES
-    ('Sunday Collection - 1st Mass'),
-    ('Sunday Collection - 2nd Mass'),
-    ('Fiesta Collection'),
-    ('Special Collection'),
-    ('Other Collection')
-ON CONFLICT (category_name) DO NOTHING;
+-- Income services (Donations, Collections/Offerings, Church Services,
+-- Other Income) are seeded in sql/phase3-categories.sql.
 
 CREATE TABLE IF NOT EXISTS donations (
     donation_id BIGSERIAL PRIMARY KEY,
@@ -173,6 +169,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     description TEXT,
     amount NUMERIC(12, 2) NOT NULL,
     expense_date DATE NOT NULL,
+    receipt_url TEXT,
     created_by UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

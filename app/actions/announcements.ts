@@ -4,6 +4,10 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/session";
+import {
+  encodeParishTitle,
+  type ParishContentKind,
+} from "@/lib/parish-content";
 
 export type AnnouncementActionState = {
   error?: string;
@@ -19,6 +23,18 @@ async function getIp() {
   );
 }
 
+function revalidateParishPages() {
+  revalidatePath("/administrator/announcements");
+  revalidatePath("/administrator/parish");
+  revalidatePath("/administrator/parish/activities");
+  revalidatePath("/administrator/parish/notices");
+  revalidatePath("/parish-officer");
+  revalidatePath("/parish-officer/parish-info");
+  revalidatePath("/parish-officer/activities");
+  revalidatePath("/parish-officer/notices");
+  revalidatePath("/treasurer/parish-info");
+}
+
 export async function createAnnouncement(
   _prev: AnnouncementActionState,
   formData: FormData
@@ -28,15 +44,20 @@ export async function createAnnouncement(
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
   const publish = String(formData.get("publish") || "") === "1";
+  const kindRaw = String(formData.get("kind") || "notice");
+  const kind: ParishContentKind =
+    kindRaw === "activity" ? "activity" : "notice";
 
   if (!title || !content) {
     return { error: "Title and content are required." };
   }
 
+  const storedTitle = encodeParishTitle(kind, title);
+
   const { data, error } = await supabase
     .from("announcements")
     .insert({
-      title,
+      title: storedTitle,
       content,
       created_by: user.id,
       is_published: publish,
@@ -54,11 +75,11 @@ export async function createAnnouncement(
     action: "CREATE_ANNOUNCEMENT",
     table_name: "announcements",
     record_id: data.announcement_id,
-    description: `Created announcement: ${title}`,
+    description: `Created announcement: ${storedTitle}`,
     ip_address: await getIp(),
   });
 
-  revalidatePath("/administrator/announcements");
+  revalidateParishPages();
   return { success: publish ? "Announcement published." : "Announcement saved as draft." };
 }
 
@@ -71,14 +92,19 @@ export async function updateAnnouncement(
   const announcementId = Number(formData.get("announcement_id"));
   const title = String(formData.get("title") || "").trim();
   const content = String(formData.get("content") || "").trim();
+  const kindRaw = String(formData.get("kind") || "notice");
+  const kind: ParishContentKind =
+    kindRaw === "activity" ? "activity" : "notice";
 
   if (!announcementId || !title || !content) {
     return { error: "Title and content are required." };
   }
 
+  const storedTitle = encodeParishTitle(kind, title);
+
   const { error } = await supabase
     .from("announcements")
-    .update({ title, content })
+    .update({ title: storedTitle, content })
     .eq("announcement_id", announcementId);
 
   if (error) {
@@ -94,7 +120,7 @@ export async function updateAnnouncement(
     ip_address: await getIp(),
   });
 
-  revalidatePath("/administrator/announcements");
+  revalidateParishPages();
   return { success: "Announcement updated." };
 }
 
@@ -131,7 +157,7 @@ export async function publishAnnouncement(
     ip_address: await getIp(),
   });
 
-  revalidatePath("/administrator/announcements");
+  revalidateParishPages();
   return { success: publish ? "Announcement published." : "Announcement unpublished." };
 }
 
@@ -164,6 +190,6 @@ export async function deleteAnnouncement(
     ip_address: await getIp(),
   });
 
-  revalidatePath("/administrator/announcements");
+  revalidateParishPages();
   return { success: "Announcement deleted." };
 }

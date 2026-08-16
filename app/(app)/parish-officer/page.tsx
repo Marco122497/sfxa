@@ -1,22 +1,23 @@
 import Link from "next/link";
 import {
+  ArrowRightIcon,
   BanknoteIcon,
-  CalendarIcon,
-  FileTextIcon,
-  HandCoinsIcon,
   LayoutDashboardIcon,
-  ShoppingBasketIcon,
+  ScaleIcon,
   WalletCardsIcon,
+  WalletIcon,
 } from "lucide-react";
 
 import { requireParishOfficer } from "@/lib/auth/session";
-import { getParishOfficerDashboardData } from "@/lib/parish-officer/dashboard";
-import { PARISH_REPORT_TYPES } from "@/lib/reports";
-import { formatDate, formatMoney } from "@/lib/format";
+import { createClient } from "@/lib/supabase/server";
+import { getCashFlowStatement } from "@/lib/cash-flow";
+import { listChapels } from "@/lib/chapels/store";
+import { formatDateTime } from "@/lib/auth/roles";
+import { formatMoney } from "@/lib/format";
 import {
-  IncomeSourcesPieChart,
-  MonthlyIncomeExpenseBarChart,
-} from "@/components/parish-officer/dashboard-charts";
+  isParishContentKind,
+  stripParishPrefix,
+} from "@/lib/parish-content";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -25,56 +26,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 export default async function ParishOfficerDashboardPage() {
   const { profile } = await requireParishOfficer();
-  const {
-    stats,
-    monthlySummary,
-    incomeSources,
-    recentFinancialSummary,
-  } = await getParishOfficerDashboardData();
+  const supabase = await createClient();
+  const [statement, chapels, { data: announcements }] = await Promise.all([
+    getCashFlowStatement(),
+    listChapels().catch(() => []),
+    supabase
+      .from("announcements")
+      .select("announcement_id, title, published_at, created_at, content")
+      .eq("is_published", true)
+      .order("published_at", { ascending: false })
+      .limit(8),
+  ]);
 
-  const cards = [
-    {
-      title: "Total Donations",
-      value: formatMoney(stats.totalDonations),
-      icon: HandCoinsIcon,
-    },
-    {
-      title: "Total Collections",
-      value: formatMoney(stats.totalCollections),
-      icon: ShoppingBasketIcon,
-    },
-    {
-      title: "Total Expenses",
-      value: formatMoney(stats.totalExpenses),
-      icon: WalletCardsIcon,
-    },
-    {
-      title: "Current Balance",
-      value: formatMoney(stats.currentBalance),
-      icon: BanknoteIcon,
-    },
-    {
-      title: "Current Budget Utilization",
-      value: `${stats.budgetUtilizationPct}%`,
-      description:
-        stats.totalBudget > 0
-          ? `${formatMoney(stats.budgetSpent)} of ${formatMoney(stats.totalBudget)}`
-          : "No budget allocated",
-      icon: CalendarIcon,
-    },
-  ];
+  const chapel = chapels.find((row) => row.chapel_id === profile.chapel_id);
+  const items = announcements ?? [];
+  const activities = items.filter((row) =>
+    isParishContentKind(row.title, "activity")
+  );
+  const notices = items.filter((row) =>
+    isParishContentKind(row.title, "notice")
+  );
 
   return (
     <div className="space-y-6">
@@ -84,132 +59,169 @@ export default async function ParishOfficerDashboardPage() {
             <LayoutDashboardIcon className="size-4" aria-hidden />
           </span>
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Dashboard
+            Saint Francis Xavier Parish
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Overall parish financial status for {profile.first_name}. View-only —
-          no record editing.
+          {chapel?.chapel_name || "Parish-wide approved view"} · Welcome,{" "}
+          {profile.first_name}. View-only financial summaries and parish
+          information.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {cards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <card.icon className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">
-                {card.value}
-              </div>
-              {"description" in card && card.description ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {card.description}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-5">
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <CardTitle>Monthly Financial Overview</CardTitle>
-            <CardDescription>
-              Income (donations + collections) vs expenses by month.
-            </CardDescription>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Collections
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <MonthlyIncomeExpenseBarChart data={monthlySummary} />
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.totalInflows)}
+            </div>
+            <BanknoteIcon className="size-4 text-muted-foreground" />
           </CardContent>
         </Card>
-
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle>Income Sources</CardTitle>
-            <CardDescription>
-              Where parish income comes from.
-            </CardDescription>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Expenses
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <IncomeSourcesPieChart data={incomeSources} />
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.totalOutflows)}
+            </div>
+            <WalletCardsIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Net Cash Flow
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.netCashFlow)}
+            </div>
+            <ScaleIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ending Balance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.endingBalance)}
+            </div>
+            <WalletIcon className="size-4 text-muted-foreground" />
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
-        <Card className="xl:col-span-3">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Recent Financial Summary</CardTitle>
-            <CardDescription>
-              Summarized recent parish financial activity.
-            </CardDescription>
+            <CardTitle>Upcoming Activities</CardTitle>
+            <CardDescription>Published by the Administrator.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {recentFinancialSummary.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No financial activity recorded yet.
-              </p>
+          <CardContent className="space-y-3">
+            {activities.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No activities yet.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Activity</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentFinancialSummary.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{formatDate(row.date)}</TableCell>
-                      <TableCell className="max-w-[260px] truncate">
-                        {row.activity}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatMoney(row.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <ul className="space-y-2 text-sm">
+                {activities.slice(0, 3).map((item) => (
+                  <li key={item.announcement_id}>
+                    <p className="font-medium">{stripParishPrefix(item.title)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(item.published_at ?? item.created_at)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
+            <Link
+              href="/parish-officer/activities"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              View activities
+            </Link>
           </CardContent>
         </Card>
-
-        <Card className="xl:col-span-2">
+        <Card>
           <CardHeader>
-            <CardTitle>Recent Reports</CardTitle>
-            <CardDescription>
-              View-only access to approved financial reports.
-            </CardDescription>
+            <CardTitle>Parish Notices</CardTitle>
+            <CardDescription>Published by the Administrator.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {PARISH_REPORT_TYPES.map((report) => (
-              <Link
-                key={report.id}
-                href={`/parish-officer/reports?type=${report.id}`}
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-auto w-full justify-start gap-2 px-3 py-2.5"
-                )}
-              >
-                <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="text-left">
-                  {report.id === "summary"
-                    ? "Financial Summary Report"
-                    : report.label}
-                </span>
-              </Link>
-            ))}
+          <CardContent className="space-y-3">
+            {notices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No notices yet.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {notices.slice(0, 3).map((item) => (
+                  <li key={item.announcement_id}>
+                    <p className="font-medium">{stripParishPrefix(item.title)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatDateTime(item.published_at ?? item.created_at)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href="/parish-officer/notices"
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              View notices
+            </Link>
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Financial Transparency</CardTitle>
+          <CardDescription>
+            Approved, non-confidential summaries. Members cannot edit records.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {[
+            {
+              href: "/parish-officer/transparency/summary",
+              title: "Financial Summary",
+            },
+            {
+              href: "/parish-officer/transparency/cash-flow",
+              title: "Cash Flow Summary",
+            },
+            {
+              href: "/parish-officer/transparency/statements",
+              title: "Approved Statements",
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-auto w-full justify-between px-3 py-2.5"
+              )}
+            >
+              <span>{item.title}</span>
+              <span className="inline-flex items-center gap-1 text-muted-foreground">
+                View
+                <ArrowRightIcon className="size-4" />
+              </span>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }

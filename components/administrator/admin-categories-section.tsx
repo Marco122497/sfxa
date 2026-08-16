@@ -1,6 +1,6 @@
 import { HandCoinsIcon, PiggyBankIcon, ShoppingBasketIcon, TagsIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { CategoryKind } from "@/app/actions/categories";
 import { isCollectionCategoryName } from "@/lib/categories";
 import { CategoryPageHeader } from "@/components/administrator/category-page-header";
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 
 async function loadCategories(kind: CategoryKind) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   if (kind === "donation" || kind === "collection") {
     const { data } = await supabase

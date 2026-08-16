@@ -1,11 +1,5 @@
-import { AdminCategoriesSection } from "@/components/administrator/admin-categories-section";
+import { redirect } from "next/navigation";
 
-export default function AdminDonationCategoriesPage() {
-  return (
-    <AdminCategoriesSection
-      kind="donation"
-      title="Donation Categories"
-      description="Manage donation types used in Treasurer donation records. Collection types are managed separately."
-    />
-  );
+export default function AdminDonationCategoriesRedirectPage() {
+  redirect("/administrator/categories/income-services");
 }

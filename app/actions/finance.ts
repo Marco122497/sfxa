@@ -32,11 +32,21 @@ function revalidateFinance() {
   revalidatePath("/treasurer/budgets/allocation");
   revalidatePath("/treasurer/budgets/monitoring");
   revalidatePath("/treasurer/budgets/history");
-  revalidatePath("/treasurer/reports");
+  revalidatePath("/treasurer/receive/collections");
+  revalidatePath("/treasurer/receive/donations");
+  revalidatePath("/treasurer/receive/services");
+  revalidatePath("/treasurer/receive/other");
+  revalidatePath("/treasurer/release/expenses");
+  revalidatePath("/treasurer/release/disbursements");
+  revalidatePath("/treasurer/cash-flow");
+  revalidatePath("/treasurer/statements");
+  revalidatePath("/administrator/statements");
   revalidatePath("/administrator/finance");
   revalidatePath("/administrator/finance/donations");
   revalidatePath("/administrator/finance/collections");
+  revalidatePath("/administrator/finance/income");
   revalidatePath("/administrator/finance/expenses");
+  revalidatePath("/administrator/finance/disbursements");
   revalidatePath("/administrator/finance/budgets");
   revalidatePath("/administrator");
   revalidatePath("/administrator/reports");
@@ -402,7 +412,7 @@ export async function createExpense(
     if (/expense_subcategory_id|column|expense_subcategories/i.test(error.message)) {
       return {
         error:
-          "Specific categories are not set up yet. Run sql/phase9-expense-subcategories.sql in Supabase.",
+          "Specific categories are not set up yet. Run sql/phase3-categories.sql in Supabase.",
       };
     }
     return { error: error.message };
@@ -491,7 +501,7 @@ export async function updateExpense(
     if (/expense_subcategory_id|column|expense_subcategories/i.test(error.message)) {
       return {
         error:
-          "Specific categories are not set up yet. Run sql/phase9-expense-subcategories.sql in Supabase.",
+          "Specific categories are not set up yet. Run sql/phase3-categories.sql in Supabase.",
       };
     }
     return { error: error.message };
@@ -593,7 +603,7 @@ export async function createBudget(
     if (/expense_subcategory_id|column/i.test(error.message)) {
       return {
         error:
-          "Specific budget allocations are not set up yet. Run sql/phase10-budget-subcategories.sql in Supabase.",
+          "Specific budget allocations are not set up yet. Run sql/phase5-budget.sql in Supabase.",
       };
     }
     return { error: error.message };
@@ -682,7 +692,7 @@ export async function updateBudget(
     if (/expense_subcategory_id|column/i.test(error.message)) {
       return {
         error:
-          "Specific budget allocations are not set up yet. Run sql/phase10-budget-subcategories.sql in Supabase.",
+          "Specific budget allocations are not set up yet. Run sql/phase5-budget.sql in Supabase.",
       };
     }
     return { error: error.message };

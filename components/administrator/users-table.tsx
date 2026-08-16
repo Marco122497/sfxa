@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { Loader2, PencilIcon, Trash2Icon, UserRoundIcon } from "lucide-react";
 
+import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import {
   deleteUser,
   updateUser,
   type UserActionState,
 } from "@/app/actions/users";
 import { ROLES, formatDateTime, type Profile } from "@/lib/auth/roles";
+import { displayRoleName } from "@/lib/income";
 import { formatDate } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -95,7 +97,7 @@ function UserHoverCard({ user }: { user: Profile }) {
               {user.full_name}
             </p>
             <p className="text-xs text-muted-foreground">
-              {user.role} · {user.status ? "Active" : "Inactive"}
+              {displayRoleName(user.role)} · {user.status ? "Active" : "Inactive"}
             </p>
           </div>
         </div>
@@ -144,9 +146,7 @@ function EditUserForm({
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState(user.status ? "1" : "0");
 
-  useEffect(() => {
-    if (state.success) onSuccess();
-  }, [state.success, onSuccess]);
+  useRefreshOnSuccess(state.success, onSuccess);
 
   return (
     <>
@@ -220,7 +220,7 @@ function EditUserForm({
             >
               {ROLES.map((item) => (
                 <option key={item} value={item}>
-                  {item}
+                  {displayRoleName(item)}
                 </option>
               ))}
             </select>
@@ -353,9 +353,7 @@ function DeleteUserButton({
   const [state, formAction, pending] = useActionState(deleteUser, initialState);
   const formId = `delete-user-${userId}`;
 
-  useEffect(() => {
-    if (state.success) setOpen(false);
-  }, [state.success]);
+  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -429,19 +427,22 @@ function DeleteUserButton({
 export function UsersTable({
   users,
   currentUserId,
+  lockedRole,
 }: {
   users: Profile[];
   currentUserId: string;
+  lockedRole?: Profile["role"];
 }) {
   const [query, setQuery] = useState("");
-  const [role, setRole] = useState("");
+  const [role, setRole] = useState(lockedRole ?? "");
   const [status, setStatus] = useState("");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
 
     return users.filter((user) => {
-      if (role && user.role !== role) return false;
+      if ((lockedRole || role) && user.role !== (lockedRole || role))
+        return false;
       if (status === "active" && !user.status) return false;
       if (status === "inactive" && user.status) return false;
 
@@ -462,17 +463,18 @@ export function UsersTable({
 
       return haystack.includes(q);
     });
-  }, [users, query, role, status]);
+  }, [users, query, role, status, lockedRole]);
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className={`grid gap-3 ${lockedRole ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search name, email, employee no.…"
           className="sm:col-span-1"
         />
+        {lockedRole ? null : (
         <select
           value={role}
           onChange={(event) => setRole(event.target.value)}
@@ -482,10 +484,11 @@ export function UsersTable({
           <option value="">All roles</option>
           {ROLES.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {displayRoleName(item)}
             </option>
           ))}
         </select>
+        )}
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value)}
@@ -523,7 +526,7 @@ export function UsersTable({
                   {user.email || "—"}
                 </TableCell>
                 <TableCell>{user.employee_no || "—"}</TableCell>
-                <TableCell>{user.role}</TableCell>
+                <TableCell>{displayRoleName(user.role)}</TableCell>
                 <TableCell>{user.status ? "Active" : "Inactive"}</TableCell>
                 <TableCell>{formatDateTime(user.last_login)}</TableCell>
                 <TableCell>

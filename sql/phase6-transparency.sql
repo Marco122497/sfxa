@@ -1,7 +1,10 @@
--- Phase 5 — Public Transparency Dashboard
--- Run in Supabase SQL Editor after phase3-treasurer.sql
--- Allows anonymous (no login) read of safe public summaries only.
--- Re-run after phase9 so expense summaries can use subcategories.
+-- Phase 6 — Parish Member / public financial transparency
+-- Run after sql/phase5-budget.sql
+-- Safe to re-run.
+--
+-- Parish Members see approved, non-confidential summaries only.
+-- Totals use income_services.category when present so collections,
+-- donations, church services, and other income stay separated.
 
 ALTER TABLE parish_projects ENABLE ROW LEVEL SECURITY;
 
@@ -11,14 +14,12 @@ CREATE POLICY "Public can read parish projects"
     TO anon, authenticated
     USING (true);
 
--- Published announcements only for anonymous visitors
 DROP POLICY IF EXISTS "Anonymous can read published announcements" ON announcements;
 CREATE POLICY "Anonymous can read published announcements"
     ON announcements FOR SELECT
     TO anon
     USING (is_published = TRUE);
 
--- Aggregated monthly donation totals (excludes parish collections)
 CREATE OR REPLACE FUNCTION public.public_monthly_donation_totals()
 RETURNS TABLE (month_key text, total numeric)
 LANGUAGE sql
@@ -31,14 +32,12 @@ AS $$
     COALESCE(SUM(d.amount), 0) AS total
   FROM donations d
   LEFT JOIN donation_categories c ON c.category_id = d.category_id
-  WHERE c.category_name IS NULL
-     OR c.category_name NOT ILIKE '%Collection%'
+  WHERE public.income_kind_for_category(d.category_id, c.category_name) = 'donation'
   GROUP BY 1
   ORDER BY 1 DESC
   LIMIT 12;
 $$;
 
--- Aggregated monthly donation totals by category (excludes parish collections)
 CREATE OR REPLACE FUNCTION public.public_monthly_donation_summary()
 RETURNS TABLE (month_key text, category_name text, total numeric)
 LANGUAGE sql
@@ -52,14 +51,12 @@ AS $$
     COALESCE(SUM(d.amount), 0) AS total
   FROM donations d
   LEFT JOIN donation_categories c ON c.category_id = d.category_id
-  WHERE c.category_name IS NULL
-     OR c.category_name NOT ILIKE '%Collection%'
+  WHERE public.income_kind_for_category(d.category_id, c.category_name) = 'donation'
   GROUP BY 1, 2
   ORDER BY 1 DESC, 2 ASC
   LIMIT 48;
 $$;
 
--- Aggregated monthly collection totals by category (no donor names)
 CREATE OR REPLACE FUNCTION public.public_monthly_collection_summary()
 RETURNS TABLE (month_key text, category_name text, total numeric)
 LANGUAGE sql
@@ -73,13 +70,12 @@ AS $$
     COALESCE(SUM(d.amount), 0) AS total
   FROM donations d
   LEFT JOIN donation_categories c ON c.category_id = d.category_id
-  WHERE c.category_name ILIKE '%Collection%'
+  WHERE public.income_kind_for_category(d.category_id, c.category_name) = 'collection'
   GROUP BY 1, 2
   ORDER BY 1 DESC, 2 ASC
   LIMIT 48;
 $$;
 
--- Aggregated monthly expenses by general + specific category (no receipts)
 CREATE OR REPLACE FUNCTION public.public_monthly_expense_summary()
 RETURNS TABLE (
   month_key text,
@@ -108,8 +104,6 @@ AS $$
   LIMIT 72;
 $$;
 
--- Budget utilization totals only (no expense line details)
--- Spend is rolled up by general expense category (synced with budget categories)
 CREATE OR REPLACE FUNCTION public.public_budget_utilization()
 RETURNS TABLE (
   category_name text,
@@ -151,3 +145,6 @@ GRANT EXECUTE ON FUNCTION public.public_monthly_donation_summary() TO anon, auth
 GRANT EXECUTE ON FUNCTION public.public_monthly_collection_summary() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.public_monthly_expense_summary() TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.public_budget_utilization() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.income_kind_for_category(bigint, text) TO anon, authenticated, service_role;
+
+NOTIFY pgrst, 'reload schema';

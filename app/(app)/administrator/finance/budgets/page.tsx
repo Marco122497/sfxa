@@ -2,7 +2,7 @@ import { PiggyBankIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { formatMoney } from "@/lib/format";
-import { PageHeading } from "@/components/layout/page-heading";
+import { FinancePageHeader } from "@/components/administrator/finance-page-header";
 import { BudgetManager } from "@/components/treasurer/budget-manager";
 import {
   Card,
@@ -19,15 +19,15 @@ export default async function AdminBudgetsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeading
-        title="Budget Management"
-        description="View and manage parish budget allocations by general or specific category."
+      <FinancePageHeader
+        title="Budget"
+        description="Monitor budget utilization against expense categories. Budget categories follow the expense categories configured by the Administrator."
         icon={PiggyBankIcon}
       />
       {subcategorySetupRequired && (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
           Specific budget allocations need a database update. Run{" "}
-          <code className="text-xs">sql/phase10-budget-subcategories.sql</code>{" "}
+          <code className="text-xs">sql/phase5-budget.sql</code>{" "}
           in Supabase, then refresh.
         </p>
       )}

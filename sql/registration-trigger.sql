@@ -1,5 +1,6 @@
--- Run this in Supabase SQL Editor to fix "Registration failed (HTTP 500)".
--- A failing profile trigger rolls back auth user creation and Auth returns 500.
+-- Registration profile trigger
+-- Run in Supabase SQL Editor if sign-up returns HTTP 500.
+-- See sql/README.md for the full setup order.
 
 DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
 CREATE POLICY "Users can insert own profile"
