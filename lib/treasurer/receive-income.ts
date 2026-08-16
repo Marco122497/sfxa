@@ -158,47 +158,73 @@ export async function loadReceiveIncome(
     allTypes.map((row) => [row.category_id, row.category_name])
   );
 
-  const selectBase =
-    "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)";
-  const selectWithStatus = `${selectBase}, status`;
+  type DonationQueryRow = {
+    donation_id: number;
+    donor_name: string | null;
+    category_id: number | null;
+    amount: number | string;
+    donation_date: string;
+    remarks: string | null;
+    status?: string | null;
+    donation_categories:
+      | { category_name?: string }
+      | { category_name?: string }[]
+      | null;
+  };
 
-  let donations: Record<string, unknown>[] | null = null;
+  let donations: DonationQueryRow[] = [];
 
   if (kindIds.length > 0) {
-    const first = await supabase
-      .from("donations")
-      .select(options?.withStatus ? selectWithStatus : selectBase)
-      .in("category_id", kindIds)
-      .order("donation_date", { ascending: false })
-      .limit(200);
+    const first = options?.withStatus
+      ? await supabase
+          .from("donations")
+          .select(
+            "donation_id, donor_name, category_id, amount, donation_date, remarks, status, donation_categories(category_name)"
+          )
+          .in("category_id", kindIds)
+          .order("donation_date", { ascending: false })
+          .limit(200)
+      : await supabase
+          .from("donations")
+          .select(
+            "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+          )
+          .in("category_id", kindIds)
+          .order("donation_date", { ascending: false })
+          .limit(200);
 
     if (first.error && options?.withStatus) {
       const fallback = await supabase
         .from("donations")
-        .select(selectBase)
+        .select(
+          "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+        )
         .in("category_id", kindIds)
         .order("donation_date", { ascending: false })
         .limit(200);
-      donations = (fallback.data ?? []) as Record<string, unknown>[];
+      donations = (fallback.data ?? []) as DonationQueryRow[];
     } else {
-      donations = (first.data ?? []) as Record<string, unknown>[];
+      donations = (first.data ?? []) as unknown as DonationQueryRow[];
     }
   }
 
-  const rows: ReceiveIncomeRow[] = (donations ?? []).map((row) => {
+  const rows: ReceiveIncomeRow[] = donations.map((row) => {
     const categoryId =
       typeof row.category_id === "number" ? row.category_id : null;
     return {
       donation_id: Number(row.donation_id),
-      donor_name: (row.donor_name as string | null) ?? null,
+      donor_name: row.donor_name,
       category_id: categoryId,
-      amount: row.amount as number | string,
+      amount: row.amount,
       donation_date: String(row.donation_date),
-      remarks: (row.remarks as string | null) ?? null,
+      remarks: row.remarks,
       category_name:
         (categoryId != null ? nameById.get(categoryId) : null) ??
-        relationName(row.donation_categories as never),
-      status: "status" in row ? String(row.status ?? "") : undefined,
+        relationName(row.donation_categories),
+      status:
+        row.status != null && row.status !== ""
+          ? String(row.status)
+          : undefined,
     };
   });
 
