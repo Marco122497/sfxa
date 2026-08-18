@@ -38,7 +38,6 @@ const pageLabels: Record<string, string> = {
   statements: "Financial Statements",
   settings: "Settings",
   receive: "Receive Funds",
-  expenses: "Expenses",
   services: "Church Services",
   other: "Other Income",
   "cash-flow": "Cash Flow",
