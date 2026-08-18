@@ -15,6 +15,7 @@ import type {
   ReportSummaryLine,
 } from "@/lib/reports-data";
 import { relationName } from "@/lib/treasurer/relations";
+import { actualCash, remainingBudget as remainingBudgetFromUsage } from "@/lib/finance-ledgers";
 
 const BREAKDOWN_COLORS = [
   "#D99A2B",
@@ -227,12 +228,12 @@ async function getFinancialSummaryReport(
   }, 0);
 
   const totalIncome = totalDonations + totalCollections;
-  const netBalance = totalIncome - totalExpenses;
+  const cashOnHand = actualCash(totalIncome, totalExpenses);
   const totalBudget = (budgets ?? []).reduce(
     (sum, row) => sum + toNumber(row.allocated_amount),
     0
   );
-  const remainingBudget = totalBudget - totalExpenses;
+  const remainingBudget = remainingBudgetFromUsage(totalBudget, totalExpenses);
 
   const metrics: ReportMetric[] = [
     {
@@ -261,8 +262,8 @@ async function getFinancialSummaryReport(
     },
     {
       id: "net",
-      label: "Net Balance",
-      value: formatMoneyPlain(netBalance),
+      label: "Actual Cash",
+      value: formatMoneyPlain(cashOnHand),
       tone: "green",
     },
     {
@@ -324,7 +325,7 @@ async function getFinancialSummaryReport(
       amount: totalExpenses,
       children: expenseChildren,
     },
-    { id: "net", label: "Net Balance", amount: netBalance },
+    { id: "net", label: "Actual Cash", amount: cashOnHand },
     { id: "budget", label: "Remaining Budget", amount: remainingBudget },
   ];
 

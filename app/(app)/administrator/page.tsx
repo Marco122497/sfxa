@@ -1,8 +1,7 @@
 import {
-  ArrowDownToLineIcon,
-  ArrowUpFromLineIcon,
   BanknoteIcon,
   LayoutDashboardIcon,
+  PiggyBankIcon,
   ReceiptIcon,
   ScaleIcon,
   WalletIcon,
@@ -10,14 +9,15 @@ import {
 
 import { requireAdmin } from "@/lib/auth/session";
 import { getAdminDashboardData } from "@/lib/admin/dashboard";
+import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import {
   getCashFlowStatement,
   getIncomeSourceSlices,
-  getMonthlyCashFlow,
+  getDailyCashFlow,
 } from "@/lib/cash-flow";
 import { formatMoney } from "@/lib/format";
 import {
-  CashFlowBarChart,
+  CashFlowLineChart,
   IncomeSourcesPieChart,
 } from "@/components/finance/cash-flow-charts";
 import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
@@ -38,13 +38,15 @@ export default async function AdministratorDashboardPage() {
   const [
     { recentFinancialActivities, recentUserActivities },
     statement,
-    monthly,
+    daily,
     sources,
+    budget,
   ] = await Promise.all([
     getAdminDashboardData(),
     getCashFlowStatement(),
-    getMonthlyCashFlow(),
+    getDailyCashFlow(),
     getIncomeSourceSlices(),
+    getBudgetModuleData(),
   ]);
 
   const cards = [
@@ -59,14 +61,9 @@ export default async function AdministratorDashboardPage() {
       icon: ReceiptIcon,
     },
     {
-      title: "Cash Inflow",
-      value: formatMoney(statement.totalInflows),
-      icon: ArrowDownToLineIcon,
-    },
-    {
-      title: "Cash Outflow",
-      value: formatMoney(statement.totalOutflows),
-      icon: ArrowUpFromLineIcon,
+      title: "Remaining Budget",
+      value: formatMoney(budget.totals.remaining),
+      icon: PiggyBankIcon,
     },
     {
       title: "Net Cash Flow",
@@ -74,7 +71,7 @@ export default async function AdministratorDashboardPage() {
       icon: ScaleIcon,
     },
     {
-      title: "Current Balance",
+      title: "Actual Cash",
       value: formatMoney(statement.endingBalance),
       icon: BanknoteIcon,
     },
@@ -92,8 +89,9 @@ export default async function AdministratorDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Overall financial summary for {profile.first_name}: income, expenses,
-          cash flow, and current balance.
+          Overall financial summary for {profile.first_name}: collected income,
+          budget usage, and actual cash. Expenses use budget and reduce cash —
+          they do not deduct from income.
         </p>
       </div>
 
@@ -116,17 +114,7 @@ export default async function AdministratorDashboardPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <CardTitle>Cash Flow</CardTitle>
-            <CardDescription>
-              Cash inflow, outflow, and net cash flow by month.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CashFlowBarChart data={monthly} />
-          </CardContent>
-        </Card>
+        <CashFlowLineChart data={daily} className="xl:col-span-3" />
 
         <Card className="xl:col-span-2">
           <CardHeader>

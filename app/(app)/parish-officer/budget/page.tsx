@@ -28,7 +28,7 @@ export default async function ParishBudgetMonitoringPage() {
     <div className="space-y-6">
       <ParishViewPageHeader
         title="Budget Monitoring"
-        description="View allocated, utilized, and remaining budget. Read-only."
+        description="View allocated, utilized, and remaining budget. Expenses increase usage; they do not reduce income."
         icon={PiggyBankIcon}
       />
 

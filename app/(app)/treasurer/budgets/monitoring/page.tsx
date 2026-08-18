@@ -55,7 +55,7 @@ export default async function TreasurerBudgetMonitoringPage() {
     <div className="space-y-6">
       <BudgetPageHeader
         title="Budget Monitoring"
-        description="Track remaining budget and utilization across allocations."
+        description="Track budget usage against allocations. Expenses increase utilization and reduce remaining budget — not collected income."
         icon={PiggyBankIcon}
       />
 

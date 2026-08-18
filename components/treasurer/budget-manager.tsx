@@ -206,8 +206,9 @@ function AddBudgetDialog({ categories }: { categories: BudgetCategory[] }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Create budget</AlertDialogTitle>
           <AlertDialogDescription>
-            Allocate a budget for a general category, or a specific category
-            under it, per fiscal year.
+            Allocate collected income for a general category, or a specific
+            category under it, per fiscal year. This is a spending plan — it
+            does not deduct from income or cash.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id="add-budget-form" className="space-y-4">

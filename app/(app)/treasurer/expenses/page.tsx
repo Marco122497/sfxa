@@ -3,12 +3,17 @@ import { requireTreasurer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { relationName } from "@/lib/treasurer/relations";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { getActualCashAmount } from "@/lib/cash-flow";
 import { toExpenseBudgetCaps } from "@/lib/expense-budget";
+import { formatMoney } from "@/lib/format";
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
 import { ExpenseManager } from "@/components/treasurer/expense-manager";
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 
 export default async function TreasurerExpensesPage() {
@@ -20,6 +25,7 @@ export default async function TreasurerExpensesPage() {
     subcategoriesResult,
     expensesResult,
     budgetModule,
+    cashOnHand,
   ] = await Promise.all([
     supabase
       .from("expense_categories")
@@ -37,6 +43,7 @@ export default async function TreasurerExpensesPage() {
       .order("expense_date", { ascending: false })
       .limit(200),
     getBudgetModuleData(),
+    getActualCashAmount(),
   ]);
 
   const budgetedCategoryNames = new Set(
@@ -82,7 +89,6 @@ export default async function TreasurerExpensesPage() {
     description: row.description,
     amount: row.amount,
     expense_date: row.expense_date,
-    receipt_url: row.receipt_url ?? null,
     category_name: relationName(row.expense_categories ?? null),
     subcategory_name: relationName(
       row.expense_subcategories ?? null,
@@ -94,7 +100,7 @@ export default async function TreasurerExpensesPage() {
     <div className="space-y-4">
       <TreasurerPageHeader
         title="Expenses"
-        description="Record spending with a general category and a specific category under it."
+        description="Record spending against the allocated budget. Expenses increase budget usage and reduce actual cash — they do not deduct from income."
         icon={ReceiptIcon}
       />
       {(subcategoriesResult.error || expensesResult.error) && (
@@ -104,6 +110,21 @@ export default async function TreasurerExpensesPage() {
           in Supabase, then refresh.
         </p>
       )}
+      <Card>
+        <CardHeader className="items-center text-center">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Actual Cash
+          </CardTitle>
+          <CardDescription>
+            Collected income minus expenses paid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <div className="text-2xl font-semibold tracking-tight">
+            {formatMoney(cashOnHand)}
+          </div>
+        </CardContent>
+      </Card>
       <Card size="sm">
         <CardContent className="px-3 py-0">
           <ExpenseManager
@@ -114,6 +135,7 @@ export default async function TreasurerExpensesPage() {
             }))}
             subcategories={subcategoriesResult.data ?? []}
             budgetCaps={budgetCaps}
+            actualCash={cashOnHand}
           />
         </CardContent>
       </Card>

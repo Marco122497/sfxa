@@ -17,7 +17,7 @@ export default async function TreasurerBudgetAllocationPage() {
     <div className="space-y-4">
       <BudgetPageHeader
         title="Budget Allocation"
-        description="Allocate budgets per general or specific category; specific allocations roll up into the general total."
+        description="Allocate collected income into spending categories. Allocating a budget does not reduce income or move cash."
         icon={PiggyBankIcon}
       />
       {subcategorySetupRequired && (

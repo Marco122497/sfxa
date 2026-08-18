@@ -3,9 +3,9 @@ import { WalletIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import {
   getCashFlowStatement,
-  getMonthlyCashFlow,
+  getDailyCashFlow,
 } from "@/lib/cash-flow";
-import { CashFlowBarChart } from "@/components/finance/cash-flow-charts";
+import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import { PageHeading } from "@/components/layout/page-heading";
 import {
@@ -18,9 +18,9 @@ import {
 
 export default async function AdminCashFlowPage() {
   await requireAdmin();
-  const [statement, monthly] = await Promise.all([
+  const [statement, daily] = await Promise.all([
     getCashFlowStatement(),
-    getMonthlyCashFlow(),
+    getDailyCashFlow(),
   ]);
 
   return (
@@ -30,15 +30,7 @@ export default async function AdminCashFlowPage() {
         description="Consolidated parish cash inflows, outflows, net cash flow, and ending balance."
         icon={WalletIcon}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly cash flow</CardTitle>
-          <CardDescription>Inflow, outflow, and net by month.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CashFlowBarChart data={monthly} />
-        </CardContent>
-      </Card>
+      <CashFlowLineChart data={daily} title="Cash flow" />
       <Card>
         <CardHeader>
           <CardTitle>Consolidated Statement of Cash Flows</CardTitle>

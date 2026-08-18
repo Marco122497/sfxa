@@ -3,10 +3,18 @@ import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { relationName } from "@/lib/treasurer/relations";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { getActualCashAmount } from "@/lib/cash-flow";
 import { toExpenseBudgetCaps } from "@/lib/expense-budget";
+import { formatMoney } from "@/lib/format";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
 import { ExpenseManager } from "@/components/treasurer/expense-manager";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default async function AdminExpensesPage() {
   await requireAdmin();
@@ -17,6 +25,7 @@ export default async function AdminExpensesPage() {
     subcategoriesResult,
     expensesResult,
     budgetModule,
+    cashOnHand,
   ] = await Promise.all([
     supabase
       .from("expense_categories")
@@ -34,6 +43,7 @@ export default async function AdminExpensesPage() {
       .order("expense_date", { ascending: false })
       .limit(200),
     getBudgetModuleData(),
+    getActualCashAmount(),
   ]);
 
   const budgetedCategoryNames = new Set(
@@ -79,7 +89,6 @@ export default async function AdminExpensesPage() {
     description: row.description,
     amount: row.amount,
     expense_date: row.expense_date,
-    receipt_url: row.receipt_url ?? null,
     category_name: relationName(row.expense_categories ?? null),
     subcategory_name: relationName(
       row.expense_subcategories ?? null,
@@ -91,7 +100,7 @@ export default async function AdminExpensesPage() {
     <div className="space-y-4">
       <FinancePageHeader
         title="Expenses"
-        description="Monitor expense records. Expense categories are configured under Categories, and also drive budget allocation."
+        description="Expense records increase budget usage and reduce actual cash. They do not deduct from collected income."
         icon={ReceiptIcon}
       />
       {(subcategoriesResult.error || expensesResult.error) && (
@@ -101,6 +110,21 @@ export default async function AdminExpensesPage() {
           in Supabase, then refresh.
         </p>
       )}
+      <Card>
+        <CardHeader className="items-center text-center">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            Actual Cash
+          </CardTitle>
+          <CardDescription>
+            Collected income minus expenses paid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center">
+          <div className="text-2xl font-semibold tracking-tight">
+            {formatMoney(cashOnHand)}
+          </div>
+        </CardContent>
+      </Card>
       <Card size="sm">
         <CardContent className="px-3 py-0">
           <ExpenseManager
@@ -111,6 +135,7 @@ export default async function AdminExpensesPage() {
             }))}
             subcategories={subcategoriesResult.data ?? []}
             budgetCaps={budgetCaps}
+            actualCash={cashOnHand}
             canEdit
             canDelete
           />

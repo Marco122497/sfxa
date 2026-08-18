@@ -3,9 +3,9 @@ import { WalletIcon } from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import {
   getCashFlowStatement,
-  getMonthlyCashFlow,
+  getDailyCashFlow,
 } from "@/lib/cash-flow";
-import { CashFlowBarChart } from "@/components/finance/cash-flow-charts";
+import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
 import {
@@ -18,9 +18,9 @@ import {
 
 export default async function TreasurerCashFlowPage() {
   await requireTreasurer();
-  const [statement, monthly] = await Promise.all([
+  const [statement, daily] = await Promise.all([
     getCashFlowStatement(),
-    getMonthlyCashFlow(),
+    getDailyCashFlow(),
   ]);
 
   return (
@@ -30,15 +30,7 @@ export default async function TreasurerCashFlowPage() {
         description="Beginning balance, inflows, outflows, net cash flow, and ending cash balance."
         icon={WalletIcon}
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly cash flow</CardTitle>
-          <CardDescription>Inflow, outflow, and net by month.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <CashFlowBarChart data={monthly} />
-        </CardContent>
-      </Card>
+      <CashFlowLineChart data={daily} title="Cash flow" />
       <Card>
         <CardHeader>
           <CardTitle>Statement of Cash Flows</CardTitle>

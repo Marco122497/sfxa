@@ -3,13 +3,13 @@ import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
 import { relationName } from "@/lib/treasurer/relations";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { actualCash } from "@/lib/finance-ledgers";
 
 export type TreasurerDashboardStats = {
   todaysDonations: number;
   todaysCollections: number;
   todaysExpenses: number;
   currentBalance: number;
-  remainingBudget: number;
 };
 
 export type DailyIncomePoint = {
@@ -85,7 +85,6 @@ export async function getTreasurerDashboardData() {
     { data: donationCategories },
     { data: donations },
     expensesResult,
-    { data: budgets },
     { data: recentDonations },
     expensesRecentResult,
     budgetModule,
@@ -101,7 +100,6 @@ export async function getTreasurerDashboardData() {
       .select(
         "amount, expense_date, expense_categories(category_name)"
       ),
-    supabase.from("budgets").select("allocated_amount"),
     supabase
       .from("donations")
       .select(
@@ -210,17 +208,14 @@ export async function getTreasurerDashboardData() {
     categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + amount);
   }
 
-  const totalBudget = (budgets ?? []).reduce(
-    (sum, row) => sum + toNumber(row.allocated_amount),
-    0
-  );
-
   const stats: TreasurerDashboardStats = {
     todaysDonations,
     todaysCollections,
     todaysExpenses,
-    currentBalance: totalDonations + totalCollections - totalExpenses,
-    remainingBudget: totalBudget - totalExpenses,
+    currentBalance: actualCash(
+      totalDonations + totalCollections,
+      totalExpenses
+    ),
   };
 
   const dailyIncome: DailyIncomePoint[] = weekDays.map((d) => {

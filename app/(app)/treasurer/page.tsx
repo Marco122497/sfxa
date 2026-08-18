@@ -2,20 +2,17 @@ import Link from "next/link";
 import {
   ArrowRightIcon,
   BanknoteIcon,
-  HandCoinsIcon,
   LayoutDashboardIcon,
-  ShoppingBasketIcon,
   WalletCardsIcon,
   WalletIcon,
 } from "lucide-react";
 
 import { requireTreasurer } from "@/lib/auth/session";
 import { getTreasurerDashboardData } from "@/lib/treasurer/dashboard";
+import { getCashFlowStatement, getDailyCashFlow } from "@/lib/cash-flow";
 import { formatDate, formatMoney } from "@/lib/format";
-import {
-  DailyIncomeLineChart,
-  ExpenseDistributionPieChart,
-} from "@/components/treasurer/dashboard-charts";
+import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
+import { ExpenseDistributionPieChart } from "@/components/treasurer/dashboard-charts";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -36,41 +33,15 @@ import { cn } from "@/lib/utils";
 
 export default async function TreasurerDashboardPage() {
   const { profile } = await requireTreasurer();
-  const {
-    stats,
-    dailyIncome,
-    expensesByCategory,
-    recentTransactions,
-    budgetStatus,
-  } = await getTreasurerDashboardData();
-
-  const cards = [
-    {
-      title: "Today's Donations",
-      value: formatMoney(stats.todaysDonations),
-      icon: HandCoinsIcon,
-    },
-    {
-      title: "Today's Collections",
-      value: formatMoney(stats.todaysCollections),
-      icon: ShoppingBasketIcon,
-    },
-    {
-      title: "Today's Expenses",
-      value: formatMoney(stats.todaysExpenses),
-      icon: WalletCardsIcon,
-    },
-    {
-      title: "Current Balance",
-      value: formatMoney(stats.currentBalance),
-      icon: BanknoteIcon,
-    },
-    {
-      title: "Remaining Budget",
-      value: formatMoney(stats.remainingBudget),
-      icon: WalletIcon,
-    },
-  ];
+  const [
+    { expensesByCategory, recentTransactions, budgetStatus },
+    daily,
+    statement,
+  ] = await Promise.all([
+    getTreasurerDashboardData(),
+    getDailyCashFlow(),
+    getCashFlowStatement(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -84,41 +55,56 @@ export default async function TreasurerDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Welcome, {profile.first_name}. Receive, release, and record parish
-          finances.
+          Welcome, {profile.first_name}. Collect income, allocate a budget, then
+          record expenses. Expenses use budget and reduce cash — they do not
+          deduct from income.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        {cards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <card.icon className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">
-                {card.value}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Income
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.totalInflows)}
+            </div>
+            <WalletIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Expenses
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.totalOutflows)}
+            </div>
+            <WalletCardsIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Actual Cash
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between">
+            <div className="text-2xl font-semibold tracking-tight">
+              {formatMoney(statement.endingBalance)}
+            </div>
+            <BanknoteIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
-        <Card className="xl:col-span-3">
-          <CardHeader>
-            <CardTitle>Daily Income Trend</CardTitle>
-            <CardDescription>
-              Donations and collections by day for the current week.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DailyIncomeLineChart data={dailyIncome} />
-          </CardContent>
-        </Card>
+        <CashFlowLineChart data={daily} className="xl:col-span-3" />
 
         <Card className="xl:col-span-2">
           <CardHeader>
@@ -189,7 +175,8 @@ export default async function TreasurerDashboardPage() {
           <CardHeader>
             <CardTitle>Budget Status</CardTitle>
             <CardDescription>
-              Used vs remaining by category for {new Date().getFullYear()}.
+              Budget used vs remaining by category. Expenses increase usage;
+              they do not reduce collected income.
             </CardDescription>
           </CardHeader>
           <CardContent>

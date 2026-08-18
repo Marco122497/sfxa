@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
 import { relationName } from "@/lib/treasurer/relations";
+import { actualCash } from "@/lib/finance-ledgers";
 
 export type ParishDashboardStats = {
   totalDonations: number;
@@ -239,7 +240,7 @@ export async function getParishOfficerDashboardData() {
     totalDonations,
     totalCollections,
     totalExpenses,
-    currentBalance: totalDonations + totalCollections - totalExpenses,
+    currentBalance: actualCash(totalDonations + totalCollections, totalExpenses),
     budgetUtilizationPct,
     totalBudget,
     budgetSpent: totalExpenses,

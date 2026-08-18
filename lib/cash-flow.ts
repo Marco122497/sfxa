@@ -2,7 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { loadIncomeKindLookup } from "@/lib/income-categories-server";
 import { relationName } from "@/lib/treasurer/relations";
 import { toNumber } from "@/lib/format";
+import { actualCash } from "@/lib/finance-ledgers";
 
+/** Cash in comes from collected income. Cash out comes from expenses. Expenses never reduce recorded income. */
 export type CashFlowPeriod = {
   from: string;
   to: string;
@@ -28,6 +30,13 @@ export type CashFlowStatement = {
 
 export type MonthlyCashFlowRow = {
   month: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+};
+
+export type DailyCashFlowRow = {
+  date: string;
   inflow: number;
   outflow: number;
   net: number;
@@ -65,6 +74,25 @@ export function lastSixMonthKeys(now = new Date()) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     keys.push(`${y}-${m}`);
+  }
+  return keys;
+}
+
+function isoDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export function currentYearDayKeys(now = new Date()) {
+  const start = new Date(now.getFullYear(), 0, 1);
+  const end = new Date(now.getFullYear(), 11, 31);
+  const keys: string[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    keys.push(isoDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
   return keys;
 }
@@ -168,6 +196,23 @@ export async function getCashFlowStatement(
   };
 }
 
+export async function getActualCashAmount(): Promise<number> {
+  const supabase = await createClient();
+  const [{ data: donations }, { data: expenses }] = await Promise.all([
+    supabase.from("donations").select("amount"),
+    supabase.from("expenses").select("amount"),
+  ]);
+  const income = (donations ?? []).reduce(
+    (sum, row) => sum + toNumber(row.amount),
+    0
+  );
+  const spent = (expenses ?? []).reduce(
+    (sum, row) => sum + toNumber(row.amount),
+    0
+  );
+  return actualCash(income, spent);
+}
+
 export async function getMonthlyCashFlow(): Promise<MonthlyCashFlowRow[]> {
   const supabase = await createClient();
   const keys = lastSixMonthKeys();
@@ -199,6 +244,37 @@ export async function getMonthlyCashFlow(): Promise<MonthlyCashFlowRow[]> {
   });
 }
 
+export async function getDailyCashFlow(): Promise<DailyCashFlowRow[]> {
+  const supabase = await createClient();
+  const keys = currentYearDayKeys();
+  const [{ data: donations }, { data: expenses }] = await Promise.all([
+    supabase.from("donations").select("amount, donation_date"),
+    supabase.from("expenses").select("amount, expense_date"),
+  ]);
+
+  const map = new Map(keys.map((key) => [key, { inflow: 0, outflow: 0 }]));
+  for (const row of donations ?? []) {
+    const key = String(row.donation_date).slice(0, 10);
+    const current = map.get(key);
+    if (current) current.inflow += toNumber(row.amount);
+  }
+  for (const row of expenses ?? []) {
+    const key = String(row.expense_date).slice(0, 10);
+    const current = map.get(key);
+    if (current) current.outflow += toNumber(row.amount);
+  }
+
+  return keys.map((date) => {
+    const value = map.get(date)!;
+    return {
+      date,
+      inflow: value.inflow,
+      outflow: value.outflow,
+      net: value.inflow - value.outflow,
+    };
+  });
+}
+
 export async function getIncomeSourceSlices(): Promise<IncomeSourceSlice[]> {
   const supabase = await createClient();
   const [{ data: donations }, { labelFor }] = await Promise.all([
@@ -215,6 +291,30 @@ export async function getIncomeSourceSlices(): Promise<IncomeSourceSlice[]> {
       typeof row.category_id === "number" ? row.category_id : null
     );
     totals.set(label, (totals.get(label) ?? 0) + toNumber(row.amount));
+  }
+
+  return [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, amount], index) => ({
+      category,
+      amount,
+      fill: SOURCE_COLORS[index % SOURCE_COLORS.length],
+    }));
+}
+
+export async function getIncomeServiceCategorySlices(): Promise<
+  IncomeSourceSlice[]
+> {
+  const supabase = await createClient();
+  const { data: donations } = await supabase
+    .from("donations")
+    .select("amount, donation_categories(category_name)");
+
+  const totals = new Map<string, number>();
+  for (const row of donations ?? []) {
+    const name =
+      relationName(row.donation_categories as never) || "Unspecified";
+    totals.set(name, (totals.get(name) ?? 0) + toNumber(row.amount));
   }
 
   return [...totals.entries()]

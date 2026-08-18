@@ -14,6 +14,7 @@ import {
   toExpenseBudgetCaps,
 } from "@/lib/expense-budget";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { getActualCashAmount } from "@/lib/cash-flow";
 
 export type FinanceActionState = {
   error?: string;
@@ -195,61 +196,21 @@ async function ensureExpenseWithinBudget(
   return null;
 }
 
+async function ensureExpenseWithinCash(amount: number, credit = 0) {
+  const cash = await getActualCashAmount();
+  const available = Math.max(0, cash + credit);
+  if (Math.round(amount * 100) > Math.round(available * 100)) {
+    return `Not enough actual cash. Available cash is ${formatMoney(available)}.`;
+  }
+  return null;
+}
+
 function parseAmount(value: FormDataEntryValue | null) {
   const amount = Number(String(value || "").trim());
   if (!Number.isFinite(amount) || amount <= 0) {
     return null;
   }
   return amount;
-}
-
-async function uploadReceipt(
-  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
-  userId: string,
-  file: FormDataEntryValue | null
-) {
-  if (!(file instanceof File) || file.size === 0) {
-    return { url: null as string | null, error: null as string | null };
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    return { url: null, error: "Receipt must be 5MB or smaller." };
-  }
-
-  const allowed = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-    "application/pdf",
-  ];
-  if (!allowed.includes(file.type)) {
-    return {
-      url: null,
-      error: "Receipt must be JPEG, PNG, WebP, GIF, or PDF.",
-    };
-  }
-
-  const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
-  const path = `${userId}/${Date.now()}.${extension}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("receipts")
-    .upload(path, file, {
-      upsert: false,
-      contentType: file.type,
-      cacheControl: "3600",
-    });
-
-  if (uploadError) {
-    return { url: null, error: uploadError.message };
-  }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("receipts").getPublicUrl(path);
-
-  return { url: publicUrl, error: null };
 }
 
 export async function createDonation(
@@ -429,13 +390,9 @@ export async function createExpense(
     return { error: overBudgetError };
   }
 
-  const receipt = await uploadReceipt(
-    supabase,
-    user.id,
-    formData.get("receipt")
-  );
-  if (receipt.error) {
-    return { error: receipt.error };
+  const overCashError = await ensureExpenseWithinCash(amount);
+  if (overCashError) {
+    return { error: overCashError };
   }
 
   const { data, error } = await supabase
@@ -446,7 +403,6 @@ export async function createExpense(
       description: description || sub.subcategory_name,
       amount,
       expense_date,
-      receipt_url: receipt.url,
       created_by: user.id,
     })
     .select("expense_id")
@@ -489,8 +445,6 @@ export async function updateExpense(
   const description = String(formData.get("description") || "").trim() || null;
   const amount = parseAmount(formData.get("amount"));
   const expense_date = String(formData.get("expense_date") || "").trim();
-  const existingReceipt =
-    String(formData.get("existing_receipt_url") || "").trim() || null;
 
   if (!expense_id || !expense_category_id || !amount || !expense_date) {
     return { error: "General category, amount, and date are required." };
@@ -540,13 +494,12 @@ export async function updateExpense(
     return { error: overBudgetError };
   }
 
-  const receipt = await uploadReceipt(
-    supabase,
-    user.id,
-    formData.get("receipt")
+  const overCashError = await ensureExpenseWithinCash(
+    amount,
+    toNumber(existing?.amount)
   );
-  if (receipt.error) {
-    return { error: receipt.error };
+  if (overCashError) {
+    return { error: overCashError };
   }
 
   const { error } = await supabase
@@ -557,7 +510,6 @@ export async function updateExpense(
       description: description || sub.subcategory_name,
       amount,
       expense_date,
-      receipt_url: receipt.url ?? existingReceipt,
     })
     .eq("expense_id", expense_id);
 

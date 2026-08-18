@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
 import { relationName } from "@/lib/treasurer/relations";
+import { actualCash, remainingBudget as remainingBudgetFromUsage } from "@/lib/finance-ledgers";
 
 export type AdminDashboardStats = {
   totalDonations: number;
@@ -214,8 +215,14 @@ export async function getAdminDashboardData() {
     (sum, row) => sum + toNumber(row.allocated_amount),
     0
   );
-  const currentBalance = totalDonations + totalCollections - totalExpenses;
-  const remainingBudget = totalBudget - totalExpenses;
+  const currentBalance = actualCash(
+    totalDonations + totalCollections,
+    totalExpenses
+  );
+  const remainingBudget = remainingBudgetFromUsage(
+    totalBudget,
+    totalExpenses
+  );
 
   const stats: AdminDashboardStats = {
     totalDonations,

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ExternalLinkIcon,
   Loader2,
   PencilIcon,
   PlusIcon,
@@ -71,7 +70,6 @@ export type ExpenseRow = {
   description: string | null;
   amount: number | string;
   expense_date: string;
-  receipt_url: string | null;
   category_name: string | null;
   subcategory_name: string | null;
 };
@@ -80,16 +78,18 @@ function ExpenseFormFields({
   categories,
   subcategories,
   budgetCaps,
+  actualCash = 0,
   defaults,
   idPrefix,
-  onOverBudgetChange,
+  onBlockedChange,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
   budgetCaps: ExpenseBudgetCap[];
+  actualCash?: number;
   defaults?: Partial<ExpenseRow>;
   idPrefix: string;
-  onOverBudgetChange?: (overBudget: boolean) => void;
+  onBlockedChange?: (blocked: boolean) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const firstBudgeted = categories.find((c) => c.has_budget);
@@ -142,13 +142,27 @@ function ExpenseFormFields({
   const remaining = cap
     ? Math.max(0, cap.remaining + (sameBucket ? toNumber(defaults?.amount) : 0))
     : null;
-  const entered = toNumber(amount);
+  const availableCash = Math.max(
+    0,
+    (Number(actualCash) || 0) +
+      (defaults?.amount != null ? toNumber(defaults.amount) : 0)
+  );
+  const enteredCents = Math.round(toNumber(amount) * 100);
+  const cashCents = Math.round(availableCash * 100);
+  const remainingCents =
+    remaining == null ? null : Math.round(remaining * 100);
   const overBudget =
-    remaining != null && amount !== "" && entered - remaining > 0.0001;
+    remainingCents != null && amount !== "" && enteredCents > remainingCents;
+  const overCash = amount !== "" && enteredCents > cashCents;
+  const blocked =
+    overBudget ||
+    overCash ||
+    (remaining != null && remaining <= 0) ||
+    availableCash <= 0;
 
   useEffect(() => {
-    onOverBudgetChange?.(overBudget || (remaining != null && remaining <= 0));
-  }, [onOverBudgetChange, overBudget, remaining]);
+    onBlockedChange?.(blocked);
+  }, [onBlockedChange, blocked]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -210,13 +224,23 @@ function ExpenseFormFields({
           type="number"
           min="0.01"
           step="0.01"
-          max={remaining != null && remaining > 0 ? remaining.toFixed(2) : undefined}
           required
           value={amount}
-          aria-invalid={overBudget || undefined}
+          aria-invalid={overBudget || overCash || undefined}
           onChange={(event) => setAmount(event.target.value)}
         />
-        {remaining != null ? (
+        {overCash || availableCash <= 0 ? (
+          <p className="text-xs text-destructive" role="alert">
+            {availableCash <= 0
+              ? "Not enough actual cash to record this expense."
+              : `Not enough actual cash. Available cash is ${formatMoney(availableCash)}.`}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Actual cash: {formatMoney(availableCash)}
+          </p>
+        )}
+        {remaining != null && !overCash && availableCash > 0 ? (
           overBudget || remaining <= 0 ? (
             <p className="text-xs text-destructive" role="alert">
               {remaining <= 0
@@ -241,15 +265,6 @@ function ExpenseFormFields({
           onChange={(event) => setExpenseDate(event.target.value)}
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-receipt`}>Receipt</Label>
-        <Input
-          id={`${idPrefix}-receipt`}
-          name="receipt"
-          type="file"
-          accept="image/*,application/pdf"
-        />
-      </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor={`${idPrefix}-description`}>Note (optional)</Label>
         <Input
@@ -267,13 +282,15 @@ function AddExpenseDialog({
   categories,
   subcategories,
   budgetCaps,
+  actualCash,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
   budgetCaps: ExpenseBudgetCap[];
+  actualCash: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [overBudget, setOverBudget] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [state, formAction, pending] = useServerAction(createExpense, initialState, () => setOpen(false));
 
 
@@ -282,7 +299,7 @@ function AddExpenseDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setOverBudget(false);
+        if (!next) setBlocked(false);
       }}
     >
       <AlertDialogTrigger render={<Button type="button" />}>
@@ -293,10 +310,20 @@ function AddExpenseDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Add expense</AlertDialogTitle>
           <AlertDialogDescription>
-            Choose a general category and a specific category under it.
+            Choose a general category and a specific category under it. This
+            uses remaining budget and reduces actual cash. It does not deduct
+            from collected income.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <form action={formAction} id="add-expense-form" className="space-y-4">
+        <form
+          action={formAction}
+          id="add-expense-form"
+          className="space-y-4"
+          noValidate
+          onSubmit={(event) => {
+            if (blocked) event.preventDefault();
+          }}
+        >
           {state.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
@@ -306,13 +333,14 @@ function AddExpenseDialog({
             categories={categories}
             subcategories={subcategories}
             budgetCaps={budgetCaps}
+            actualCash={actualCash}
             idPrefix="add"
-            onOverBudgetChange={setOverBudget}
+            onBlockedChange={setBlocked}
           />
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button type="submit" form="add-expense-form" disabled={pending || overBudget}>
+          <Button type="submit" form="add-expense-form" disabled={pending || blocked}>
             {pending ? (
               <>
                 <Loader2 className="animate-spin" />
@@ -333,14 +361,16 @@ function EditExpenseDialog({
   categories,
   subcategories,
   budgetCaps,
+  actualCash,
 }: {
   row: ExpenseRow;
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
   budgetCaps: ExpenseBudgetCap[];
+  actualCash: number;
 }) {
   const [open, setOpen] = useState(false);
-  const [overBudget, setOverBudget] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [state, formAction, pending] = useServerAction(updateExpense, initialState, () => setOpen(false));
 
 
@@ -349,7 +379,7 @@ function EditExpenseDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setOverBudget(false);
+        if (!next) setBlocked(false);
       }}
     >
       <AlertDialogTrigger
@@ -368,20 +398,19 @@ function EditExpenseDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Edit expense</AlertDialogTitle>
           <AlertDialogDescription>
-            Update general/specific category, amount, or receipt.
+            Update general/specific category or amount.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form
           action={formAction}
           id={`edit-expense-${row.expense_id}`}
           className="space-y-4"
+          noValidate
+          onSubmit={(event) => {
+            if (blocked) event.preventDefault();
+          }}
         >
           <input type="hidden" name="expense_id" value={row.expense_id} />
-          <input
-            type="hidden"
-            name="existing_receipt_url"
-            value={row.receipt_url ?? ""}
-          />
           {state.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
@@ -392,22 +421,18 @@ function EditExpenseDialog({
             categories={categories}
             subcategories={subcategories}
             budgetCaps={budgetCaps}
+            actualCash={actualCash}
             idPrefix={`edit-${row.expense_id}`}
             defaults={row}
-            onOverBudgetChange={setOverBudget}
+            onBlockedChange={setBlocked}
           />
-          {row.receipt_url && (
-            <p className="text-xs text-muted-foreground">
-              Current receipt stays unless you upload a new file.
-            </p>
-          )}
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <Button
             type="submit"
             form={`edit-expense-${row.expense_id}`}
-            disabled={pending || overBudget}
+            disabled={pending || blocked}
           >
             {pending ? (
               <>
@@ -504,6 +529,7 @@ export function ExpenseManager({
   categories,
   subcategories,
   budgetCaps = [],
+  actualCash = 0,
   canEdit = false,
   canDelete = false,
 }: {
@@ -511,6 +537,7 @@ export function ExpenseManager({
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
   budgetCaps?: ExpenseBudgetCap[];
+  actualCash?: number;
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
@@ -554,6 +581,7 @@ export function ExpenseManager({
             categories={categories}
             subcategories={subcategories}
             budgetCaps={budgetCaps}
+            actualCash={actualCash}
           />
         </div>
       </div>
@@ -567,7 +595,6 @@ export function ExpenseManager({
               <TableHead className="h-8 px-2">Date</TableHead>
               <TableHead className="h-8 px-2">General</TableHead>
               <TableHead className="h-8 px-2">Specific</TableHead>
-              <TableHead className="h-8 px-2">Receipt</TableHead>
               <TableHead className="h-8 px-2 text-right">Amount</TableHead>
               {showActions ? (
                 <TableHead
@@ -588,21 +615,6 @@ export function ExpenseManager({
                 <TableCell className="max-w-[200px] truncate px-2 py-1.5 font-medium">
                   {row.subcategory_name || row.description || "—"}
                 </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  {row.receipt_url ? (
-                    <a
-                      href={row.receipt_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    >
-                      View
-                      <ExternalLinkIcon className="size-3.5" />
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </TableCell>
                 <TableCell className="px-2 py-1.5 text-right tabular-nums">
                   {formatMoney(row.amount)}
                 </TableCell>
@@ -615,6 +627,7 @@ export function ExpenseManager({
                           categories={categories}
                           subcategories={subcategories}
                           budgetCaps={budgetCaps}
+                          actualCash={actualCash}
                         />
                       ) : null}
                       {canDelete ? (

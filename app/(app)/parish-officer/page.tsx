@@ -1,22 +1,24 @@
 import Link from "next/link";
 import {
-  ArrowRightIcon,
   BanknoteIcon,
   LayoutDashboardIcon,
-  ScaleIcon,
   WalletCardsIcon,
   WalletIcon,
 } from "lucide-react";
 
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { getCashFlowStatement } from "@/lib/cash-flow";
+import { getCashFlowStatement, getDailyCashFlow, getIncomeServiceCategorySlices } from "@/lib/cash-flow";
 import { formatDateTime } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import {
   isParishContentKind,
   stripParishPrefix,
 } from "@/lib/parish-content";
+import {
+  CashFlowLineChart,
+  IncomeSourcesPieChart,
+} from "@/components/finance/cash-flow-charts";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -30,9 +32,12 @@ import { cn } from "@/lib/utils";
 export default async function ParishOfficerDashboardPage() {
   const { profile } = await requireParishOfficer();
   const supabase = await createClient();
-  const [statement, { data: announcements }] = await Promise.all([
-    getCashFlowStatement(),
-    supabase
+  const [statement, daily, services, { data: announcements }] =
+    await Promise.all([
+      getCashFlowStatement(),
+      getDailyCashFlow(),
+      getIncomeServiceCategorySlices(),
+      supabase
       .from("announcements")
       .select("announcement_id, title, published_at, created_at, content")
       .eq("is_published", true)
@@ -60,23 +65,23 @@ export default async function ParishOfficerDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Welcome, {profile.first_name}. View-only financial summaries and
-          parish information.
+          Welcome, {profile.first_name}. Income stays collected. Expenses use
+          budget and reduce actual cash.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Collections
+              Total Income
             </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <div className="text-2xl font-semibold tracking-tight">
               {formatMoney(statement.totalInflows)}
             </div>
-            <BanknoteIcon className="size-4 text-muted-foreground" />
+            <WalletIcon className="size-4 text-muted-foreground" />
           </CardContent>
         </Card>
         <Card>
@@ -95,27 +100,30 @@ export default async function ParishOfficerDashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Net Cash Flow
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.netCashFlow)}
-            </div>
-            <ScaleIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ending Balance
+              Actual Cash
             </CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
             <div className="text-2xl font-semibold tracking-tight">
               {formatMoney(statement.endingBalance)}
             </div>
-            <WalletIcon className="size-4 text-muted-foreground" />
+            <BanknoteIcon className="size-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-5">
+        <CashFlowLineChart data={daily} className="xl:col-span-3" />
+
+        <Card className="xl:col-span-2">
+          <CardHeader>
+            <CardTitle>Income Service Categories</CardTitle>
+            <CardDescription>
+              Amounts collected by each income service type.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <IncomeSourcesPieChart data={services} />
           </CardContent>
         </Card>
       </div>
@@ -178,46 +186,6 @@ export default async function ParishOfficerDashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Financial Transparency</CardTitle>
-          <CardDescription>
-            Approved, non-confidential summaries. Members cannot edit records.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {[
-            {
-              href: "/parish-officer/transparency/summary",
-              title: "Financial Summary",
-            },
-            {
-              href: "/parish-officer/transparency/cash-flow",
-              title: "Cash Flow Summary",
-            },
-            {
-              href: "/parish-officer/transparency/statements",
-              title: "Approved Statements",
-            },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-auto w-full justify-between px-3 py-2.5"
-              )}
-            >
-              <span>{item.title}</span>
-              <span className="inline-flex items-center gap-1 text-muted-foreground">
-                View
-                <ArrowRightIcon className="size-4" />
-              </span>
-            </Link>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }
