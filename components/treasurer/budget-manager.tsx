@@ -1,15 +1,9 @@
 "use client";
 
-import {
-  Fragment,
-  useActionState,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   createBudget,
   deleteBudget,
@@ -196,12 +190,11 @@ function BudgetFormFields({
 
 function AddBudgetDialog({ categories }: { categories: BudgetCategory[] }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerAction(
     createBudget,
-    initialState
+    initialState,
+    () => setOpen(false)
   );
-
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -251,12 +244,11 @@ function EditBudgetDialog({
   categories: BudgetCategory[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerAction(
     updateBudget,
-    initialState
+    initialState,
+    () => setOpen(false)
   );
-
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -327,13 +319,12 @@ function DeleteBudgetButton({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerAction(
     deleteBudget,
-    initialState
+    initialState,
+    () => setOpen(false)
   );
   const formId = `delete-budget-${budgetId}`;
-
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

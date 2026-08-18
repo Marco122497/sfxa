@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import {
@@ -10,7 +10,7 @@ import {
   type CategoryActionState,
   type CategoryKind,
 } from "@/app/actions/categories";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -78,13 +78,9 @@ const KIND_COPY: Record<
 
 function AddCategoryDialog({ kind }: { kind: CategoryKind }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(createCategory, initialState, () => setOpen(false));
   const copy = KIND_COPY[kind];
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -135,12 +131,8 @@ function EditCategoryDialog({
   row: CategoryRow;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(updateCategory, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -218,13 +210,9 @@ function DeleteCategoryButton({
   categoryName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(deleteCategory, initialState, () => setOpen(false));
   const formId = `delete-category-${kind}-${categoryId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

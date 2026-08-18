@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import type { NavNotification } from "@/components/layout/nav-notifications";
 import { requireUser } from "@/lib/auth/session";
+import { loadIncomeCategories } from "@/lib/income-categories-server";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({
@@ -10,6 +11,7 @@ export default async function AppLayout({
 }) {
   const { profile } = await requireUser();
   const supabase = await createClient();
+  const incomeCategories = await loadIncomeCategories();
 
   const { data: announcements } = await supabase
     .from("announcements")
@@ -28,7 +30,11 @@ export default async function AppLayout({
   );
 
   return (
-    <AppShell profile={profile} notifications={notifications}>
+    <AppShell
+      profile={profile}
+      notifications={notifications}
+      incomeCategories={incomeCategories}
+    >
       {children}
     </AppShell>
   );

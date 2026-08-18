@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { classifyIncomeName, type IncomeCategoryId } from "@/lib/income";
+import { loadIncomeKindLookup } from "@/lib/income-categories-server";
 import { relationName } from "@/lib/treasurer/relations";
 import { toNumber } from "@/lib/format";
 
@@ -11,6 +11,7 @@ export type CashFlowPeriod = {
 export type CashFlowBreakdown = {
   label: string;
   amount: number;
+  items?: CashFlowBreakdown[];
 };
 
 export type CashFlowStatement = {
@@ -75,31 +76,31 @@ export function currentMonthRange(now = new Date()): CashFlowPeriod {
   return { from, to };
 }
 
-function inflowLabel(kind: IncomeCategoryId) {
-  if (kind === "church_service") return "Church Services";
-  if (kind === "collection") return "Collections / Offerings";
-  if (kind === "other_income") return "Other Income";
-  return "Donations";
-}
-
 export async function getCashFlowStatement(
   period: CashFlowPeriod = currentMonthRange()
 ): Promise<CashFlowStatement> {
   const supabase = await createClient();
-  const [{ data: donations }, { data: expenses }] = await Promise.all([
-    supabase
-      .from("donations")
-      .select("amount, donation_date, donation_categories(category_name)")
-      .order("donation_date"),
-    supabase
-      .from("expenses")
-      .select("amount, expense_date, expense_categories(category_name)")
-      .order("expense_date"),
-  ]);
+  const [{ data: donations }, { data: expenses }, { labelFor }] =
+    await Promise.all([
+      supabase
+        .from("donations")
+        .select(
+          "amount, donation_date, category_id, donation_categories(category_name)"
+        )
+        .order("donation_date"),
+      supabase
+        .from("expenses")
+        .select("amount, expense_date, expense_categories(category_name)")
+        .order("expense_date"),
+      loadIncomeKindLookup(),
+    ]);
 
   let beginningIn = 0;
   let beginningOut = 0;
-  const inflowMap = new Map<string, number>();
+  const inflowGroups = new Map<
+    string,
+    { amount: number; items: Map<string, number> }
+  >();
   const outflowMap = new Map<string, number>();
   let periodIn = 0;
   let periodOut = 0;
@@ -107,16 +108,24 @@ export async function getCashFlowStatement(
   for (const row of donations ?? []) {
     const amount = toNumber(row.amount);
     const date = String(row.donation_date);
-    const kind = classifyIncomeName(
-      relationName(row.donation_categories as never)
+    const name =
+      relationName(row.donation_categories as never) || "Unspecified";
+    const kindLabel = labelFor(
+      name,
+      typeof row.category_id === "number" ? row.category_id : null
     );
     if (date < period.from) {
       beginningIn += amount;
       continue;
     }
     if (date > period.to) continue;
-    const label = inflowLabel(kind);
-    inflowMap.set(label, (inflowMap.get(label) ?? 0) + amount);
+    const group = inflowGroups.get(kindLabel) ?? {
+      amount: 0,
+      items: new Map<string, number>(),
+    };
+    group.amount += amount;
+    group.items.set(name, (group.items.get(name) ?? 0) + amount);
+    inflowGroups.set(kindLabel, group);
     periodIn += amount;
   }
 
@@ -141,9 +150,12 @@ export async function getCashFlowStatement(
     from: period.from,
     to: period.to,
     beginningBalance,
-    inflows: [...inflowMap.entries()].map(([label, amount]) => ({
+    inflows: [...inflowGroups.entries()].map(([label, group]) => ({
       label,
-      amount,
+      amount: group.amount,
+      items: [...group.items.entries()]
+        .map(([itemLabel, amount]) => ({ label: itemLabel, amount }))
+        .sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label)),
     })),
     totalInflows: periodIn,
     outflows: [...outflowMap.entries()].map(([label, amount]) => ({
@@ -189,14 +201,18 @@ export async function getMonthlyCashFlow(): Promise<MonthlyCashFlowRow[]> {
 
 export async function getIncomeSourceSlices(): Promise<IncomeSourceSlice[]> {
   const supabase = await createClient();
-  const { data: donations } = await supabase
-    .from("donations")
-    .select("amount, donation_categories(category_name)");
+  const [{ data: donations }, { labelFor }] = await Promise.all([
+    supabase
+      .from("donations")
+      .select("amount, category_id, donation_categories(category_name)"),
+    loadIncomeKindLookup(),
+  ]);
 
   const totals = new Map<string, number>();
   for (const row of donations ?? []) {
-    const label = inflowLabel(
-      classifyIncomeName(relationName(row.donation_categories as never))
+    const label = labelFor(
+      relationName(row.donation_categories as never),
+      typeof row.category_id === "number" ? row.category_id : null
     );
     totals.set(label, (totals.get(label) ?? 0) + toNumber(row.amount));
   }

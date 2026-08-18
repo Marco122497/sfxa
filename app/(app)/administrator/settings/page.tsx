@@ -18,11 +18,6 @@ export default async function AdminSettingsPage() {
 
   const links = [
     {
-      href: "/administrator/chapels",
-      title: "Chapel Access",
-      description: "Chapels, treasurer assignment, and member access.",
-    },
-    {
       href: "/administrator/users",
       title: "User Management",
       description: "Administrators, Treasurers, and Parish Members.",
@@ -58,7 +53,7 @@ export default async function AdminSettingsPage() {
     <div className="space-y-6">
       <PageHeading
         title="Settings"
-        description="System configuration for chapel access, users, and categories."
+        description="System configuration for users and categories."
         icon={SettingsIcon}
       />
       <div className="grid gap-4 sm:grid-cols-2">

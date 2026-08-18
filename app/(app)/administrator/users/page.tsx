@@ -29,8 +29,7 @@ export default async function AdminUsersPage() {
         <CardHeader>
           <CardTitle>Accounts</CardTitle>
           <CardDescription>
-            All three roles are managed here. Assign treasurers and parish
-            members to a chapel under Chapel Access.
+            Create and manage Administrators, Treasurers, and Parish Members.
           </CardDescription>
         </CardHeader>
         <CardContent>

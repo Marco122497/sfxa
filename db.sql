@@ -131,6 +131,15 @@ CREATE TABLE IF NOT EXISTS donation_categories (
 
 -- Income services (Donations, Collections/Offerings, Church Services,
 -- Other Income) are seeded in sql/phase3-categories.sql.
+-- Income category names are managed in sql/phase3-income-categories.sql.
+
+CREATE TABLE IF NOT EXISTS income_categories (
+    income_category_id BIGSERIAL PRIMARY KEY,
+    category_code VARCHAR(40) UNIQUE NOT NULL,
+    category_name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS donations (
     donation_id BIGSERIAL PRIMARY KEY,

@@ -24,7 +24,6 @@ export type Profile = {
   last_login: string | null;
   created_at: string;
   updated_at: string;
-  chapel_id?: number | null;
   /** Auth account email (from auth.users when loaded by admin). */
   email?: string | null;
 };

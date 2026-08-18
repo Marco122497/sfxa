@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function ChapelAccessRedirectPage() {
-  redirect("/administrator/chapels");
+export default function ChapelAccessRemovedPage() {
+  redirect("/administrator");
 }

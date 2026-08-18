@@ -11,7 +11,6 @@ import {
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getCashFlowStatement } from "@/lib/cash-flow";
-import { listChapels } from "@/lib/chapels/store";
 import { formatDateTime } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import {
@@ -31,9 +30,8 @@ import { cn } from "@/lib/utils";
 export default async function ParishOfficerDashboardPage() {
   const { profile } = await requireParishOfficer();
   const supabase = await createClient();
-  const [statement, chapels, { data: announcements }] = await Promise.all([
+  const [statement, { data: announcements }] = await Promise.all([
     getCashFlowStatement(),
-    listChapels().catch(() => []),
     supabase
       .from("announcements")
       .select("announcement_id, title, published_at, created_at, content")
@@ -42,7 +40,6 @@ export default async function ParishOfficerDashboardPage() {
       .limit(8),
   ]);
 
-  const chapel = chapels.find((row) => row.chapel_id === profile.chapel_id);
   const items = announcements ?? [];
   const activities = items.filter((row) =>
     isParishContentKind(row.title, "activity")
@@ -63,9 +60,8 @@ export default async function ParishOfficerDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {chapel?.chapel_name || "Parish-wide approved view"} · Welcome,{" "}
-          {profile.first_name}. View-only financial summaries and parish
-          information.
+          Welcome, {profile.first_name}. View-only financial summaries and
+          parish information.
         </p>
       </div>
 

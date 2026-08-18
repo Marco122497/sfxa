@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { Loader2 } from "lucide-react";
 
 import {
   receiveOnlineDonation,
   type ReceiveDonationState,
 } from "@/app/actions/receive-funds";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
 import { formatDate, formatMoney } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,11 +60,8 @@ export function ReceivePendingDonations({ rows }: { rows: PendingDonation[] }) {
 }
 
 function PendingRow({ row }: { row: PendingDonation }) {
-  const [state, formAction, pending] = useActionState(
-    receiveOnlineDonation,
-    initialState
-  );
-  useRefreshOnSuccess(state.success);
+  const [state, formAction, pending] = useServerAction(receiveOnlineDonation, initialState);
+
 
   return (
     <TableRow>

@@ -1,10 +1,10 @@
--- Phase 4 — Treasurer: Receive Funds and Release Funds
+-- Phase 4 — Treasurer: Receive Funds and Expenses
 -- Run after sql/phase3-categories.sql
 -- Safe to re-run.
 --
 -- Receive Funds: collections, donations, church services, other income
 --   (Treasurer selects income services created in phase 3)
--- Release Funds: expenses and disbursements
+-- Expenses: cash outflow
 --   (Treasurer selects expense categories created in phase 3)
 
 CREATE TABLE IF NOT EXISTS donations (

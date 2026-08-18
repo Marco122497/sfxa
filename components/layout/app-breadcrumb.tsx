@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import type { IncomeCategoryRecord } from "@/lib/income-categories";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -26,7 +27,6 @@ const pageLabels: Record<string, string> = {
   budgets: "Budget",
   categories: "Categories",
   income: "Income Categories",
-  chapels: "Chapel Access",
   treasurers: "Treasurers",
   members: "Parish Members",
   activities: "Parish Activities",
@@ -38,10 +38,9 @@ const pageLabels: Record<string, string> = {
   statements: "Financial Statements",
   settings: "Settings",
   receive: "Receive Funds",
-  release: "Release Funds",
+  expenses: "Expenses",
   services: "Church Services",
   other: "Other Income",
-  disbursements: "Disbursements",
   "cash-flow": "Cash Flow",
   donate: "Donate Online",
   "my-donations": "My Donations",
@@ -55,7 +54,13 @@ const dashboardLabels: Record<string, string> = {
   "parish-officer": "Parish Member Dashboard",
 };
 
-export function AppBreadcrumb({ dashboardHref }: { dashboardHref: string }) {
+export function AppBreadcrumb({
+  dashboardHref,
+  incomeCategories = [],
+}: {
+  dashboardHref: string;
+  incomeCategories?: IncomeCategoryRecord[];
+}) {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
   const root = segments[0] ?? "";
@@ -76,10 +81,12 @@ export function AppBreadcrumb({ dashboardHref }: { dashboardHref: string }) {
   const dashboardLabel =
     dashboardLabels[dashboardHref.replace("/", "")] ?? "Dashboard";
   const leaf = segments[segments.length - 1] ?? "";
+  const incomeCategory = incomeCategories.find((item) => item.code === leaf);
   let pageLabel =
+    incomeCategory?.name ||
     pageLabels[leaf] ||
     pageLabels[segments[1] ?? ""] ||
-    leaf.replace(/-/g, " ");
+    leaf.replace(/[-_]/g, " ");
   if (leaf === "income" && segments.includes("finance")) {
     pageLabel = "Income";
   }
@@ -88,6 +95,15 @@ export function AppBreadcrumb({ dashboardHref }: { dashboardHref: string }) {
   }
   if (leaf === "activities" && segments[0] === "parish-officer") {
     pageLabel = "Upcoming Parish Activities";
+  }
+  if (leaf === "allocation") {
+    pageLabel = "Budget Allocation";
+  }
+  if (leaf === "monitoring") {
+    pageLabel = "Budget Monitoring";
+  }
+  if (leaf === "history" && segments.includes("budgets")) {
+    pageLabel = "Budget History";
   }
 
   return (

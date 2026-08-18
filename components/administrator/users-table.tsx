@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, Trash2Icon, UserRoundIcon } from "lucide-react";
 
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   deleteUser,
   updateUser,
@@ -134,7 +134,7 @@ function EditUserForm({
   isSelf: boolean;
   onSuccess: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(updateUser, initialState);
+  const [state, formAction, pending] = useServerAction(updateUser, initialState, onSuccess);
   const formId = `edit-user-${user.id}`;
   const [firstName, setFirstName] = useState(user.first_name);
   const [middleName, setMiddleName] = useState(user.middle_name ?? "");
@@ -146,7 +146,6 @@ function EditUserForm({
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState(user.status ? "1" : "0");
 
-  useRefreshOnSuccess(state.success, onSuccess);
 
   return (
     <>
@@ -350,10 +349,9 @@ function DeleteUserButton({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(deleteUser, initialState);
+  const [state, formAction, pending] = useServerAction(deleteUser, initialState, () => setOpen(false));
   const formId = `delete-user-${userId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

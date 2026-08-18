@@ -2,6 +2,8 @@ import { ReceiptIcon } from "lucide-react";
 import { requireTreasurer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { relationName } from "@/lib/treasurer/relations";
+import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { toExpenseBudgetCaps } from "@/lib/expense-budget";
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
 import { ExpenseManager } from "@/components/treasurer/expense-manager";
 import {
@@ -17,7 +19,7 @@ export default async function TreasurerExpensesPage() {
     { data: categories },
     subcategoriesResult,
     expensesResult,
-    { data: budgets },
+    budgetModule,
   ] = await Promise.all([
     supabase
       .from("expense_categories")
@@ -34,15 +36,13 @@ export default async function TreasurerExpensesPage() {
       )
       .order("expense_date", { ascending: false })
       .limit(200),
-    supabase.from("budgets").select("budget_categories(category_name)"),
+    getBudgetModuleData(),
   ]);
 
-  // Budget categories mirror expense categories by name.
   const budgetedCategoryNames = new Set(
-    (budgets ?? [])
-      .map((row) => relationName(row.budget_categories ?? null))
-      .filter(Boolean)
+    budgetModule.rows.map((row) => row.category_name).filter(Boolean)
   );
+  const budgetCaps = toExpenseBudgetCaps(budgetModule.rows, categories ?? []);
 
   let expenses:
     | {
@@ -93,7 +93,7 @@ export default async function TreasurerExpensesPage() {
   return (
     <div className="space-y-4">
       <TreasurerPageHeader
-        title="Release Expenses"
+        title="Expenses"
         description="Record spending with a general category and a specific category under it."
         icon={ReceiptIcon}
       />
@@ -113,6 +113,7 @@ export default async function TreasurerExpensesPage() {
               has_budget: budgetedCategoryNames.has(category.category_name),
             }))}
             subcategories={subcategoriesResult.data ?? []}
+            budgetCaps={budgetCaps}
           />
         </CardContent>
       </Card>

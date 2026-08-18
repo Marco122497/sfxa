@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
 import {
@@ -12,7 +12,7 @@ import {
   updateExpenseSubcategory,
   type CategoryActionState,
 } from "@/app/actions/categories";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -56,12 +56,8 @@ export type ExpenseSpecificCategory = {
 
 function AddGeneralDialog() {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(createCategory, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -114,12 +110,8 @@ function AddGeneralDialog() {
 
 function EditGeneralDialog({ row }: { row: ExpenseGeneralCategory }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(updateCategory, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -195,13 +187,9 @@ function DeleteGeneralButton({
   categoryName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteCategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(deleteCategory, initialState, () => setOpen(false));
   const formId = `delete-general-${categoryId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -274,12 +262,8 @@ function AddSpecificDialog({
   generals: ExpenseGeneralCategory[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createExpenseSubcategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(createExpenseSubcategory, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   const disabled = generals.length === 0;
 
@@ -358,12 +342,8 @@ function EditSpecificDialog({
   generals: ExpenseGeneralCategory[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateExpenseSubcategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(updateExpenseSubcategory, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   const generalName =
     generals.find((g) => g.id === row.expense_category_id)?.name ?? "—";
@@ -443,13 +423,9 @@ function DeleteSpecificButton({
   subcategoryName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteExpenseSubcategory,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(deleteExpenseSubcategory, initialState, () => setOpen(false));
   const formId = `delete-specific-${subcategoryId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

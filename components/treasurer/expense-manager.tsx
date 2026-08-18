@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ExternalLinkIcon,
   Loader2,
@@ -9,7 +9,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 
 import {
   createExpense,
@@ -17,7 +17,11 @@ import {
   updateExpense,
   type FinanceActionState,
 } from "@/app/actions/finance";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, toNumber } from "@/lib/format";
+import {
+  resolveExpenseBudgetCap,
+  type ExpenseBudgetCap,
+} from "@/lib/expense-budget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -75,13 +79,17 @@ export type ExpenseRow = {
 function ExpenseFormFields({
   categories,
   subcategories,
+  budgetCaps,
   defaults,
   idPrefix,
+  onOverBudgetChange,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
+  budgetCaps: ExpenseBudgetCap[];
   defaults?: Partial<ExpenseRow>;
   idPrefix: string;
+  onOverBudgetChange?: (overBudget: boolean) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const firstBudgeted = categories.find((c) => c.has_budget);
@@ -106,6 +114,12 @@ function ExpenseFormFields({
       ? defaults.expense_subcategory_id
       : (specificForCategory[0]?.subcategory_id ?? "")
   );
+  const [expenseDate, setExpenseDate] = useState(
+    defaults?.expense_date ?? today
+  );
+  const [amount, setAmount] = useState(
+    defaults?.amount != null ? String(defaults.amount) : ""
+  );
 
   useEffect(() => {
     const stillValid = specificForCategory.some(
@@ -115,6 +129,26 @@ function ExpenseFormFields({
       setSubcategoryId(specificForCategory[0]?.subcategory_id ?? "");
     }
   }, [specificForCategory, subcategoryId]);
+
+  const cap = resolveExpenseBudgetCap(
+    budgetCaps,
+    categoryId,
+    subcategoryId,
+    Number(expenseDate.slice(0, 4)) || new Date().getFullYear()
+  );
+  const sameBucket =
+    defaults?.expense_category_id === categoryId &&
+    defaults?.expense_subcategory_id === subcategoryId;
+  const remaining = cap
+    ? Math.max(0, cap.remaining + (sameBucket ? toNumber(defaults?.amount) : 0))
+    : null;
+  const entered = toNumber(amount);
+  const overBudget =
+    remaining != null && amount !== "" && entered - remaining > 0.0001;
+
+  useEffect(() => {
+    onOverBudgetChange?.(overBudget || (remaining != null && remaining <= 0));
+  }, [onOverBudgetChange, overBudget, remaining]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -141,12 +175,6 @@ function ExpenseFormFields({
             </option>
           ))}
         </select>
-        {categories.some((c) => !c.has_budget) && (
-          <p className="text-xs text-muted-foreground">
-            Categories marked “needs budget allocation” must get a budget under
-            Budgets → Allocation before expenses can be recorded.
-          </p>
-        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-subcategory`}>Specific category</Label>
@@ -182,9 +210,25 @@ function ExpenseFormFields({
           type="number"
           min="0.01"
           step="0.01"
+          max={remaining != null && remaining > 0 ? remaining.toFixed(2) : undefined}
           required
-          defaultValue={defaults?.amount ?? ""}
+          value={amount}
+          aria-invalid={overBudget || undefined}
+          onChange={(event) => setAmount(event.target.value)}
         />
+        {remaining != null ? (
+          overBudget || remaining <= 0 ? (
+            <p className="text-xs text-destructive" role="alert">
+              {remaining <= 0
+                ? "No remaining budget for this category."
+                : `Amount cannot exceed the remaining budget of ${formatMoney(remaining)}.`}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Remaining budget: {formatMoney(remaining)}
+            </p>
+          )
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-date`}>Date</Label>
@@ -193,7 +237,8 @@ function ExpenseFormFields({
           name="expense_date"
           type="date"
           required
-          defaultValue={defaults?.expense_date ?? today}
+          value={expenseDate}
+          onChange={(event) => setExpenseDate(event.target.value)}
         />
       </div>
       <div className="space-y-2">
@@ -221,20 +266,25 @@ function ExpenseFormFields({
 function AddExpenseDialog({
   categories,
   subcategories,
+  budgetCaps,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
+  budgetCaps: ExpenseBudgetCap[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createExpense,
-    initialState
-  );
+  const [overBudget, setOverBudget] = useState(false);
+  const [state, formAction, pending] = useServerAction(createExpense, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setOverBudget(false);
+      }}
+    >
       <AlertDialogTrigger render={<Button type="button" />}>
         <PlusIcon />
         Add expense
@@ -255,12 +305,14 @@ function AddExpenseDialog({
           <ExpenseFormFields
             categories={categories}
             subcategories={subcategories}
+            budgetCaps={budgetCaps}
             idPrefix="add"
+            onOverBudgetChange={setOverBudget}
           />
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <Button type="submit" form="add-expense-form" disabled={pending}>
+          <Button type="submit" form="add-expense-form" disabled={pending || overBudget}>
             {pending ? (
               <>
                 <Loader2 className="animate-spin" />
@@ -280,21 +332,26 @@ function EditExpenseDialog({
   row,
   categories,
   subcategories,
+  budgetCaps,
 }: {
   row: ExpenseRow;
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
+  budgetCaps: ExpenseBudgetCap[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateExpense,
-    initialState
-  );
+  const [overBudget, setOverBudget] = useState(false);
+  const [state, formAction, pending] = useServerAction(updateExpense, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setOverBudget(false);
+      }}
+    >
       <AlertDialogTrigger
         render={
           <Button
@@ -334,8 +391,10 @@ function EditExpenseDialog({
             key={JSON.stringify(row)}
             categories={categories}
             subcategories={subcategories}
+            budgetCaps={budgetCaps}
             idPrefix={`edit-${row.expense_id}`}
             defaults={row}
+            onOverBudgetChange={setOverBudget}
           />
           {row.receipt_url && (
             <p className="text-xs text-muted-foreground">
@@ -348,7 +407,7 @@ function EditExpenseDialog({
           <Button
             type="submit"
             form={`edit-expense-${row.expense_id}`}
-            disabled={pending}
+            disabled={pending || overBudget}
           >
             {pending ? (
               <>
@@ -373,13 +432,9 @@ function DeleteExpenseButton({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteExpense,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(deleteExpense, initialState, () => setOpen(false));
   const formId = `delete-expense-${expenseId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -448,12 +503,14 @@ export function ExpenseManager({
   expenses,
   categories,
   subcategories,
+  budgetCaps = [],
   canEdit = false,
   canDelete = false,
 }: {
   expenses: ExpenseRow[];
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
+  budgetCaps?: ExpenseBudgetCap[];
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
@@ -496,6 +553,7 @@ export function ExpenseManager({
           <AddExpenseDialog
             categories={categories}
             subcategories={subcategories}
+            budgetCaps={budgetCaps}
           />
         </div>
       </div>
@@ -556,6 +614,7 @@ export function ExpenseManager({
                           row={row}
                           categories={categories}
                           subcategories={subcategories}
+                          budgetCaps={budgetCaps}
                         />
                       ) : null}
                       {canDelete ? (

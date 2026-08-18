@@ -11,7 +11,7 @@ export const INCOME_CATEGORIES = [
     id: "collection",
     label: "Collections / Offerings",
     description:
-      "Offerings collected during masses and chapel services, including regular, Sunday, special, and chapel collections.",
+      "Offerings collected during masses and parish services, including regular, Sunday, and special collections.",
   },
   {
     id: "church_service",

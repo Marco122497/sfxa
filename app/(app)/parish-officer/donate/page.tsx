@@ -13,20 +13,10 @@ import {
 } from "@/components/ui/card";
 
 export default async function DonateOnlinePage() {
-  const { supabase, profile } = await requireParishOfficer();
+  await requireParishOfficer();
   const donationTypes = await loadIncomeTypeOptions("donation", {
     ensureCategories: false,
   });
-
-  let chapelName: string | null = null;
-  if (profile.chapel_id) {
-    const { data } = await supabase
-      .from("chapels")
-      .select("chapel_name")
-      .eq("chapel_id", profile.chapel_id)
-      .maybeSingle();
-    chapelName = data?.chapel_name ?? null;
-  }
 
   return (
     <div className="space-y-6">
@@ -44,10 +34,7 @@ export default async function DonateOnlinePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <OnlineDonateForm
-            categories={donationTypes}
-            chapelName={chapelName}
-          />
+          <OnlineDonateForm categories={donationTypes} />
         </CardContent>
       </Card>
     </div>

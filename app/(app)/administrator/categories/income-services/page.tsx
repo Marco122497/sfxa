@@ -3,7 +3,7 @@ import { TagsIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { classifyIncomeName } from "@/lib/income";
+import { classifyIncomeName, INCOME_CATEGORIES } from "@/lib/income";
 import { CategoryPageHeader } from "@/components/administrator/category-page-header";
 import { IncomeServiceManager } from "@/components/administrator/income-service-manager";
 import { MissingSchemaNotice } from "@/components/finance/missing-schema-notice";
@@ -23,6 +23,10 @@ export default async function AdminIncomeServicesPage({
     category: string;
     is_active: boolean;
   }[] = [];
+  let incomeCategories = INCOME_CATEGORIES.map((item) => ({
+    code: item.id,
+    name: item.label,
+  }));
   let loadError: string | null = null;
   let projectHost: string | null = null;
 
@@ -34,10 +38,23 @@ export default async function AdminIncomeServicesPage({
 
   try {
     const admin = createAdminClient();
-    const { data, error } = await admin
-      .from("income_services")
-      .select("service_id, service_name, category, is_active")
-      .order("service_name");
+    const [{ data, error }, categoriesResult] = await Promise.all([
+      admin
+        .from("income_services")
+        .select("service_id, service_name, category, is_active")
+        .order("service_name"),
+      admin
+        .from("income_categories")
+        .select("category_code, category_name")
+        .order("category_name"),
+    ]);
+
+    if (!categoriesResult.error && (categoriesResult.data?.length ?? 0) > 0) {
+      incomeCategories = (categoriesResult.data ?? []).map((row) => ({
+        code: row.category_code,
+        name: row.category_name,
+      }));
+    }
 
     if (!error) {
       services = data ?? [];
@@ -82,6 +99,7 @@ export default async function AdminIncomeServicesPage({
           <CardContent className="px-3 py-0">
             <IncomeServiceManager
               services={services}
+              incomeCategories={incomeCategories}
               initialCategory={params.category}
             />
           </CardContent>

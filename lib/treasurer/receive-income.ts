@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { classifyIncomeName, type IncomeCategoryId } from "@/lib/income";
+import { classifyIncomeName } from "@/lib/income";
 import { relationName } from "@/lib/treasurer/relations";
 
 export type ReceiveIncomeCategory = {
@@ -30,7 +30,7 @@ type IncomeServiceRow = {
   donation_category_id: number | null;
 };
 
-function asKinds(kind: IncomeCategoryId | IncomeCategoryId[]) {
+function asKinds(kind: string | string[]) {
   return Array.isArray(kind) ? kind : [kind];
 }
 
@@ -95,7 +95,7 @@ async function resolveCategoryId(
  * not by guessing from category names.
  */
 export async function loadReceiveIncome(
-  kind: IncomeCategoryId | IncomeCategoryId[],
+  kind: string | string[],
   options?: { withStatus?: boolean; ensureCategories?: boolean }
 ) {
   const supabase = await createClient();
@@ -232,7 +232,7 @@ export async function loadReceiveIncome(
 }
 
 export async function loadIncomeTypeOptions(
-  kind: IncomeCategoryId,
+  kind: string,
   options?: { ensureCategories?: boolean }
 ) {
   const { categories } = await loadReceiveIncome(kind, options);

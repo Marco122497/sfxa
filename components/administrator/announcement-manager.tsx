@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import {
   EyeOffIcon,
   GlobeIcon,
@@ -18,7 +18,7 @@ import {
   updateAnnouncement,
   type AnnouncementActionState,
 } from "@/app/actions/announcements";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { formatDateTime } from "@/lib/auth/roles";
 import {
   parishContentKind,
@@ -70,14 +70,10 @@ const selectClassName =
 
 function AddAnnouncementDialog({ kind }: { kind?: ParishContentKind }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createAnnouncement,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(createAnnouncement, initialState, () => setOpen(false));
   const lockedKind = kind;
   const noun = lockedKind === "notice" ? "notice" : "activity";
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog
@@ -177,13 +173,9 @@ function EditAnnouncementDialog({
   kind?: ParishContentKind;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateAnnouncement,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(updateAnnouncement, initialState, () => setOpen(false));
   const formId = `edit-announcement-${item.announcement_id}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog
@@ -287,11 +279,10 @@ function EditAnnouncementDialog({
 }
 
 function PublishAnnouncementButton({ item }: { item: AnnouncementRow }) {
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerAction(
     publishAnnouncement,
     initialState
   );
-  useRefreshOnSuccess(state.success);
 
   return (
     <form action={formAction} className="inline">
@@ -333,13 +324,13 @@ function PublishAnnouncementButton({ item }: { item: AnnouncementRow }) {
 
 function DeleteAnnouncementButton({ item }: { item: AnnouncementRow }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerAction(
     deleteAnnouncement,
-    initialState
+    initialState,
+    () => setOpen(false)
   );
   const formId = `delete-announcement-${item.announcement_id}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

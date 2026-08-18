@@ -7,11 +7,25 @@ import {
   requireAdmin,
   requireTreasurerOrAdmin,
 } from "@/lib/auth/session";
+import { formatMoney, toNumber } from "@/lib/format";
+import { incomeRecordCopy } from "@/lib/income-categories";
+import {
+  resolveExpenseBudgetCap,
+  toExpenseBudgetCaps,
+} from "@/lib/expense-budget";
+import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 
 export type FinanceActionState = {
   error?: string;
   success?: string;
 };
+
+function recordCopyFromForm(formData: FormData) {
+  return incomeRecordCopy(
+    String(formData.get("record_kind") || "donation"),
+    String(formData.get("record_name") || "")
+  );
+}
 
 async function getIp() {
   const headerStore = await headers();
@@ -32,22 +46,12 @@ function revalidateFinance() {
   revalidatePath("/treasurer/budgets/allocation");
   revalidatePath("/treasurer/budgets/monitoring");
   revalidatePath("/treasurer/budgets/history");
-  revalidatePath("/treasurer/receive/collections");
-  revalidatePath("/treasurer/receive/donations");
-  revalidatePath("/treasurer/receive/services");
-  revalidatePath("/treasurer/receive/other");
+  revalidatePath("/treasurer/receive", "layout");
   revalidatePath("/treasurer/release/expenses");
-  revalidatePath("/treasurer/release/disbursements");
   revalidatePath("/treasurer/cash-flow");
   revalidatePath("/treasurer/statements");
   revalidatePath("/administrator/statements");
-  revalidatePath("/administrator/finance");
-  revalidatePath("/administrator/finance/donations");
-  revalidatePath("/administrator/finance/collections");
-  revalidatePath("/administrator/finance/income");
-  revalidatePath("/administrator/finance/expenses");
-  revalidatePath("/administrator/finance/disbursements");
-  revalidatePath("/administrator/finance/budgets");
+  revalidatePath("/administrator/finance", "layout");
   revalidatePath("/administrator");
   revalidatePath("/administrator/reports");
   revalidatePath("/parish-officer/budget");
@@ -162,6 +166,35 @@ async function ensureCategoryHasBudget(
   return `"${category.category_name}" has no budget allocation yet. Create one in Budgets → Allocation first.`;
 }
 
+async function ensureExpenseWithinBudget(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  expenseCategoryId: number,
+  expenseSubcategoryId: number,
+  amount: number,
+  expenseDate: string,
+  credit = 0
+): Promise<string | null> {
+  const [{ rows }, { data: expenseCategories }] = await Promise.all([
+    getBudgetModuleData(),
+    supabase
+      .from("expense_categories")
+      .select("expense_category_id, category_name"),
+  ]);
+  const cap = resolveExpenseBudgetCap(
+    toExpenseBudgetCaps(rows, expenseCategories ?? []),
+    expenseCategoryId,
+    expenseSubcategoryId,
+    Number(expenseDate.slice(0, 4)) || new Date().getFullYear()
+  );
+  if (!cap) return null;
+
+  const remaining = Math.max(0, cap.remaining + credit);
+  if (amount - remaining > 0.0001) {
+    return `Amount exceeds the remaining budget of ${formatMoney(remaining)}.`;
+  }
+  return null;
+}
+
 function parseAmount(value: FormDataEntryValue | null) {
   const amount = Number(String(value || "").trim());
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -262,7 +295,7 @@ export async function createDonation(
   });
 
   revalidateFinance();
-  return { success: "Donation recorded." };
+  return { success: recordCopyFromForm(formData).recordedMessage };
 }
 
 export async function updateDonation(
@@ -307,7 +340,7 @@ export async function updateDonation(
   });
 
   revalidateFinance();
-  return { success: "Donation updated." };
+  return { success: recordCopyFromForm(formData).updatedMessage };
 }
 
 export async function deleteDonation(
@@ -340,7 +373,7 @@ export async function deleteDonation(
   });
 
   revalidateFinance();
-  return { success: "Donation deleted." };
+  return { success: recordCopyFromForm(formData).deletedMessage };
 }
 
 export async function createExpense(
@@ -383,6 +416,17 @@ export async function createExpense(
   );
   if (budgetError) {
     return { error: budgetError };
+  }
+
+  const overBudgetError = await ensureExpenseWithinBudget(
+    supabase,
+    expense_category_id,
+    expense_subcategory_id,
+    amount,
+    expense_date
+  );
+  if (overBudgetError) {
+    return { error: overBudgetError };
   }
 
   const receipt = await uploadReceipt(
@@ -474,6 +518,26 @@ export async function updateExpense(
   );
   if (budgetError) {
     return { error: budgetError };
+  }
+
+  const { data: existing } = await supabase
+    .from("expenses")
+    .select("amount, expense_category_id, expense_subcategory_id")
+    .eq("expense_id", expense_id)
+    .maybeSingle();
+  const sameBucket =
+    existing?.expense_category_id === expense_category_id &&
+    existing?.expense_subcategory_id === expense_subcategory_id;
+  const overBudgetError = await ensureExpenseWithinBudget(
+    supabase,
+    expense_category_id,
+    expense_subcategory_id,
+    amount,
+    expense_date,
+    sameBucket ? toNumber(existing?.amount) : 0
+  );
+  if (overBudgetError) {
+    return { error: overBudgetError };
   }
 
   const receipt = await uploadReceipt(

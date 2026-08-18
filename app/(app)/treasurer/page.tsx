@@ -11,7 +11,6 @@ import {
 
 import { requireTreasurer } from "@/lib/auth/session";
 import { getTreasurerDashboardData } from "@/lib/treasurer/dashboard";
-import { listChapels } from "@/lib/chapels/store";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   DailyIncomeLineChart,
@@ -37,8 +36,6 @@ import { cn } from "@/lib/utils";
 
 export default async function TreasurerDashboardPage() {
   const { profile } = await requireTreasurer();
-  const chapels = await listChapels().catch(() => []);
-  const chapel = chapels.find((row) => row.chapel_id === profile.chapel_id);
   const {
     stats,
     dailyIncome,
@@ -87,8 +84,8 @@ export default async function TreasurerDashboardPage() {
           </h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          {chapel?.chapel_name || "No chapel assigned"} · Receive, release, and
-          record finances for your chapel, {profile.first_name}.
+          Welcome, {profile.first_name}. Receive, release, and record parish
+          finances.
         </p>
       </div>
 

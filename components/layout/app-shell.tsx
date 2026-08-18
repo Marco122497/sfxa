@@ -2,6 +2,7 @@
 
 import type { Profile } from "@/lib/auth/roles";
 import { getDashboardPath } from "@/lib/auth/roles";
+import type { IncomeCategoryRecord } from "@/lib/income-categories";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
 import { AppPageSkeleton } from "@/components/layout/app-page-skeleton";
@@ -25,10 +26,12 @@ import {
 function AppShellContent({
   profile,
   notifications,
+  incomeCategories,
   children,
 }: {
   profile: Profile;
   notifications: NavNotification[];
+  incomeCategories: IncomeCategoryRecord[];
   children: React.ReactNode;
 }) {
   const dashboardHref = getDashboardPath(profile.role);
@@ -36,7 +39,7 @@ function AppShellContent({
 
   return (
     <>
-      <AppSidebar profile={profile} />
+      <AppSidebar profile={profile} incomeCategories={incomeCategories} />
       <SidebarInset>
         <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
@@ -45,7 +48,10 @@ function AppShellContent({
               orientation="vertical"
               className="mr-1 data-vertical:h-4 data-vertical:self-auto"
             />
-            <AppBreadcrumb dashboardHref={dashboardHref} />
+            <AppBreadcrumb
+              dashboardHref={dashboardHref}
+              incomeCategories={incomeCategories}
+            />
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <ModeToggle />
@@ -67,16 +73,22 @@ function AppShellContent({
 export function AppShell({
   profile,
   notifications = [],
+  incomeCategories = [],
   children,
 }: {
   profile: Profile;
   notifications?: NavNotification[];
+  incomeCategories?: IncomeCategoryRecord[];
   children: React.ReactNode;
 }) {
   return (
     <SidebarProvider>
       <NavigationPendingProvider>
-        <AppShellContent profile={profile} notifications={notifications}>
+        <AppShellContent
+          profile={profile}
+          notifications={notifications}
+          incomeCategories={incomeCategories}
+        >
           {children}
         </AppShellContent>
       </NavigationPendingProvider>

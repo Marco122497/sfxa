@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CircleOffIcon,
   Loader2,
@@ -17,12 +17,10 @@ import {
   updateIncomeService,
   type IncomeServiceActionState,
 } from "@/app/actions/income-services";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   ADDABLE_INCOME_CATEGORIES,
-  INCOME_CATEGORIES,
   incomeCategoryLabel,
-  isIncomeCategoryId,
 } from "@/lib/income";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -61,14 +59,40 @@ export type IncomeServiceRow = {
   is_active: boolean;
 };
 
+export type IncomeCategoryOption = {
+  code: string;
+  name: string;
+};
+
+function categoryOptions(categories?: IncomeCategoryOption[]) {
+  if (categories && categories.length > 0) return categories;
+  return ADDABLE_INCOME_CATEGORIES.map((item) => ({
+    code: item.id,
+    name: item.label,
+  }));
+}
+
+function categoryLabel(
+  code: string,
+  categories?: IncomeCategoryOption[]
+) {
+  return (
+    categoryOptions(categories).find((item) => item.code === code)?.name ??
+    incomeCategoryLabel(code)
+  );
+}
+
 export function IncomeServiceManager({
   services,
+  incomeCategories,
   initialCategory = "",
 }: {
   services: IncomeServiceRow[];
+  incomeCategories?: IncomeCategoryOption[];
   initialCategory?: string;
 }) {
-  const defaultCategory = isIncomeCategoryId(initialCategory)
+  const options = categoryOptions(incomeCategories);
+  const defaultCategory = options.some((item) => item.code === initialCategory)
     ? initialCategory
     : "";
   const [query, setQuery] = useState("");
@@ -81,10 +105,10 @@ export function IncomeServiceManager({
       if (!q) return true;
       return (
         service.service_name.toLowerCase().includes(q) ||
-        incomeCategoryLabel(service.category).toLowerCase().includes(q)
+        categoryLabel(service.category, options).toLowerCase().includes(q)
       );
     });
-  }, [filter, query, services]);
+  }, [filter, options, query, services]);
 
   return (
     <div className="space-y-2">
@@ -105,9 +129,9 @@ export function IncomeServiceManager({
             aria-label="Filter by income category"
           >
             <option value="">All income categories</option>
-            {INCOME_CATEGORIES.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
+            {options.map((item) => (
+              <option key={item.code} value={item.code}>
+                {item.name}
               </option>
             ))}
           </select>
@@ -117,7 +141,10 @@ export function IncomeServiceManager({
             placeholder="Search services…"
             className="h-8 w-[180px]"
           />
-          <AddServiceDialog defaultCategory={defaultCategory || "donation"} />
+          <AddServiceDialog
+            defaultCategory={defaultCategory || options[0]?.code || "donation"}
+            incomeCategories={options}
+          />
         </div>
       </div>
       {filtered.length === 0 ? (
@@ -139,14 +166,17 @@ export function IncomeServiceManager({
                   {service.service_name}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
-                  {incomeCategoryLabel(service.category)}
+                  {categoryLabel(service.category, options)}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
                   {service.is_active ? "Active" : "Inactive"}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
                   <div className="flex justify-end gap-1">
-                    <EditServiceDialog service={service} />
+                    <EditServiceDialog
+                      service={service}
+                      incomeCategories={options}
+                    />
                     <ToggleServiceDialog service={service} />
                     <DeleteServiceDialog service={service} />
                   </div>
@@ -160,14 +190,16 @@ export function IncomeServiceManager({
   );
 }
 
-function AddServiceDialog({ defaultCategory }: { defaultCategory: string }) {
+function AddServiceDialog({
+  defaultCategory,
+  incomeCategories,
+}: {
+  defaultCategory: string;
+  incomeCategories: IncomeCategoryOption[];
+}) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createIncomeService,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(createIncomeService, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -207,9 +239,9 @@ function AddServiceDialog({ defaultCategory }: { defaultCategory: string }) {
               defaultValue={defaultCategory}
               className={selectClassName}
             >
-              {ADDABLE_INCOME_CATEGORIES.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
+              {incomeCategories.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
                 </option>
               ))}
             </select>
@@ -227,15 +259,17 @@ function AddServiceDialog({ defaultCategory }: { defaultCategory: string }) {
   );
 }
 
-function EditServiceDialog({ service }: { service: IncomeServiceRow }) {
+function EditServiceDialog({
+  service,
+  incomeCategories,
+}: {
+  service: IncomeServiceRow;
+  incomeCategories: IncomeCategoryOption[];
+}) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateIncomeService,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(updateIncomeService, initialState, () => setOpen(false));
   const formId = `edit-income-service-${service.service_id}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -288,15 +322,15 @@ function EditServiceDialog({ service }: { service: IncomeServiceRow }) {
               name="category"
               required
               defaultValue={
-                isIncomeCategoryId(service.category)
+                incomeCategories.some((item) => item.code === service.category)
                   ? service.category
-                  : "donation"
+                  : (incomeCategories[0]?.code ?? "donation")
               }
               className={selectClassName}
             >
-              {ADDABLE_INCOME_CATEGORIES.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
+              {incomeCategories.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.name}
                 </option>
               ))}
             </select>
@@ -322,14 +356,10 @@ function EditServiceDialog({ service }: { service: IncomeServiceRow }) {
 
 function ToggleServiceDialog({ service }: { service: IncomeServiceRow }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    toggleIncomeService,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(toggleIncomeService, initialState, () => setOpen(false));
   const formId = `toggle-income-service-${service.service_id}`;
   const activating = !service.is_active;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -417,13 +447,9 @@ function ToggleServiceDialog({ service }: { service: IncomeServiceRow }) {
 
 function DeleteServiceDialog({ service }: { service: IncomeServiceRow }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteIncomeService,
-    initialState
-  );
+  const [state, formAction, pending] = useServerAction(deleteIncomeService, initialState, () => setOpen(false));
   const formId = `delete-income-service-${service.service_id}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>

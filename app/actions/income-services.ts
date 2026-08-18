@@ -15,11 +15,25 @@ export type IncomeServiceActionState = {
   success?: string;
 };
 
-function isCategory(value: string): value is IncomeCategoryId {
+function isLegacyCategory(value: string): value is IncomeCategoryId {
   return (
     isIncomeCategoryId(value) &&
     ADDABLE_INCOME_CATEGORIES.some((item) => item.id === value)
   );
+}
+
+async function isKnownCategory(
+  supabase: ReturnType<typeof createAdminClient>,
+  value: string
+) {
+  if (!value) return false;
+  const { data, error } = await supabase
+    .from("income_categories")
+    .select("category_code")
+    .eq("category_code", value)
+    .maybeSingle();
+  if (!error) return Boolean(data);
+  return isLegacyCategory(value);
 }
 
 function revalidateIncomeConfig() {
@@ -27,10 +41,8 @@ function revalidateIncomeConfig() {
   revalidatePath("/administrator/categories/income");
   revalidatePath("/administrator/categories/income-services");
   revalidatePath("/administrator/income-services");
-  revalidatePath("/treasurer/receive/collections");
-  revalidatePath("/treasurer/receive/donations");
-  revalidatePath("/treasurer/receive/services");
-  revalidatePath("/treasurer/receive/other");
+  revalidatePath("/administrator/finance", "layout");
+  revalidatePath("/treasurer/receive", "layout");
 }
 
 export async function createIncomeService(
@@ -41,7 +53,7 @@ export async function createIncomeService(
   const supabase = createAdminClient();
   const service_name = String(formData.get("service_name") || "").trim();
   const category = String(formData.get("category") || "").trim();
-  if (!service_name || !isCategory(category)) {
+  if (!service_name || !(await isKnownCategory(supabase, category))) {
     return { error: "Name and category are required." };
   }
 
@@ -105,7 +117,7 @@ export async function updateIncomeService(
   const service_id = Number(formData.get("service_id"));
   const service_name = String(formData.get("service_name") || "").trim();
   const category = String(formData.get("category") || "").trim();
-  if (!service_id || !service_name || !isCategory(category)) {
+  if (!service_id || !service_name || !(await isKnownCategory(supabase, category))) {
     return { error: "Name and category are required." };
   }
 

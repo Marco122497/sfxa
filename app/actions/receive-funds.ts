@@ -29,7 +29,7 @@ export async function receiveOnlineDonation(
         : error.message,
     };
   }
-  revalidatePath("/treasurer/receive/donations");
+  revalidatePath("/treasurer/receive", "layout");
   revalidatePath("/treasurer/donations");
   revalidatePath("/treasurer/cash-flow");
   revalidatePath("/administrator");

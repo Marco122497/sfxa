@@ -19,10 +19,8 @@ const selectClassName =
 
 export function OnlineDonateForm({
   categories,
-  chapelName,
 }: {
   categories: { category_id: number; category_name: string }[];
-  chapelName?: string | null;
 }) {
   const [state, formAction, pending] = useActionState(
     submitOnlineDonation,
@@ -40,11 +38,6 @@ export function OnlineDonateForm({
         <Alert>
           <AlertDescription>{state.success}</AlertDescription>
         </Alert>
-      ) : null}
-      {chapelName ? (
-        <p className="text-sm text-muted-foreground">
-          Donating to <span className="font-medium text-foreground">{chapelName}</span>
-        </p>
       ) : null}
       <div className="space-y-2">
         <Label htmlFor="category_id">Donation type</Label>

@@ -4,16 +4,14 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowDownToLineIcon,
-  ArrowUpFromLineIcon,
-  BanknoteIcon,
   CalendarDaysIcon, 
   ChevronRightIcon,
   ChurchIcon,
   ClipboardListIcon,
   FileTextIcon,
   FolderTreeIcon,
-  HandCoinsIcon,
   HeartHandshakeIcon,
+  HistoryIcon,
   KeyRoundIcon,
   LayoutDashboardIcon,
   Loader2,
@@ -23,6 +21,7 @@ import {
   SettingsIcon,
   ShieldIcon,
   TagsIcon,
+  TrendingUpIcon,
   UserRoundIcon,
   UsersIcon,
   WalletIcon,
@@ -30,6 +29,9 @@ import {
 
 import type { Profile, UserRole } from "@/lib/auth/roles";
 import { getDashboardPath } from "@/lib/auth/roles";
+import type { IncomeCategoryRecord } from "@/lib/income-categories";
+import { FALLBACK_INCOME_CATEGORIES } from "@/lib/income-categories";
+import { getIncomeCategoryIcon } from "@/components/income-category-icon";
 import { useNavigationPending } from "@/components/layout/navigation-pending";
 import {
   Collapsible,
@@ -56,6 +58,7 @@ type NavChild = {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+  children?: NavChild[];
 };
 
 type NavItem = {
@@ -65,18 +68,43 @@ type NavItem = {
   children?: NavChild[];
 };
 
-function getNavItems(role: UserRole, home: string): NavItem[] {
+function getNavItems(
+  role: UserRole,
+  home: string,
+  incomeCategories: IncomeCategoryRecord[]
+): NavItem[] {
+  const categories =
+    incomeCategories.length > 0
+      ? incomeCategories
+      : FALLBACK_INCOME_CATEGORIES;
   const items: NavItem[] = [
     { title: "Dashboard", url: home, icon: LayoutDashboardIcon },
   ];
 
   if (role === "Administrator") {
-    items.push(
+    const financeChildren: NavChild[] = [
       {
-        title: "Chapel Access",
-        url: "/administrator/chapels",
-        icon: ChurchIcon,
+        title: "Income",
+        url: "/administrator/finance/income",
+        icon: HeartHandshakeIcon,
+        children: categories.map((category) => ({
+          title: category.name,
+          url: `/administrator/finance/${category.code}`,
+          icon: getIncomeCategoryIcon(category.code, category.name),
+        })),
       },
+      {
+        title: "Expenses",
+        url: "/administrator/finance/expenses",
+        icon: ReceiptIcon,
+      },
+      {
+        title: "Budget",
+        url: "/administrator/finance/budgets",
+        icon: PiggyBankIcon,
+      },
+    ];
+    items.push(
       {
         title: "User Management",
         url: "/administrator/users",
@@ -123,40 +151,9 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
       },
       {
         title: "Financial Monitoring",
-        url: "/administrator/finance/collections",
+        url: "/administrator/finance",
         icon: WalletIcon,
-        children: [
-          {
-            title: "Collections",
-            url: "/administrator/finance/collections",
-            icon: BanknoteIcon,
-          },
-          {
-            title: "Donations",
-            url: "/administrator/finance/donations",
-            icon: HandCoinsIcon,
-          },
-          {
-            title: "Income",
-            url: "/administrator/finance/income",
-            icon: HeartHandshakeIcon,
-          },
-          {
-            title: "Expenses",
-            url: "/administrator/finance/expenses",
-            icon: ReceiptIcon,
-          },
-          {
-            title: "Disbursements",
-            url: "/administrator/finance/disbursements",
-            icon: FileTextIcon,
-          },
-          {
-            title: "Budget",
-            url: "/administrator/finance/budgets",
-            icon: PiggyBankIcon,
-          },
-        ],
+        children: financeChildren,
       },
       {
         title: "Financial Statements",
@@ -191,52 +188,40 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
     items.push(
       {
         title: "Receive Funds",
-        url: "/treasurer/receive/collections",
+        url: "/treasurer/receive",
         icon: ArrowDownToLineIcon,
-        children: [
-          {
-            title: "Collections / Offerings",
-            url: "/treasurer/receive/collections",
-            icon: BanknoteIcon,
-          },
-          {
-            title: "Donations",
-            url: "/treasurer/receive/donations",
-            icon: HandCoinsIcon,
-          },
-          {
-            title: "Church Services",
-            url: "/treasurer/receive/services",
-            icon: HeartHandshakeIcon,
-          },
-          {
-            title: "Other Income",
-            url: "/treasurer/receive/other",
-            icon: WalletIcon,
-          },
-        ],
+        children: categories.map((category) => ({
+          title: category.name,
+          url: `/treasurer/receive/${category.code}`,
+          icon: getIncomeCategoryIcon(category.code, category.name),
+        })),
       },
       {
-        title: "Release Funds",
+        title: "Expenses",
         url: "/treasurer/release/expenses",
-        icon: ArrowUpFromLineIcon,
-        children: [
-          {
-            title: "Expenses",
-            url: "/treasurer/release/expenses",
-            icon: ReceiptIcon,
-          },
-          {
-            title: "Disbursements",
-            url: "/treasurer/release/disbursements",
-            icon: FileTextIcon,
-          },
-        ],
+        icon: ReceiptIcon,
       },
       {
         title: "Budget",
         url: "/treasurer/budgets/allocation",
         icon: PiggyBankIcon,
+        children: [
+          {
+            title: "Budget Allocation",
+            url: "/treasurer/budgets/allocation",
+            icon: PiggyBankIcon,
+          },
+          {
+            title: "Budget Monitoring",
+            url: "/treasurer/budgets/monitoring",
+            icon: TrendingUpIcon,
+          },
+          {
+            title: "Budget History",
+            url: "/treasurer/budgets/history",
+            icon: HistoryIcon,
+          },
+        ],
       },
       {
         title: "Cash Flow",
@@ -328,10 +313,6 @@ function getNavItems(role: UserRole, home: string): NavItem[] {
 function isItemActive(pathname: string, itemUrl: string, home: string) {
   if (pathname === itemUrl) return true;
 
-  if (itemUrl.startsWith("/treasurer/budgets")) {
-    return pathname.startsWith("/treasurer/budgets");
-  }
-
   if (itemUrl === home) {
     return pathname === home;
   }
@@ -339,20 +320,131 @@ function isItemActive(pathname: string, itemUrl: string, home: string) {
   return pathname.startsWith(`${itemUrl}/`) || pathname.startsWith(`${itemUrl}?`);
 }
 
+function isBranchActive(
+  pathname: string,
+  node: { url: string; children?: NavChild[] },
+  home: string
+): boolean {
+  if (isItemActive(pathname, node.url, home)) return true;
+  return Boolean(
+    node.children?.some((child) => isBranchActive(pathname, child, home))
+  );
+}
+
 function isParentActive(pathname: string, item: NavItem) {
-  if (!item.children?.length) return isItemActive(pathname, item.url, "");
-  if (
-    pathname === item.url ||
-    pathname.startsWith(`${item.url}/`) ||
-    pathname.startsWith(`${item.url}?`)
-  ) {
-    return true;
+  return isBranchActive(pathname, item, "");
+}
+
+function prefetchBranch(
+  node: { url: string; children?: NavChild[] },
+  onPrefetch: (url: string) => void
+) {
+  onPrefetch(node.url);
+  node.children?.forEach((child) => prefetchBranch(child, onPrefetch));
+}
+
+function NavSubItem({
+  child,
+  home,
+  activePath,
+  pendingHref,
+  onNavigate,
+  onPrefetch,
+}: {
+  child: NavChild;
+  home: string;
+  activePath: string;
+  pendingHref: string | null;
+  onNavigate: (url: string) => void;
+  onPrefetch: (url: string) => void;
+}) {
+  const nested = Boolean(child.children?.length);
+  const branchActive = isBranchActive(activePath, child, home);
+  const exactActive = isItemActive(activePath, child.url, home);
+  const isLoading =
+    pendingHref !== null && isBranchActive(pendingHref, child, home);
+  const [open, setOpen] = useState(branchActive);
+  const ChildIcon = child.icon;
+
+  useEffect(() => {
+    setOpen(branchActive);
+  }, [branchActive]);
+
+  if (!nested) {
+    return (
+      <SidebarMenuSubItem>
+        <SidebarMenuSubButton
+          isActive={exactActive}
+          render={<button type="button" />}
+          onMouseEnter={() => onPrefetch(child.url)}
+          onFocus={() => onPrefetch(child.url)}
+          onClick={() => onNavigate(child.url)}
+          className={
+            isLoading
+              ? "w-full cursor-pointer opacity-80"
+              : "w-full cursor-pointer"
+          }
+        >
+          {isLoading ? (
+            <Loader2 className="size-4 shrink-0 animate-spin" />
+          ) : (
+            <ChildIcon className="size-4 shrink-0" />
+          )}
+          <span>{child.title}</span>
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    );
   }
-  return item.children.some(
-    (child) =>
-      pathname === child.url ||
-      pathname.startsWith(`${child.url}/`) ||
-      pathname.startsWith(`${child.url}?`)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <SidebarMenuSubItem>
+        <div className="flex min-w-0 items-center gap-0.5">
+          <SidebarMenuSubButton
+            isActive={exactActive}
+            render={<button type="button" />}
+            onMouseEnter={() => prefetchBranch(child, onPrefetch)}
+            onFocus={() => prefetchBranch(child, onPrefetch)}
+            onClick={() => onNavigate(child.url)}
+            className={
+              isLoading
+                ? "min-w-0 flex-1 cursor-pointer opacity-80"
+                : "min-w-0 flex-1 cursor-pointer"
+            }
+          >
+            {isLoading ? (
+              <Loader2 className="size-4 shrink-0 animate-spin" />
+            ) : (
+              <ChildIcon className="size-4 shrink-0" />
+            )}
+            <span>{child.title}</span>
+          </SidebarMenuSubButton>
+          <CollapsibleTrigger
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label={`Toggle ${child.title}`}
+          >
+            <ChevronRightIcon
+              className={`size-4 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
+            />
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent>
+          <SidebarMenuSub className="mx-0 translate-x-0 border-l-0 px-0 py-1 pl-3">
+            {child.children!.map((grandchild) => (
+              <NavSubItem
+                key={grandchild.url}
+                child={grandchild}
+                home={home}
+                activePath={activePath}
+                pendingHref={pendingHref}
+                onNavigate={onNavigate}
+                onPrefetch={onPrefetch}
+              />
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuSubItem>
+    </Collapsible>
   );
 }
 
@@ -389,9 +481,11 @@ function CollapsibleNavItem({
             <SidebarMenuButton
               isActive={parentActive}
               className={isLoading ? "opacity-80" : undefined}
-              onMouseEnter={() => onPrefetch(item.url)}
-              onFocus={() => onPrefetch(item.url)}
-              onClick={() => onNavigate(item.url)}
+              onMouseEnter={() => {
+                item.children?.forEach((child) =>
+                  prefetchBranch(child, onPrefetch)
+                );
+              }}
             />
           }
         >
@@ -407,37 +501,17 @@ function CollapsibleNavItem({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {item.children!.map((child) => {
-              const childActive = isItemActive(activePath, child.url, home);
-              const childLoading =
-                pendingHref !== null &&
-                isItemActive(pendingHref, child.url, home);
-              const ChildIcon = child.icon;
-
-              return (
-                <SidebarMenuSubItem key={child.url}>
-                  <SidebarMenuSubButton
-                    isActive={childActive}
-                    render={<button type="button" />}
-                    onMouseEnter={() => onPrefetch(child.url)}
-                    onFocus={() => onPrefetch(child.url)}
-                    onClick={() => onNavigate(child.url)}
-                    className={
-                      childLoading
-                        ? "w-full cursor-pointer opacity-80"
-                        : "w-full cursor-pointer"
-                    }
-                  >
-                    {childLoading ? (
-                      <Loader2 className="size-4 shrink-0 animate-spin" />
-                    ) : (
-                      <ChildIcon className="size-4 shrink-0" />
-                    )}
-                    <span>{child.title}</span>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
+            {item.children!.map((child) => (
+              <NavSubItem
+                key={child.url}
+                child={child}
+                home={home}
+                activePath={activePath}
+                pendingHref={pendingHref}
+                onNavigate={onNavigate}
+                onPrefetch={onPrefetch}
+              />
+            ))}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>
@@ -447,14 +521,18 @@ function CollapsibleNavItem({
 
 export function AppSidebar({
   profile,
+  incomeCategories = [],
   ...props
-}: React.ComponentProps<typeof Sidebar> & { profile: Profile }) {
+}: React.ComponentProps<typeof Sidebar> & {
+  profile: Profile;
+  incomeCategories?: IncomeCategoryRecord[];
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
   const { pendingHref, navigate } = useNavigationPending();
   const home = getDashboardPath(profile.role);
-  const navItems = getNavItems(profile.role, home);
+  const navItems = getNavItems(profile.role, home, incomeCategories);
 
   function onNavigate(url: string) {
     if (pathname === url) return;

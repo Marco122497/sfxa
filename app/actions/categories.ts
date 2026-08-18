@@ -75,7 +75,7 @@ function revalidateCategories() {
   revalidatePath("/administrator/categories/budgets");
   revalidatePath("/treasurer/donations");
   revalidatePath("/treasurer/collections");
-  revalidatePath("/treasurer/receive/other");
+  revalidatePath("/treasurer/receive", "layout");
   revalidatePath("/treasurer/expenses");
   revalidatePath("/treasurer/budgets");
   revalidatePath("/treasurer/budgets/categories");

@@ -2,6 +2,8 @@ import { ReceiptIcon } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { relationName } from "@/lib/treasurer/relations";
+import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
+import { toExpenseBudgetCaps } from "@/lib/expense-budget";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
 import { ExpenseManager } from "@/components/treasurer/expense-manager";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +16,7 @@ export default async function AdminExpensesPage() {
     { data: categories },
     subcategoriesResult,
     expensesResult,
-    { data: budgets },
+    budgetModule,
   ] = await Promise.all([
     supabase
       .from("expense_categories")
@@ -31,15 +33,13 @@ export default async function AdminExpensesPage() {
       )
       .order("expense_date", { ascending: false })
       .limit(200),
-    supabase.from("budgets").select("budget_categories(category_name)"),
+    getBudgetModuleData(),
   ]);
 
-  // Budget categories mirror expense categories by name.
   const budgetedCategoryNames = new Set(
-    (budgets ?? [])
-      .map((row) => relationName(row.budget_categories ?? null))
-      .filter(Boolean)
+    budgetModule.rows.map((row) => row.category_name).filter(Boolean)
   );
+  const budgetCaps = toExpenseBudgetCaps(budgetModule.rows, categories ?? []);
 
   let expenses:
     | {
@@ -110,6 +110,7 @@ export default async function AdminExpensesPage() {
               has_budget: budgetedCategoryNames.has(category.category_name),
             }))}
             subcategories={subcategoriesResult.data ?? []}
+            budgetCaps={budgetCaps}
             canEdit
             canDelete
           />

@@ -1,10 +1,10 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { Loader2, UserPlusIcon } from "lucide-react";
 
 import { createUser, type UserActionState } from "@/app/actions/users";
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { ROLES } from "@/lib/auth/roles";
 import { displayRoleName } from "@/lib/income";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,9 +32,8 @@ function AddUserForm({
 }: {
   onSuccess: () => void;
 }) {
-  const [state, formAction, pending] = useActionState(createUser, initialState);
+  const [state, formAction, pending] = useServerAction(createUser, initialState, onSuccess);
 
-  useRefreshOnSuccess(state.success, onSuccess);
 
   return (
     <>

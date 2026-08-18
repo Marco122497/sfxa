@@ -27,7 +27,7 @@ export default async function AdminStatementsPage() {
         <CardHeader>
           <CardTitle>Statement of Cash Flows</CardTitle>
           <CardDescription>
-            Cash receipts, disbursements, net cash flow, and ending cash balance.
+            Cash receipts, expenses, net cash flow, and ending cash balance.
           </CardDescription>
         </CardHeader>
         <CardContent>

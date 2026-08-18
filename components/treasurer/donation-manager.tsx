@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 
-import { useRefreshOnSuccess } from "@/hooks/use-refresh-on-success";
+import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   createDonation,
   deleteDonation,
@@ -11,6 +11,10 @@ import {
   type FinanceActionState,
 } from "@/app/actions/finance";
 import { formatDate, formatMoney } from "@/lib/format";
+import {
+  incomeRecordCopy,
+  type IncomeRecordCopy,
+} from "@/lib/income-categories";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -58,25 +62,44 @@ export type DonationRow = {
 
 export type DonationManagerMode = "donation" | "collection";
 
+function copyFromProps(
+  mode: DonationManagerMode,
+  categoryCode?: string,
+  categoryName?: string
+) {
+  return incomeRecordCopy(
+    categoryCode ?? (mode === "collection" ? "collection" : "donation"),
+    categoryName ?? (mode === "collection" ? "Collections" : "Donations")
+  );
+}
+
+function RecordKindFields({ copy }: { copy: IncomeRecordCopy }) {
+  return (
+    <>
+      <input type="hidden" name="record_kind" value={copy.kind} />
+      <input type="hidden" name="record_name" value={copy.plural} />
+    </>
+  );
+}
+
 function DonationFormFields({
   categories,
   defaults,
   idPrefix,
-  mode,
+  copy,
 }: {
   categories: DonationCategory[];
   defaults?: Partial<DonationRow>;
   idPrefix: string;
-  mode: DonationManagerMode;
+  copy: IncomeRecordCopy;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const isCollection = mode === "collection";
+  const showDonor = copy.showDonor;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {isCollection ? (
-        <input type="hidden" name="donor_name" value="" />
-      ) : (
+      <RecordKindFields copy={copy} />
+      {showDonor ? (
         <div className="space-y-2">
           <Label htmlFor={`${idPrefix}-donor`}>Donor name</Label>
           <Input
@@ -85,11 +108,11 @@ function DonationFormFields({
             defaultValue={defaults?.donor_name ?? ""}
           />
         </div>
+      ) : (
+        <input type="hidden" name="donor_name" value="" />
       )}
-      <div className={`space-y-2${isCollection ? " sm:col-span-2" : ""}`}>
-        <Label htmlFor={`${idPrefix}-category`}>
-          {isCollection ? "Collection type" : "Donation type"}
-        </Label>
+      <div className={`space-y-2${showDonor ? "" : " sm:col-span-2"}`}>
+        <Label htmlFor={`${idPrefix}-category`}>{copy.typeLabel}</Label>
         <select
           id={`${idPrefix}-category`}
           name="category_id"
@@ -136,9 +159,7 @@ function DonationFormFields({
           id={`${idPrefix}-remarks`}
           name="remarks"
           defaultValue={defaults?.remarks ?? ""}
-          placeholder={
-            isCollection ? "Optional notes (e.g. envelope count)" : undefined
-          }
+          placeholder={copy.remarksPlaceholder}
         />
       </div>
     </div>
@@ -148,39 +169,28 @@ function DonationFormFields({
 function AddDonationDialog({
   categories,
   defaultCategoryId,
-  mode,
+  copy,
 }: {
   categories: DonationCategory[];
   defaultCategoryId?: number;
-  mode: DonationManagerMode;
+  copy: IncomeRecordCopy;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    createDonation,
-    initialState
-  );
-  const isCollection = mode === "collection";
-
-  useRefreshOnSuccess(state.success, () => setOpen(false));
+  const [state, formAction, pending] = useServerAction(createDonation, initialState, () => setOpen(false));
+  const formId = `add-${copy.formKey}-form`;
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger render={<Button type="button" />}>
         <PlusIcon />
-        {isCollection ? "Add collection" : "Add donation"}
+        {copy.addLabel}
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isCollection ? "Add collection" : "Add donation"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {isCollection
-              ? "Choose a collection type from Income Services, then enter the amount."
-              : "Choose a donation type from Income Services, then enter the amount."}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{copy.addLabel}</AlertDialogTitle>
+          <AlertDialogDescription>{copy.addDescription}</AlertDialogDescription>
         </AlertDialogHeader>
-        <form action={formAction} id="add-donation-form" className="space-y-4">
+        <form action={formAction} id={formId} className="space-y-4">
           {state.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
@@ -188,16 +198,13 @@ function AddDonationDialog({
           )}
           {categories.length === 0 ? (
             <Alert>
-              <AlertDescription>
-                No {isCollection ? "collection" : "donation"} types found.
-                Add them under Categories → Income Services first.
-              </AlertDescription>
+              <AlertDescription>{copy.noTypesMessage}</AlertDescription>
             </Alert>
           ) : (
             <DonationFormFields
               categories={categories}
-              idPrefix="add"
-              mode={mode}
+              idPrefix={`add-${copy.formKey}`}
+              copy={copy}
               defaults={{
                 category_id: defaultCategoryId ?? categories[0]?.category_id,
               }}
@@ -208,7 +215,7 @@ function AddDonationDialog({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <Button
             type="submit"
-            form="add-donation-form"
+            form={formId}
             disabled={pending || categories.length === 0}
           >
             {pending ? (
@@ -229,20 +236,15 @@ function AddDonationDialog({
 function EditDonationDialog({
   row,
   categories,
-  mode,
+  copy,
 }: {
   row: DonationRow;
   categories: DonationCategory[];
-  mode: DonationManagerMode;
+  copy: IncomeRecordCopy;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    updateDonation,
-    initialState
-  );
-  const isCollection = mode === "collection";
+  const [state, formAction, pending] = useServerAction(updateDonation, initialState, () => setOpen(false));
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -252,7 +254,7 @@ function EditDonationDialog({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label={isCollection ? "Edit collection" : "Edit donation"}
+            aria-label={copy.editLabel}
           />
         }
       >
@@ -260,14 +262,8 @@ function EditDonationDialog({
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-lg">
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            {isCollection ? "Edit collection" : "Edit donation"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {isCollection
-              ? "Update collection details."
-              : "Update donation details."}
-          </AlertDialogDescription>
+          <AlertDialogTitle>{copy.editLabel}</AlertDialogTitle>
+          <AlertDialogDescription>{copy.editDescription}</AlertDialogDescription>
         </AlertDialogHeader>
         <form
           action={formAction}
@@ -295,7 +291,7 @@ function EditDonationDialog({
                 : categories
             }
             idPrefix={`edit-${row.donation_id}`}
-            mode={mode}
+            copy={copy}
             defaults={row}
           />
         </form>
@@ -323,23 +319,17 @@ function EditDonationDialog({
 
 function DeleteDonationButton({
   donationId,
-  mode,
+  copy,
   label,
 }: {
   donationId: number;
-  mode: DonationManagerMode;
+  copy: IncomeRecordCopy;
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState(
-    deleteDonation,
-    initialState
-  );
-  const isCollection = mode === "collection";
-  const entity = isCollection ? "collection" : "donation";
-  const formId = `delete-donation-${donationId}`;
+  const [state, formAction, pending] = useServerAction(deleteDonation, initialState, () => setOpen(false));
+  const formId = `delete-${copy.formKey}-${donationId}`;
 
-  useRefreshOnSuccess(state.success, () => setOpen(false));
 
   return (
     <>
@@ -347,7 +337,7 @@ function DeleteDonationButton({
         type="button"
         variant="ghost"
         size="icon-sm"
-        aria-label={`Delete ${entity}`}
+        aria-label={`Delete ${copy.singular}`}
         onClick={() => setOpen(true)}
       >
         <Trash2Icon />
@@ -364,9 +354,7 @@ function DeleteDonationButton({
             <AlertDialogMedia className="bg-destructive/10 text-destructive">
               <Trash2Icon />
             </AlertDialogMedia>
-            <AlertDialogTitle>
-              Delete {entity}?
-            </AlertDialogTitle>
+            <AlertDialogTitle>{copy.deleteTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently remove {label}. This cannot be undone.
             </AlertDialogDescription>
@@ -378,6 +366,7 @@ function DeleteDonationButton({
           )}
           <form action={formAction} id={formId}>
             <input type="hidden" name="donation_id" value={donationId} />
+            <RecordKindFields copy={copy} />
           </form>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
@@ -410,9 +399,11 @@ export function DonationManager({
   donations,
   categories,
   defaultCategoryId,
-  title = "Donations",
-  emptyMessage = "No donations yet.",
+  title,
+  emptyMessage,
   mode = "donation",
+  categoryCode,
+  categoryName,
   canEdit = false,
   canDelete = false,
 }: {
@@ -422,19 +413,26 @@ export function DonationManager({
   title?: string;
   emptyMessage?: string;
   mode?: DonationManagerMode;
+  categoryCode?: string;
+  categoryName?: string;
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
   const [query, setQuery] = useState("");
-  const isCollection = mode === "collection";
+  const copy = copyFromProps(mode, categoryCode, categoryName);
+  const showDonor = copy.showDonor;
   const showActions = canEdit || canDelete;
+  const heading = title ?? copy.plural.replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const rows = showDonor
+    ? donations
+    : donations.map((row) => ({ ...row, donor_name: null }));
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return donations;
-    return donations.filter((row) => {
+    if (!q) return rows;
+    return rows.filter((row) => {
       const haystack = [
-        !isCollection ? row.donor_name : null,
+        showDonor ? row.donor_name : null,
         row.category_name,
         row.remarks,
         String(row.amount),
@@ -444,13 +442,13 @@ export function DonationManager({
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [donations, query, isCollection]);
+  }, [rows, query, showDonor]);
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-base font-semibold tracking-tight">{heading}</h2>
           <p className="text-xs text-muted-foreground">
             {filtered.length} record{filtered.length === 1 ? "" : "s"}
           </p>
@@ -459,31 +457,31 @@ export function DonationManager({
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={
-              isCollection ? "Search collections…" : "Search donations…"
-            }
+            placeholder={copy.searchPlaceholder}
             className="h-8 w-[200px]"
           />
           <AddDonationDialog
             categories={categories}
             defaultCategoryId={defaultCategoryId}
-            mode={mode}
+            copy={copy}
           />
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="py-2 text-sm text-muted-foreground">
+          {emptyMessage ?? copy.emptyMessage}
+        </p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="h-8 px-2">Date</TableHead>
-              {!isCollection && (
+              {showDonor && (
                 <TableHead className="h-8 px-2">Donor</TableHead>
               )}
               <TableHead className="h-8 px-2">
-                {isCollection ? "Type" : "Category"}
+                {showDonor ? "Category" : "Type"}
               </TableHead>
               <TableHead className="h-8 px-2">Remarks</TableHead>
               <TableHead className="h-8 px-2 text-right">Amount</TableHead>
@@ -500,7 +498,7 @@ export function DonationManager({
                 <TableCell className="px-2 py-1.5">
                   {formatDate(row.donation_date)}
                 </TableCell>
-                {!isCollection && (
+                {showDonor && (
                   <TableCell className="px-2 py-1.5">
                     {row.donor_name || "—"}
                   </TableCell>
@@ -521,13 +519,13 @@ export function DonationManager({
                         <EditDonationDialog
                           row={row}
                           categories={categories}
-                          mode={mode}
+                          copy={copy}
                         />
                       ) : null}
                       {canDelete ? (
                         <DeleteDonationButton
                           donationId={row.donation_id}
-                          mode={mode}
+                          copy={copy}
                           label={`${formatMoney(row.amount)} · ${row.category_name || "Uncategorized"} · ${formatDate(row.donation_date)}`}
                         />
                       ) : null}

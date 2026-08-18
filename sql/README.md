@@ -10,9 +10,9 @@ Run in this order:
 
 1. `db.sql` — core schema (profiles, parish information, finance tables, storage, admin seed)
 2. `sql/registration-trigger.sql` — only if registration returns HTTP 500
-3. `sql/phase2-admin.sql` — Chapel Access, admin RLS, parish publish fields
+3. `sql/phase2-admin.sql` — Admin RLS and parish publish fields
 4. `sql/phase3-categories.sql` — **Categories** (income categories, income services, expense categories)
-5. `sql/phase4-treasurer.sql` — Receive / Release Funds extras (receipts, donation status, chapel on transactions)
+5. `sql/phase4-treasurer.sql` — Receive / Release Funds extras (receipts, donation status)
 6. `sql/phase5-budget.sql` — Budget allocations + history (uses expense categories)
 7. `sql/phase6-transparency.sql` — Parish Member / public approved summaries
 8. `sql/sample-parish-projects.sql` — optional sample projects
@@ -22,7 +22,7 @@ Run in this order:
 | Phase | Who it serves | What it creates |
 | --- | --- | --- |
 | `db.sql` | All roles | Profiles, announcements, donations, expenses, budgets |
-| Phase 2 | Administrator | Chapels, treasurer/member assignment, parish publish |
+| Phase 2 | Administrator | Admin RLS, parish publish |
 | Phase 3 | Administrator | Income categories/services and expense categories |
 | Phase 4 | Treasurer | Cash inflow/outflow recording (uses phase 3 services) |
 | Phase 5 | Treasurer + Administrator | Budget vs actual (same expense categories) |

@@ -40,7 +40,6 @@ export async function submitOnlineDonation(
     donor_user_id: user.id,
     payment_method,
     status: "pending",
-    chapel_id: profile.chapel_id ?? null,
   });
 
   if (error) {
@@ -55,7 +54,7 @@ export async function submitOnlineDonation(
   revalidatePath("/parish-officer/donations");
   revalidatePath("/parish-officer/receipts");
   revalidatePath("/treasurer/donations");
-  revalidatePath("/treasurer/receive/donations");
+  revalidatePath("/treasurer/receive", "layout");
   return {
     success:
       "Donation submitted. The Treasurer will verify and receive this into cash inflow.",
