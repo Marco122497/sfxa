@@ -12,6 +12,7 @@ import {
 
 import { logout } from "@/app/actions/auth";
 import type { Profile } from "@/lib/auth/roles";
+import { useOptionalNavigationPending } from "@/components/layout/navigation-pending";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
@@ -41,6 +42,7 @@ function initials(profile: Profile) {
 export function NavUser({ profile }: { profile: Profile }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const navigation = useOptionalNavigationPending();
 
   function handleLogout() {
     startTransition(() => {
@@ -102,11 +104,23 @@ export function NavUser({ profile }: { profile: Profile }) {
           <DropdownMenuSeparator />
 
           <DropdownMenuGroup>
-            <DropdownMenuItem render={<Link href="/profile" />}>
+            <DropdownMenuItem
+              render={<Link href="/profile" />}
+              onClick={(event) => {
+                event.preventDefault();
+                navigation?.navigate("/profile");
+              }}
+            >
               <UserRoundIcon />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem render={<Link href="/change-password" />}>
+            <DropdownMenuItem
+              render={<Link href="/change-password" />}
+              onClick={(event) => {
+                event.preventDefault();
+                navigation?.navigate("/change-password");
+              }}
+            >
               <KeyRoundIcon />
               Change password
             </DropdownMenuItem>

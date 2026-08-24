@@ -91,3 +91,7 @@ export function useNavigationPending() {
   }
   return context;
 }
+
+export function useOptionalNavigationPending() {
+  return useContext(NavigationPendingContext);
+}

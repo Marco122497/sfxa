@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
+import { useNavigationPending } from "@/components/layout/navigation-pending";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -61,9 +62,11 @@ export function AppBreadcrumb({
   incomeCategories?: IncomeCategoryRecord[];
 }) {
   const pathname = usePathname();
-  const segments = pathname.split("/").filter(Boolean);
+  const { pendingHref } = useNavigationPending();
+  const activePath = (pendingHref ?? pathname).split("?")[0];
+  const segments = activePath.split("/").filter(Boolean);
   const root = segments[0] ?? "";
-  const isDashboard = pathname === dashboardHref;
+  const isDashboard = activePath === dashboardHref;
 
   if (isDashboard) {
     return (

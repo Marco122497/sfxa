@@ -1,5 +1,5 @@
 import { RoutePageSkeleton } from "@/components/layout/route-page-skeleton";
 
 export default function Loading() {
-  return <RoutePageSkeleton href="/parish-officer/reports" />;
+  return <RoutePageSkeleton href="/treasurer/parish-info" />;
 }

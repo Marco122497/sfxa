@@ -5,7 +5,7 @@ import { getDashboardPath } from "@/lib/auth/roles";
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
-import { AppPageSkeleton } from "@/components/layout/app-page-skeleton";
+import { RoutePageSkeleton } from "@/components/layout/route-page-skeleton";
 import {
   NavigationPendingProvider,
   useNavigationPending,
@@ -35,7 +35,7 @@ function AppShellContent({
   children: React.ReactNode;
 }) {
   const dashboardHref = getDashboardPath(profile.role);
-  const { isPending } = useNavigationPending();
+  const { isPending, pendingHref } = useNavigationPending();
 
   return (
     <>
@@ -63,7 +63,11 @@ function AppShellContent({
           </div>
         </header>
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6">
-          {isPending ? <AppPageSkeleton /> : children}
+          {isPending && pendingHref ? (
+            <RoutePageSkeleton href={pendingHref} />
+          ) : (
+            children
+          )}
         </div>
       </SidebarInset>
     </>
