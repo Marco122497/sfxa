@@ -2,6 +2,8 @@ import Link from "next/link";
 import { SettingsIcon } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { getParishPriestName } from "@/lib/parish-settings";
+import { ParishPriestSettingsForm } from "@/components/administrator/parish-priest-settings-form";
 import { PageHeading } from "@/components/layout/page-heading";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -14,7 +16,8 @@ import {
 import { cn } from "@/lib/utils";
 
 export default async function AdminSettingsPage() {
-  await requireAdmin();
+  const { supabase } = await requireAdmin();
+  const parishPriestName = await getParishPriestName(supabase);
 
   const links = [
     {
@@ -53,9 +56,10 @@ export default async function AdminSettingsPage() {
     <div className="space-y-6">
       <PageHeading
         title="Settings"
-        description="System configuration for users and categories."
+        description="System configuration for reports, users, and categories."
         icon={SettingsIcon}
       />
+      <ParishPriestSettingsForm initialName={parishPriestName} />
       <div className="grid gap-4 sm:grid-cols-2">
         {links.map((item) => (
           <Card key={item.href}>

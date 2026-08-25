@@ -32,10 +32,7 @@ export function RoutePageSkeleton({ href }: { href: string }) {
 
   if (path === "/administrator") return <AdminDashboardSkeleton />;
   if (path === "/treasurer") return <TreasurerDashboardSkeleton />;
-  if (
-    path === "/parish-officer" ||
-    path === "/parish-officer/transparency/summary"
-  ) {
+  if (path === "/parish-officer") {
     return <ParishDashboardSkeleton />;
   }
 

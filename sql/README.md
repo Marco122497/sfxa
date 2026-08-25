@@ -15,7 +15,8 @@ Run in this order:
 5. `sql/phase4-treasurer.sql` — Receive / Release Funds extras (receipts, donation status)
 6. `sql/phase5-budget.sql` — Budget allocations + history (uses expense categories)
 7. `sql/phase6-transparency.sql` — Parish Member / public approved summaries
-8. `sql/sample-parish-projects.sql` — optional sample projects
+8. `sql/phase7-parish-settings.sql` — Parish priest name used on printed reports
+9. `sql/sample-parish-projects.sql` — optional sample projects
 
 ## How this maps to the system
 
@@ -27,6 +28,7 @@ Run in this order:
 | Phase 4 | Treasurer | Cash inflow/outflow recording (uses phase 3 services) |
 | Phase 5 | Treasurer + Administrator | Budget vs actual (same expense categories) |
 | Phase 6 | Parish Member + public | Approved, non-confidential summaries |
+| Phase 7 | Administrator | Parish priest name on reports |
 
 ## Existing databases
 

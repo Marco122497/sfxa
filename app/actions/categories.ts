@@ -268,10 +268,10 @@ export async function deleteCategory(
     .eq(config.idColumn, categoryId);
 
   if (error) {
-    if (error.code === "23503") {
+    if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
         error:
-          "Cannot delete this category because it is used by existing records.",
+          "Cannot delete this category because it has transactions.",
       };
     }
     return { error: error.message };
@@ -405,10 +405,10 @@ export async function deleteExpenseSubcategory(
     .eq("subcategory_id", subcategory_id);
 
   if (error) {
-    if (error.code === "23503") {
+    if (error.code === "23503" || /foreign key/i.test(error.message)) {
       return {
         error:
-          "Cannot delete this category because it is used by existing expense records.",
+          "Cannot delete this category because it has transactions.",
       };
     }
     return { error: error.message };

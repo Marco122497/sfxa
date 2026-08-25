@@ -7,6 +7,7 @@ import {
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 
@@ -457,7 +458,18 @@ function DeleteExpenseButton({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(deleteExpense, initialState, () => setOpen(false));
+  const [, formAction, pending] = useServerAction(
+    async (prev, formData) => {
+      const result = await deleteExpense(prev, formData);
+      if (result.error) {
+        toast.error(result.error);
+        setOpen(false);
+      }
+      return result;
+    },
+    initialState,
+    () => setOpen(false)
+  );
   const formId = `delete-expense-${expenseId}`;
 
 
@@ -489,11 +501,6 @@ function DeleteExpenseButton({
               This will permanently remove {label}. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {state.error && (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          )}
           <form action={formAction} id={formId}>
             <input type="hidden" name="expense_id" value={expenseId} />
           </form>

@@ -39,9 +39,13 @@ function AppShellContent({
 
   return (
     <>
-      <AppSidebar profile={profile} incomeCategories={incomeCategories} />
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur">
+      <AppSidebar
+        className="print:hidden"
+        profile={profile}
+        incomeCategories={incomeCategories}
+      />
+      <SidebarInset className="print:overflow-visible">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur print:hidden">
           <div className="flex min-w-0 items-center gap-2">
             <SidebarTrigger />
             <Separator
@@ -62,7 +66,7 @@ function AppShellContent({
             <NavUser profile={profile} />
           </div>
         </header>
-        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 print:overflow-visible print:p-0">
           {isPending && pendingHref ? (
             <RoutePageSkeleton href={pendingHref} />
           ) : (
@@ -86,7 +90,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="overflow-x-auto">
       <NavigationPendingProvider>
         <AppShellContent
           profile={profile}

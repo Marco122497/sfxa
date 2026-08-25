@@ -15,7 +15,7 @@ import type {
   ReportSummaryLine,
 } from "@/lib/reports-data";
 import { relationName } from "@/lib/treasurer/relations";
-import { actualCash, remainingBudget as remainingBudgetFromUsage } from "@/lib/finance-ledgers";
+import { actualCash } from "@/lib/finance-ledgers";
 
 const BREAKDOWN_COLORS = [
   "#D99A2B",
@@ -48,44 +48,6 @@ function buildBreakdown(
       percent: total > 0 ? Math.round((amount / total) * 1000) / 10 : 0,
       color: BREAKDOWN_COLORS[index % BREAKDOWN_COLORS.length],
     }));
-}
-
-function profileRole(value: unknown) {
-  if (Array.isArray(value)) {
-    const first = value[0] as { role?: string; full_name?: string } | undefined;
-    return first?.role || first?.full_name || "System";
-  }
-  if (value && typeof value === "object") {
-    const row = value as { role?: string; full_name?: string };
-    return row.role || row.full_name || "System";
-  }
-  return "System";
-}
-
-function moduleLabel(tableName: string | null) {
-  switch (tableName) {
-    case "donations":
-      return "Donations";
-    case "expenses":
-      return "Expenses";
-    case "budgets":
-    case "budget_history":
-      return "Budget";
-    case "profiles":
-      return "Users";
-    case "announcements":
-      return "Announcements";
-    case "donation_categories":
-    case "expense_categories":
-    case "budget_categories":
-      return "Categories";
-    default:
-      return tableName
-        ? tableName
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase())
-        : "System";
-  }
 }
 
 function budgetStatus(allocated: number, used: number) {
@@ -123,8 +85,6 @@ export async function getAdminFormalReportData(
       return getExpenseReport(supabase, from, to, meta.title);
     case "budget":
       return getBudgetUtilizationReport(supabase, from, to, meta.title);
-    case "audit":
-      return getAuditTrailReport(supabase, from, to, meta.title);
   }
 }
 
@@ -144,22 +104,20 @@ async function getFinancialSummaryReport(
     categories.map((row) => [row.category_id, row.category_name])
   );
 
-  const [{ data: donations }, expensesResult, { data: budgets }] =
-    await Promise.all([
-      supabase
-        .from("donations")
-        .select(
-          "amount, category_id, donation_date, donation_categories(category_name)"
-        )
-        .gte("donation_date", from)
-        .lte("donation_date", to),
-      supabase
-        .from("expenses")
-        .select("amount, expense_date, expense_categories(category_name)")
-        .gte("expense_date", from)
-        .lte("expense_date", to),
-      supabase.from("budgets").select("allocated_amount"),
-    ]);
+  const [{ data: donations }, expensesResult] = await Promise.all([
+    supabase
+      .from("donations")
+      .select(
+        "amount, category_id, donation_date, donation_categories(category_name)"
+      )
+      .gte("donation_date", from)
+      .lte("donation_date", to),
+    supabase
+      .from("expenses")
+      .select("amount, expense_date, expense_categories(category_name)")
+      .gte("expense_date", from)
+      .lte("expense_date", to),
+  ]);
 
   let expenses = expensesResult.data as
     | {
@@ -229,11 +187,6 @@ async function getFinancialSummaryReport(
 
   const totalIncome = totalDonations + totalCollections;
   const cashOnHand = actualCash(totalIncome, totalExpenses);
-  const totalBudget = (budgets ?? []).reduce(
-    (sum, row) => sum + toNumber(row.allocated_amount),
-    0
-  );
-  const remainingBudget = remainingBudgetFromUsage(totalBudget, totalExpenses);
 
   const metrics: ReportMetric[] = [
     {
@@ -265,12 +218,6 @@ async function getFinancialSummaryReport(
       label: "Actual Cash",
       value: formatMoneyPlain(cashOnHand),
       tone: "green",
-    },
-    {
-      id: "budget",
-      label: "Remaining Budget",
-      value: formatMoneyPlain(remainingBudget),
-      tone: "gold",
     },
   ];
 
@@ -326,7 +273,6 @@ async function getFinancialSummaryReport(
       children: expenseChildren,
     },
     { id: "net", label: "Actual Cash", amount: cashOnHand },
-    { id: "budget", label: "Remaining Budget", amount: remainingBudget },
   ];
 
   const columns: ReportColumn[] = [
@@ -344,11 +290,10 @@ async function getFinancialSummaryReport(
     children: row.children?.length ? row.children : undefined,
   }));
 
-  const summaryLines: ReportSummaryLine[] = summaryRows.map((row, index) => ({
+  const summaryLines: ReportSummaryLine[] = summaryRows.map((row) => ({
     label: row.label,
     amount: row.amount,
-    emphasis:
-      index === summaryRows.length - 2 || index === summaryRows.length - 1,
+    emphasis: row.id === "net",
   }));
 
   const breakdown = buildBreakdown(
@@ -382,7 +327,7 @@ async function getFinancialSummaryReport(
     breakdown,
     tableTitle: "Summary Table",
     notes:
-      "All amounts are in Philippine Peso (₱). Expand Total Donations, Collections, Income, or Expenses in the summary table to view category breakdowns. This financial summary provides an overall picture of the parish's financial condition for the selected period.",
+      "Expand Total Donations, Collections, Income, or Expenses in the summary table to view category breakdowns. This financial summary provides an overall picture of the parish's financial condition for the selected period.",
     exportRows,
   };
 }
@@ -420,7 +365,6 @@ async function getDonationReport(
     { key: "date", label: "Date" },
     { key: "donor", label: "Donor" },
     { key: "type", label: "Donation Type" },
-    { key: "payment", label: "Payment Method" },
     { key: "amount", label: "Amount", align: "right" },
   ];
 
@@ -443,7 +387,6 @@ async function getDonationReport(
         date: row.donation_date,
         donor: row.donor_name?.trim() || "Anonymous",
         type,
-        payment: "—",
         amount: formatMoneyPlain(amount),
       },
     };
@@ -496,11 +439,11 @@ async function getDonationReport(
     breakdown: buildBreakdown(amountsByType),
     tableTitle: "Donation Transactions",
     notes:
-      "All amounts are in Philippine Peso (₱). Payment method is shown when recorded; otherwise marked as unavailable.",
+      "This report reflects all donations received and recorded within the specified period.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "", "Total Donations", formatMoneyPlain(total)],
+      ["", "", "Total Donations", formatMoneyPlain(total)],
     ],
   };
 }
@@ -606,7 +549,7 @@ async function getCollectionReport(
     breakdown: buildBreakdown(amountsByType),
     tableTitle: "Collection Transactions",
     notes:
-      "All amounts are in Philippine Peso (₱). This report reflects parish collections recorded within the selected period.",
+      "This report reflects parish collections recorded within the selected period.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
@@ -760,7 +703,7 @@ async function getExpenseReport(
     breakdown,
     tableTitle: "Expense Transactions",
     notes:
-      "All amounts are in Philippine Peso (₱). Approved By shows the staff member who recorded the expense when available.",
+      "Approved By shows the staff member who recorded the expense when available.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
@@ -919,7 +862,7 @@ async function getBudgetUtilizationReport(
     breakdown: buildBreakdown(allocatedByCategory),
     tableTitle: "Budget Utilization",
     notes:
-      "All amounts are in Philippine Peso (₱). Status: Healthy (<80% used), Near Limit (80–100%), Over Budget (>100%). Used amounts reflect expenses in the selected date range.",
+      "Status: Healthy (<80% used), Near Limit (80–100%), Over Budget (>100%). Used amounts reflect expenses in the selected date range.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
@@ -930,100 +873,6 @@ async function getBudgetUtilizationReport(
         formatMoneyPlain(remainingTotal),
         "",
       ],
-    ],
-  };
-}
-
-async function getAuditTrailReport(
-  supabase: SupabaseClient,
-  from: string,
-  to: string,
-  title: string
-): Promise<FormalReportData> {
-  const { data } = await supabase
-    .from("audit_logs")
-    .select(
-      "audit_id, action, table_name, description, created_at, profiles(full_name, role)"
-    )
-    .gte("created_at", `${from}T00:00:00`)
-    .lte("created_at", `${to}T23:59:59.999`)
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  const moduleCounts = new Map<string, number>();
-
-  const columns: ReportColumn[] = [
-    { key: "date", label: "Date" },
-    { key: "user", label: "User" },
-    { key: "action", label: "Action" },
-    { key: "module", label: "Module" },
-  ];
-
-  const rows: ReportRow[] = (data ?? []).map((row) => {
-    const module = moduleLabel(row.table_name);
-    moduleCounts.set(module, (moduleCounts.get(module) ?? 0) + 1);
-
-    return {
-      id: String(row.audit_id),
-      amount: 0,
-      cells: {
-        date: String(row.created_at).slice(0, 10),
-        user: profileRole(row.profiles),
-        action:
-          row.description?.trim() ||
-          row.action?.replace(/_/g, " ") ||
-          "Activity recorded",
-        module,
-      },
-    };
-  });
-
-  const metrics: ReportMetric[] = [
-    {
-      id: "actions",
-      label: "Total Actions",
-      value: String(rows.length),
-      tone: "navy",
-    },
-    {
-      id: "modules",
-      label: "Modules Touched",
-      value: String(moduleCounts.size),
-      tone: "gold",
-    },
-    {
-      id: "users",
-      label: "Unique Roles",
-      value: String(
-        new Set(rows.map((row) => row.cells.user)).size
-      ),
-      tone: "green",
-    },
-    {
-      id: "period",
-      label: "Reporting Period",
-      value: from === to ? from : `${from} → ${to}`,
-      tone: "purple",
-    },
-  ];
-
-  return {
-    type: "audit",
-    title,
-    from,
-    to,
-    metrics,
-    columns,
-    rows,
-    summaryLines: [],
-    breakdown: [],
-    showBreakdown: false,
-    tableTitle: "Audit Trail",
-    notes:
-      "This administrator-only report tracks significant system actions for accountability and transparency within the selected period.",
-    exportRows: [
-      columns.map((col) => col.label),
-      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
     ],
   };
 }

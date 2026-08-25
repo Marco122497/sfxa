@@ -163,7 +163,7 @@ async function getDonationStyleReport(
   const amountsByCategory = new Map<string, number>();
   let total = 0;
 
-  const rows: ReportRow[] = filtered.map((row, index) => {
+  const rows: ReportRow[] = filtered.map((row) => {
     const category =
       relationName(
         row.donation_categories as
@@ -182,7 +182,6 @@ async function getDonationStyleReport(
       id: String(row.donation_id),
       amount,
       cells: {
-        no: String(index + 1),
         date: row.donation_date,
         name:
           type === "collections"
@@ -190,7 +189,6 @@ async function getDonationStyleReport(
             : row.donor_name?.trim() || "Anonymous",
         type: category,
         amount: formatMoneyPlain(amount),
-        remarks: row.remarks?.trim() || "—",
       },
     };
   });
@@ -201,19 +199,15 @@ async function getDonationStyleReport(
   const isCollection = type === "collections";
   const columns: ReportColumn[] = isCollection
     ? [
-        { key: "no", label: "No." },
         { key: "date", label: "Date" },
         { key: "type", label: "Collection Type" },
         { key: "amount", label: "Amount (₱)", align: "right" },
-        { key: "remarks", label: "Remarks" },
       ]
     : [
-        { key: "no", label: "No." },
         { key: "date", label: "Date" },
         { key: "name", label: "Donor Name" },
         { key: "type", label: "Donation Type" },
         { key: "amount", label: "Amount (₱)", align: "right" },
-        { key: "remarks", label: "Remarks" },
       ];
 
   const metrics: ReportMetric[] = [
@@ -264,7 +258,11 @@ async function getDonationStyleReport(
   const exportRows = [
     columns.map((col) => col.label),
     ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-    ["", "", "", "Grand Total", formatMoneyPlain(total), ""],
+    [
+      ...Array(Math.max(columns.length - 2, 0)).fill(""),
+      "Grand Total",
+      formatMoneyPlain(total),
+    ],
   ];
 
   return {
@@ -278,8 +276,8 @@ async function getDonationStyleReport(
     summaryLines,
     breakdown,
     notes: isCollection
-      ? "All amounts are in Philippine Peso (₱). This report reflects all parish collections recorded within the specified period."
-      : "All amounts are in Philippine Peso (₱). This report reflects all donations received and recorded within the specified period.",
+      ? "This report reflects all parish collections recorded within the specified period."
+      : "This report reflects all donations received and recorded within the specified period.",
     exportRows,
   };
 }
@@ -315,7 +313,7 @@ async function getExpenseReport(
   const amountsByCategory = new Map<string, number>();
   let total = 0;
 
-  const rows: ReportRow[] = (data ?? []).map((row, index) => {
+  const rows: ReportRow[] = (data ?? []).map((row) => {
     const category =
       relationName(
         row.expense_categories as
@@ -342,7 +340,6 @@ async function getExpenseReport(
       id: String(row.expense_id),
       amount,
       cells: {
-        no: String(index + 1),
         date: row.expense_date,
         category,
         subcategory,
@@ -354,7 +351,6 @@ async function getExpenseReport(
 
   const average = rows.length > 0 ? total / rows.length : 0;
   const columns: ReportColumn[] = [
-    { key: "no", label: "No." },
     { key: "date", label: "Date" },
     { key: "category", label: "Category" },
     { key: "subcategory", label: "Subcategory" },
@@ -416,11 +412,11 @@ async function getExpenseReport(
     summaryLines,
     breakdown,
     notes:
-      "All amounts are in Philippine Peso (₱). This report reflects all expenses recorded within the specified period.",
+      "This report reflects all expenses recorded within the specified period.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "", "", "Grand Total", formatMoneyPlain(total)],
+      ["", "", "", "Grand Total", formatMoneyPlain(total)],
     ],
   };
 }
@@ -570,7 +566,6 @@ async function getBudgetReport(
         id: String(row.budget_id),
         amount: allocated,
         cells: {
-          no: "",
           year: String(row.fiscal_year),
           category,
           subcategory,
@@ -583,14 +578,10 @@ async function getBudgetReport(
     }
   }
 
-  const rows: ReportRow[] = computed.map((row, index) => ({
-    ...row,
-    cells: { ...row.cells, no: String(index + 1) },
-  }));
+  const rows: ReportRow[] = computed;
   const remainingTotal = allocatedTotal - spentTotal;
 
   const columns: ReportColumn[] = [
-    { key: "no", label: "No." },
     { key: "year", label: "Year" },
     { key: "category", label: "Category" },
     { key: "subcategory", label: "Subcategory" },
@@ -644,12 +635,11 @@ async function getBudgetReport(
     summaryLines,
     breakdown,
     notes:
-      "All amounts are in Philippine Peso (₱). Budget allocations are shown for fiscal years in the selected range. Spent amounts reflect expenses recorded within the date range.",
+      "Budget allocations are shown for fiscal years in the selected range. Spent amounts reflect expenses recorded within the date range.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
       [
-        "",
         "",
         "",
         "Totals",

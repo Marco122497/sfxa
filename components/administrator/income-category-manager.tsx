@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createIncomeCategory,
@@ -202,8 +203,15 @@ function EditIncomeCategoryDialog({ row }: { row: IncomeCategoryRow }) {
 
 function DeleteIncomeCategoryButton({ row }: { row: IncomeCategoryRow }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(
-    deleteIncomeCategory,
+  const [, formAction, pending] = useServerAction(
+    async (prev, formData) => {
+      const result = await deleteIncomeCategory(prev, formData);
+      if (result.error) {
+        toast.error(result.error);
+        setOpen(false);
+      }
+      return result;
+    },
     initialState,
     () => setOpen(false)
   );
@@ -243,11 +251,6 @@ function DeleteIncomeCategoryButton({ row }: { row: IncomeCategoryRow }) {
               services under it must be moved or deleted first.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {state.error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          ) : null}
           <form action={formAction} id={formId}>
             <input
               type="hidden"

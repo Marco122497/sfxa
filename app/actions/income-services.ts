@@ -182,7 +182,7 @@ export async function deleteIncomeService(
     if ((count ?? 0) > 0) {
       return {
         error:
-          "Cannot delete this service because it is used by existing records. Deactivate it instead.",
+          "Cannot delete this service because it has transactions.",
       };
     }
   }
@@ -196,7 +196,7 @@ export async function deleteIncomeService(
     if (error.code === "23503") {
       return {
         error:
-          "Cannot delete this service because it is used by existing records. Deactivate it instead.",
+          "Cannot delete this service because it has transactions.",
       };
     }
     return { error: error.message };

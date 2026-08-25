@@ -9,6 +9,7 @@ import {
   PowerIcon,
   Trash2Icon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   createIncomeService,
@@ -447,7 +448,18 @@ function ToggleServiceDialog({ service }: { service: IncomeServiceRow }) {
 
 function DeleteServiceDialog({ service }: { service: IncomeServiceRow }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(deleteIncomeService, initialState, () => setOpen(false));
+  const [, formAction, pending] = useServerAction(
+    async (prev, formData) => {
+      const result = await deleteIncomeService(prev, formData);
+      if (result.error) {
+        toast.error(result.error);
+        setOpen(false);
+      }
+      return result;
+    },
+    initialState,
+    () => setOpen(false)
+  );
   const formId = `delete-income-service-${service.service_id}`;
 
 
@@ -481,11 +493,6 @@ function DeleteServiceDialog({ service }: { service: IncomeServiceRow }) {
               already used in records, deactivate it instead.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {state.error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          ) : null}
           <form action={formAction} id={formId}>
             <input type="hidden" name="service_id" value={service.service_id} />
           </form>

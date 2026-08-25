@@ -176,7 +176,7 @@ export async function deleteIncomeCategory(
   if ((count ?? 0) > 0) {
     return {
       error:
-        "Cannot delete this category because income services still use it. Move or delete those services first.",
+        "Cannot delete this category because it has transactions.",
     };
   }
 

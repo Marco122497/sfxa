@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
@@ -320,8 +321,15 @@ function DeleteBudgetButton({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(
-    deleteBudget,
+  const [, formAction, pending] = useServerAction(
+    async (prev, formData) => {
+      const result = await deleteBudget(prev, formData);
+      if (result.error) {
+        toast.error(result.error);
+        setOpen(false);
+      }
+      return result;
+    },
     initialState,
     () => setOpen(false)
   );
@@ -355,11 +363,6 @@ function DeleteBudgetButton({
               This will permanently remove {label}. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {state.error && (
-            <p className="text-sm text-destructive" role="alert">
-              {state.error}
-            </p>
-          )}
           <form action={formAction} id={formId}>
             <input type="hidden" name="budget_id" value={budgetId} />
           </form>

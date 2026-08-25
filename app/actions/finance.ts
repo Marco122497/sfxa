@@ -760,15 +760,6 @@ export async function deleteBudget(
     .eq("budget_id", budget_id)
     .maybeSingle();
 
-  const { error } = await supabase
-    .from("budgets")
-    .delete()
-    .eq("budget_id", budget_id);
-
-  if (error) {
-    return { error: error.message };
-  }
-
   const related = existing?.budget_categories as
     | { category_name?: string }
     | { category_name?: string }[]
@@ -786,6 +777,48 @@ export async function deleteBudget(
   const subcategoryName = Array.isArray(subRelated)
     ? subRelated[0]?.subcategory_name
     : subRelated?.subcategory_name;
+
+  let expenseCount = 0;
+  if (existing?.expense_subcategory_id != null) {
+    const { count } = await supabase
+      .from("expenses")
+      .select("expense_id", { count: "exact", head: true })
+      .eq("expense_subcategory_id", existing.expense_subcategory_id);
+    expenseCount = count ?? 0;
+  } else if (categoryName) {
+    const { data: expenseCategory } = await supabase
+      .from("expense_categories")
+      .select("expense_category_id")
+      .eq("category_name", categoryName)
+      .maybeSingle();
+    if (expenseCategory?.expense_category_id) {
+      const { count } = await supabase
+        .from("expenses")
+        .select("expense_id", { count: "exact", head: true })
+        .eq("expense_category_id", expenseCategory.expense_category_id);
+      expenseCount = count ?? 0;
+    }
+  }
+
+  if (expenseCount > 0) {
+    return {
+      error: "Cannot delete this budget because it has transactions.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("budgets")
+    .delete()
+    .eq("budget_id", budget_id);
+
+  if (error) {
+    if (error.code === "23503" || /foreign key/i.test(error.message)) {
+      return {
+        error: "Cannot delete this budget because it has transactions.",
+      };
+    }
+    return { error: error.message };
+  }
 
   await logBudgetHistory(supabase, user.id, {
     budget_id,

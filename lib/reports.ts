@@ -64,12 +64,6 @@ export const ADMIN_REPORT_TYPES = [
     title: "BUDGET UTILIZATION REPORT",
     code: "BU",
   },
-  {
-    id: "audit",
-    label: "Audit Trail",
-    title: "AUDIT TRAIL REPORT",
-    code: "AT",
-  },
 ] as const;
 
 export type AdminReportType = (typeof ADMIN_REPORT_TYPES)[number]["id"];
@@ -86,12 +80,6 @@ export function getAdminReportTypeMeta(type: AdminReportType) {
 
 /** View-only report types available to parish officers. */
 export const PARISH_REPORT_TYPES = [
-  {
-    id: "summary",
-    label: "Financial Summary",
-    title: "FINANCIAL SUMMARY REPORT",
-    code: "FS",
-  },
   {
     id: "donations",
     label: "Donation Report",
@@ -225,12 +213,39 @@ export function resolveReportDateRange(params: {
 }
 
 export function formatReportPeriodLabel(from: string, to: string) {
-  const formatter = new Intl.DateTimeFormat("en-PH", {
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  const long: Intl.DateTimeFormatOptions = {
     month: "long",
     day: "numeric",
     year: "numeric",
-  });
-  return `${formatter.format(new Date(from))} – ${formatter.format(new Date(to))}`;
+  };
+
+  if (from === to) {
+    return new Intl.DateTimeFormat("en-PH", long).format(fromDate);
+  }
+
+  const sameYear = fromDate.getFullYear() === toDate.getFullYear();
+  const sameMonth = sameYear && fromDate.getMonth() === toDate.getMonth();
+
+  if (sameMonth) {
+    const monthYear = new Intl.DateTimeFormat("en-PH", {
+      month: "long",
+      year: "numeric",
+    }).format(fromDate);
+    return `${fromDate.getDate()}–${toDate.getDate()} ${monthYear}`;
+  }
+
+  if (sameYear) {
+    const fromPart = new Intl.DateTimeFormat("en-PH", {
+      month: "long",
+      day: "numeric",
+    }).format(fromDate);
+    return `${fromPart} – ${new Intl.DateTimeFormat("en-PH", long).format(toDate)}`;
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-PH", long);
+  return `${formatter.format(fromDate)} – ${formatter.format(toDate)}`;
 }
 
 export function formatReportShortDate(value: string) {

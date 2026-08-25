@@ -262,14 +262,9 @@ function getNavItems(
       },
       {
         title: "Financial Transparency",
-        url: "/parish-officer/transparency/summary",
+        url: "/parish-officer/transparency/cash-flow",
         icon: WalletIcon,
         children: [
-          {
-            title: "Financial Summary",
-            url: "/parish-officer/transparency/summary",
-            icon: ClipboardListIcon,
-          },
           {
             title: "Cash Flow Summary",
             url: "/parish-officer/transparency/cash-flow",

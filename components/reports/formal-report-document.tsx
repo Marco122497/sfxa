@@ -1,11 +1,4 @@
 import Image from "next/image";
-import {
-  CreditCardIcon,
-  GiftIcon,
-  HeartIcon,
-  UsersIcon,
-  type LucideIcon,
-} from "lucide-react";
 
 import { formatMoney, formatDate } from "@/lib/format";
 import {
@@ -13,48 +6,24 @@ import {
   formatReportPeriodLabel,
   getAnyReportTypeMeta,
 } from "@/lib/reports";
-import type { FormalReportData, ReportMetric } from "@/lib/reports-data";
+import type { FormalReportData } from "@/lib/reports-data";
 import { ReportDataTable } from "@/components/reports/report-data-table";
 import { ReportPieChart } from "@/components/reports/report-pie-chart";
 
-const TONE_STYLES: Record<
-  ReportMetric["tone"],
-  { icon: string; accent: string; soft: string }
-> = {
-  navy: { icon: "#1e3a5f", accent: "#1e3a5f", soft: "#e8eef6" },
-  green: { icon: "#2f7d4a", accent: "#1e6b3a", soft: "#e8f4ec" },
-  gold: { icon: "#c9a227", accent: "#9a7b1a", soft: "#f8f1dc" },
-  purple: { icon: "#6b4c9a", accent: "#5a3d82", soft: "#f0eaf6" },
-};
-
-const TONE_ICONS: Record<ReportMetric["tone"], LucideIcon> = {
-  navy: UsersIcon,
-  green: HeartIcon,
-  gold: GiftIcon,
-  purple: CreditCardIcon,
-};
-
-function MetricIcon({ tone }: { tone: ReportMetric["tone"] }) {
-  const Icon = TONE_ICONS[tone];
-  return (
-    <Icon
-      className="size-5"
-      style={{ color: TONE_STYLES[tone].icon }}
-      aria-hidden
-    />
-  );
-}
+const APP_VERSION = "v1.0.0.0.1 beta";
 
 export function FormalReportDocument({
   data,
   generatedBy,
   generatedRole,
   generatedAt,
+  notedByName = "Parish Priest",
 }: {
   data: FormalReportData;
   generatedBy: string;
   generatedRole?: string;
   generatedAt: Date;
+  notedByName?: string;
 }) {
   const meta = getAnyReportTypeMeta(data.type);
   const reportNo = buildReportNumber(data.type, data.from, data.to);
@@ -70,145 +39,114 @@ export function FormalReportDocument({
       : data.type === "expenses"
         ? "Expenses by Category"
         : "Type Breakdown";
-  const generatedDate = generatedAt.toLocaleDateString("en-PH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const generatedTime = generatedAt.toLocaleTimeString("en-PH", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
   const preparedDate = formatDate(generatedAt.toISOString().slice(0, 10));
+
+  const totalMetric =
+    data.metrics.find((metric) => metric.id === "total") ??
+    data.metrics.find((metric) => metric.id === "allocated") ??
+    data.metrics.find((metric) => metric.id === "income") ??
+    data.metrics.find((metric) => metric.id === "net");
+
+  const metaItems = [
+    { label: "Report No.", value: reportNo },
+    { label: "Prepared by", value: generatedBy },
+    { label: "Period", value: formatReportPeriodLabel(data.from, data.to) },
+    { label: "Total", value: totalMetric?.value || "—" },
+  ];
 
   return (
     <article
       id="report-print-area"
-      className="formal-report mx-auto max-w-5xl overflow-hidden rounded-xl border border-[#d7e0ea] bg-white text-[#1a2332] shadow-sm"
+      className="formal-report mx-auto bg-white text-[#111111]"
     >
-      {/* Header */}
-      <header className="border-b-2 border-[#1e3a5f] px-6 py-5 sm:px-8">
-        <div className="grid gap-4 sm:grid-cols-[88px_1fr_auto] sm:items-start">
-          <div className="mx-auto flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-[#1e3a5f] bg-[#f4f7fb] sm:mx-0">
+      <header>
+        <div className="mx-auto flex items-center justify-center gap-3">
+          <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden">
             <Image
               src="/SFXA.png"
-              alt="SFXA logo"
-              width={72}
-              height={72}
-              className="object-contain p-1"
+              alt="Saint Francis Xavier Parish"
+              width={64}
+              height={64}
+              className="size-full object-contain"
               priority
             />
           </div>
 
-          <div className="text-center sm:px-2">
-            <h1 className="font-[family-name:var(--font-display)] text-xl font-bold tracking-wide text-[#1e3a5f] sm:text-2xl">
-              SFXA
-            </h1>
-            <p className="mt-0.5 text-sm font-medium text-[#1e3a5f]">
-              Parish Financial Management and Transparency System
+          <div className="text-center">
+            <p className="font-[family-name:var(--font-display)] text-[17px] font-bold tracking-[0.02em] text-[#111111] uppercase">
+              Saint Francis Xavier Parish
             </p>
-            <h2 className="mt-3 font-[family-name:var(--font-display)] text-lg font-bold tracking-wide text-[#1e3a5f] underline decoration-2 underline-offset-4 sm:text-xl">
-              {data.title}
-            </h2>
-            <p className="mt-2 text-sm text-[#3d4f63]">
-              For the Period: {formatReportPeriodLabel(data.from, data.to)}
+            <p className="mt-0.5 text-[12px] italic text-[#374151]">
+              Stewardship in faith; transparency in service
+            </p>
+            <p className="mt-1 text-[11px] text-[#4b5563]">
+              SFXA Finance · Parish Financial Management
             </p>
           </div>
 
-          <dl className="space-y-1 text-xs text-[#3d4f63] sm:min-w-[180px] sm:text-right">
-            <div>
-              <dt className="inline font-semibold text-[#1e3a5f]">Report No.: </dt>
-              <dd className="inline">{reportNo}</dd>
-            </div>
-            <div>
-              <dt className="inline font-semibold text-[#1e3a5f]">
-                Date Generated:{" "}
-              </dt>
-              <dd className="inline">{generatedDate}</dd>
-            </div>
-            <div>
-              <dt className="inline font-semibold text-[#1e3a5f]">
-                Generated By:{" "}
-              </dt>
-              <dd className="inline">{generatedBy}</dd>
-            </div>
-            <div>
-              <dt className="inline font-semibold text-[#1e3a5f]">
-                Time Generated:{" "}
-              </dt>
-              <dd className="inline">{generatedTime}</dd>
-            </div>
-          </dl>
+          <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden">
+            <Image
+              src="/SFXA.png"
+              alt=""
+              width={64}
+              height={64}
+              className="size-full object-contain"
+            />
+          </div>
         </div>
+
+        <p className="mt-4 text-center text-[15px] font-semibold tracking-[0.12em] text-[#111111] uppercase">
+          SFXA Finance – {data.title}
+        </p>
+
+        <p className="mt-4 text-[12px] italic text-[#4b5563]">
+          Printed: {formatDate(generatedAt.toISOString().slice(0, 10))}
+        </p>
+
+        <dl className="mt-4 grid grid-cols-4 gap-x-6 gap-y-3">
+          {metaItems.map((item) => (
+            <div key={item.label} className="min-w-0">
+              <dt className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
+                {item.label}
+              </dt>
+              <dd className="mt-1 text-[13px] font-semibold leading-snug text-[#111111]">
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-5 border-b border-[#111111]" />
       </header>
 
-      {/* Metrics */}
-      <section className="grid gap-3 border-b border-[#e4ebf3] bg-[#f7f9fc] px-6 py-4 sm:grid-cols-2 sm:px-8 xl:grid-cols-4">
-        {data.metrics.map((metric) => {
-          const tone = TONE_STYLES[metric.tone];
-          return (
-            <div
-              key={metric.id}
-              className="flex items-center gap-3 rounded-lg border border-[#d7e0ea] bg-white px-3 py-3"
-            >
-              <div
-                className="flex size-10 shrink-0 items-center justify-center rounded-full"
-                style={{ backgroundColor: tone.soft }}
-              >
-                <MetricIcon tone={metric.tone} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] font-medium uppercase tracking-wide text-[#6b7c90]">
-                  {metric.label}
-                </p>
-                <p
-                  className="truncate text-lg font-bold tabular-nums"
-                  style={{ color: tone.accent }}
-                >
-                  {metric.value}
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      {/* Transactions */}
-      <section className="px-6 py-5 sm:px-8">
-        <h3 className="mb-3 font-[family-name:var(--font-display)] text-base font-semibold text-[#1e3a5f]">
+      <section className="mt-6">
+        <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
           {tableTitle}
         </h3>
         <ReportDataTable columns={data.columns} rows={data.rows} />
       </section>
 
-      {/* Summary + chart */}
       {(data.summaryLines.length > 0 ||
         (showBreakdown && data.breakdown.length > 0)) && (
-        <section
-          className={`grid gap-4 border-t border-[#e4ebf3] px-6 py-5 sm:px-8 ${
-            showBreakdown && data.breakdown.length > 0
-              ? "xl:grid-cols-2"
-              : "xl:grid-cols-1"
-          }`}
-        >
+        <section className="mt-8 grid grid-cols-2 gap-8">
           {data.summaryLines.length > 0 ? (
-            <div className="rounded-md border border-[#c5d0de]">
-              <div className="border-b border-[#c5d0de] bg-[#1e3a5f] px-3 py-2 text-sm font-semibold text-white">
+            <div className="report-keep">
+              <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
                 {summaryTitle}
-              </div>
-              <table className="w-full text-sm">
+              </h3>
+              <table className="w-full border-collapse text-[13px]">
                 <tbody>
                   {data.summaryLines.map((line) => (
                     <tr
                       key={line.label}
                       className={
                         line.emphasis
-                          ? "bg-[#e8eef6] font-bold text-[#1e3a5f]"
-                          : "border-b border-[#e4ebf3]"
+                          ? "border-t border-[#111111] font-semibold"
+                          : "border-t border-[#e5e7eb]"
                       }
                     >
-                      <td className="px-3 py-2.5">{line.label}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">
+                      <td className="py-2 pr-3 align-top">{line.label}</td>
+                      <td className="py-2 text-right tabular-nums">
                         {line.display ?? formatMoney(line.amount)}
                       </td>
                     </tr>
@@ -219,47 +157,50 @@ export function FormalReportDocument({
           ) : null}
 
           {showBreakdown && data.breakdown.length > 0 ? (
-            <div className="rounded-md border border-[#c5d0de]">
-              <div className="border-b border-[#c5d0de] bg-[#1e3a5f] px-3 py-2 text-sm font-semibold text-white">
+            <div className="report-keep">
+              <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
                 {breakdownTitle}
-              </div>
-              <div className="p-4">
-                <ReportPieChart breakdown={data.breakdown} />
-              </div>
+              </h3>
+              <ReportPieChart breakdown={data.breakdown} />
             </div>
           ) : null}
         </section>
       )}
 
-      {/* Footer */}
-      <footer className="space-y-6 border-t border-[#e4ebf3] px-6 py-5 sm:px-8">
-        <div className="rounded-md border border-[#c5d0de] bg-[#f7f9fc] px-3 py-2.5 text-xs leading-relaxed text-[#3d4f63]">
-          <span className="font-semibold text-[#1e3a5f]">Notes: </span>
+      <section className="report-keep mt-10 grid grid-cols-2 gap-10">
+        <div className="text-sm">
+          <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
+            Prepared by
+          </p>
+          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <p className="mt-2 font-medium uppercase">{generatedBy}</p>
+          <p className="text-[12px] uppercase text-[#4b5563]">
+            {generatedRole || "Staff"}
+          </p>
+          <p className="mt-1 text-[12px] text-[#4b5563]">
+            Date: {preparedDate}
+          </p>
+        </div>
+        <div className="text-sm">
+          <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
+            Noted by
+          </p>
+          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <p className="mt-2 font-medium uppercase">{notedByName}</p>
+          <p className="text-[12px] uppercase text-[#4b5563]">Parish Priest</p>
+          <p className="mt-1 text-[12px] text-[#4b5563]">Date: __________</p>
+        </div>
+      </section>
+
+      {data.notes ? (
+        <p className="report-keep mt-8 text-[12px] leading-relaxed text-[#4b5563]">
+          <span className="font-semibold text-[#111111]">Notes. </span>
           {data.notes}
-        </div>
-
-        <div className="grid gap-8 pt-2 sm:grid-cols-2">
-          <div className="text-center text-sm">
-            <p className="font-semibold text-[#1e3a5f]">Prepared By:</p>
-            <div className="mx-auto mt-8 w-40 border-b border-[#1a2332]" />
-            <p className="mt-2 font-medium">{generatedBy}</p>
-            <p className="text-xs text-[#6b7c90]">
-              {generatedRole || "Staff"}
-            </p>
-            <p className="mt-1 text-xs text-[#6b7c90]">Date: {preparedDate}</p>
-          </div>
-          <div className="text-center text-sm">
-            <p className="font-semibold text-[#1e3a5f]">Approved By:</p>
-            <div className="mx-auto mt-8 w-40 border-b border-[#1a2332]" />
-            <p className="mt-2 font-medium">NAME OF PRIEST</p>
-            <p className="text-xs text-[#6b7c90]">Parish Priest</p>
-            <p className="mt-1 text-xs text-[#6b7c90]">Date: __________</p>
-          </div>
-        </div>
-
-        <p className="pt-2 text-center font-[family-name:var(--font-display)] text-sm italic text-[#1e3a5f]">
-          &ldquo;Give and it shall be given to you.&rdquo; – Luke 6:38
         </p>
+      ) : null}
+
+      <footer className="report-doc-footer mt-12 flex items-end justify-between gap-4 border-t border-[#d1d5db] pt-2 text-[11px] text-[#6b7280]">
+        <span>Generated from SFXA Finance ({APP_VERSION})</span>
       </footer>
     </article>
   );

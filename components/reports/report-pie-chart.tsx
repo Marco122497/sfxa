@@ -83,7 +83,7 @@ export function ReportPieChart({
     <div className="flex w-full flex-col items-center gap-3">
       <ChartContainer
         config={chartConfig}
-        className="mx-auto aspect-square max-h-[260px] w-full px-0"
+        className="mx-auto aspect-square max-h-[240px] w-full px-0 print:max-h-[220px]"
         initialDimension={{ width: 260, height: 260 }}
       >
         <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -145,7 +145,7 @@ export function ReportPieChart({
         </PieChart>
       </ChartContainer>
 
-      <ul className="w-full space-y-2 text-sm">
+      <ul className="w-full space-y-1.5 text-[13px]">
         {breakdown.map((item, index) => (
           <li key={item.label} className="flex items-start gap-2">
             <span
