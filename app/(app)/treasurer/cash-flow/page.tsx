@@ -1,10 +1,12 @@
 import { WalletIcon } from "lucide-react";
 
 import { requireTreasurer } from "@/lib/auth/session";
+import { resolveReportDateRange } from "@/lib/reports";
 import {
   getCashFlowStatement,
   getDailyCashFlow,
 } from "@/lib/cash-flow";
+import { CashFlowDateFilter } from "@/components/finance/cash-flow-filters";
 import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
@@ -16,10 +18,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default async function TreasurerCashFlowPage() {
+export default async function TreasurerCashFlowPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   await requireTreasurer();
+  const { from, to } = resolveReportDateRange(await searchParams);
   const [statement, daily] = await Promise.all([
-    getCashFlowStatement(),
+    getCashFlowStatement({ from, to }),
     getDailyCashFlow(),
   ]);
 
@@ -34,13 +41,14 @@ export default async function TreasurerCashFlowPage() {
       <Card>
         <CardHeader>
           <CardTitle>Statement of Cash Flows</CardTitle>
-          <CardDescription>Generated from receive and release transactions.</CardDescription>
+          <CardDescription>
+            Generated from receive and release transactions for the selected
+            dates.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <CashFlowStatementView
-            statement={statement}
-            fullHref="/treasurer/statements"
-          />
+        <CardContent className="space-y-4">
+          <CashFlowDateFilter from={from} to={to} />
+          <CashFlowStatementView statement={statement} />
         </CardContent>
       </Card>
     </div>

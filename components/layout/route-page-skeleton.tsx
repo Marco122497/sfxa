@@ -13,7 +13,6 @@ import {
   ReceiveFundsSkeleton,
   ReportsPageSkeleton,
   SettingsPageSkeleton,
-  StatementsPageSkeleton,
   TableManagerSkeleton,
   TreasurerDashboardSkeleton,
   UsersPageSkeleton,
@@ -41,8 +40,9 @@ export function RoutePageSkeleton({ href }: { href: string }) {
   }
 
   if (path.endsWith("/reports")) return <ReportsPageSkeleton />;
-  if (path.endsWith("/cash-flow")) return <CashFlowPageSkeleton />;
-  if (path.endsWith("/statements")) return <StatementsPageSkeleton />;
+  if (path.endsWith("/cash-flow") || path.endsWith("/statements")) {
+    return <CashFlowPageSkeleton />;
+  }
 
   if (path === "/administrator/settings") return <SettingsPageSkeleton />;
   if (path === "/administrator/audit") return <AuditPageSkeleton />;

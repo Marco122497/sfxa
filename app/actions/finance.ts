@@ -50,8 +50,7 @@ function revalidateFinance() {
   revalidatePath("/treasurer/receive", "layout");
   revalidatePath("/treasurer/release/expenses");
   revalidatePath("/treasurer/cash-flow");
-  revalidatePath("/treasurer/statements");
-  revalidatePath("/administrator/statements");
+  revalidatePath("/administrator/cash-flow");
   revalidatePath("/administrator/finance", "layout");
   revalidatePath("/administrator");
   revalidatePath("/administrator/reports");

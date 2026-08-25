@@ -1,5 +1,5 @@
 import { RoutePageSkeleton } from "@/components/layout/route-page-skeleton";
 
 export default function Loading() {
-  return <RoutePageSkeleton href="/treasurer/statements" />;
+  return <RoutePageSkeleton href="/treasurer/cash-flow" />;
 }

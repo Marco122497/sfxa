@@ -54,6 +54,34 @@ function parseISODate(value: string) {
   return new Date(year, month - 1, day);
 }
 
+function isoDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function eachDay(from: string, to: string) {
+  const keys: string[] = [];
+  const cursor = parseISODate(from);
+  const end = parseISODate(to);
+  while (cursor <= end) {
+    keys.push(isoDate(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return keys;
+}
+
+function addDaysIso(value: string, days: number) {
+  const date = parseISODate(value);
+  date.setDate(date.getDate() + days);
+  return isoDate(date);
+}
+
+function minIso(a: string, b: string) {
+  return a <= b ? a : b;
+}
+
 type CashFlowRange = "daily" | "weekly" | "monthly";
 
 const RANGE_OPTIONS: { id: CashFlowRange; label: string }[] = [
@@ -63,9 +91,9 @@ const RANGE_OPTIONS: { id: CashFlowRange; label: string }[] = [
 ];
 
 const RANGE_DESCRIPTION: Record<CashFlowRange, string> = {
-  daily: "Cash inflow and outflow for each day this month.",
-  weekly: "Cash inflow and outflow for the 4 weeks this month.",
-  monthly: "Cash inflow and outflow for the 12 months this year.",
+  daily: "Cash inflow and outflow for each day in the selected date range.",
+  weekly: "Cash inflow and outflow by week in the selected date range.",
+  monthly: "Cash inflow and outflow by month in the selected date range.",
 };
 
 function daysInMonth(year: number, monthIndex: number) {
@@ -76,75 +104,68 @@ function monthPrefix(year: number, monthIndex: number) {
   return `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
 }
 
-function weekNumberFromDay(day: number) {
-  return Math.min(4, Math.ceil(day / 7));
-}
-
-function weekRange(year: number, monthIndex: number, week: number) {
+function currentMonthBounds(now = new Date()) {
+  const year = now.getFullYear();
+  const monthIndex = now.getMonth();
+  const prefix = monthPrefix(year, monthIndex);
   const lastDay = daysInMonth(year, monthIndex);
-  const from = (week - 1) * 7 + 1;
-  const to = week === 4 ? lastDay : week * 7;
-  return { from, to };
+  return {
+    from: `${prefix}-01`,
+    to: `${prefix}-${String(lastDay).padStart(2, "0")}`,
+  };
 }
 
 function aggregateCashFlow(
   rows: DailyCashFlowRow[],
   range: CashFlowRange,
-  now = new Date()
+  from: string,
+  to: string
 ): DailyCashFlowRow[] {
-  const year = now.getFullYear();
-  const monthIndex = now.getMonth();
-  const prefix = monthPrefix(year, monthIndex);
   const byDate = new Map(rows.map((row) => [row.date, row]));
+  const days = eachDay(from, to);
 
   if (range === "daily") {
-    const lastDay = daysInMonth(year, monthIndex);
-    const result: DailyCashFlowRow[] = [];
-    for (let day = 1; day <= lastDay; day++) {
-      const date = `${prefix}-${String(day).padStart(2, "0")}`;
+    return days.map((date) => {
       const row = byDate.get(date);
       const inflow = row?.inflow ?? 0;
       const outflow = row?.outflow ?? 0;
-      result.push({ date, inflow, outflow, net: inflow - outflow });
-    }
-    return result;
+      return { date, inflow, outflow, net: inflow - outflow };
+    });
   }
 
   if (range === "weekly") {
-    return [1, 2, 3, 4].map((week) => {
-      const { from, to } = weekRange(year, monthIndex, week);
+    const result: DailyCashFlowRow[] = [];
+    for (let i = 0; i < days.length; i += 7) {
+      const slice = days.slice(i, i + 7);
       let inflow = 0;
       let outflow = 0;
-      for (let day = from; day <= to; day++) {
-        const date = `${prefix}-${String(day).padStart(2, "0")}`;
+      for (const date of slice) {
         const row = byDate.get(date);
         inflow += row?.inflow ?? 0;
         outflow += row?.outflow ?? 0;
       }
-      return {
-        date: `${prefix}-${String(from).padStart(2, "0")}`,
+      result.push({
+        date: slice[0],
         inflow,
         outflow,
         net: inflow - outflow,
-      };
-    });
+      });
+    }
+    return result;
   }
 
-  const months = Array.from({ length: 12 }, () => ({
-    inflow: 0,
-    outflow: 0,
-  }));
-  const yearPrefix = `${year}-`;
-  for (const row of rows) {
-    if (!row.date.startsWith(yearPrefix)) continue;
-    const month = Number(row.date.slice(5, 7)) - 1;
-    if (month < 0 || month > 11) continue;
-    months[month].inflow += row.inflow;
-    months[month].outflow += row.outflow;
+  const months = new Map<string, { inflow: number; outflow: number }>();
+  for (const date of days) {
+    const key = date.slice(0, 7);
+    const current = months.get(key) ?? { inflow: 0, outflow: 0 };
+    const row = byDate.get(date);
+    current.inflow += row?.inflow ?? 0;
+    current.outflow += row?.outflow ?? 0;
+    months.set(key, current);
   }
 
-  return months.map((value, index) => ({
-    date: `${monthPrefix(year, index)}-01`,
+  return [...months.entries()].map(([key, value]) => ({
+    date: `${key}-01`,
     inflow: value.inflow,
     outflow: value.outflow,
     net: value.inflow - value.outflow,
@@ -156,16 +177,17 @@ function formatRangeTick(value: string, range: CashFlowRange) {
   if (range === "monthly") {
     return date.toLocaleDateString("en-PH", { month: "short" });
   }
-  if (range === "weekly") {
-    return `Week ${weekNumberFromDay(date.getDate())}`;
-  }
   return date.toLocaleDateString("en-PH", {
     month: "short",
     day: "numeric",
   });
 }
 
-function formatRangeTooltip(value: string, range: CashFlowRange) {
+function formatRangeTooltip(
+  value: string,
+  range: CashFlowRange,
+  periodTo: string
+) {
   const date = parseISODate(value);
   if (range === "monthly") {
     return date.toLocaleDateString("en-PH", {
@@ -174,14 +196,17 @@ function formatRangeTooltip(value: string, range: CashFlowRange) {
     });
   }
   if (range === "weekly") {
-    const week = weekNumberFromDay(date.getDate());
-    const { from, to } = weekRange(
-      date.getFullYear(),
-      date.getMonth(),
-      week
-    );
-    const month = date.toLocaleDateString("en-PH", { month: "short" });
-    return `Week ${week} · ${month} ${from}–${to}, ${date.getFullYear()}`;
+    const weekEnd = minIso(addDaysIso(value, 6), periodTo);
+    const fromLabel = date.toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+    });
+    const toLabel = parseISODate(weekEnd).toLocaleDateString("en-PH", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    return `${fromLabel} – ${toLabel}`;
   }
   return date.toLocaleDateString("en-PH", {
     month: "short",
@@ -254,15 +279,29 @@ export function CashFlowLineChart({
   data,
   className,
   title = "Cash Flow",
+  from,
+  to,
 }: {
   data: DailyCashFlowRow[];
   className?: string;
   title?: string;
+  from?: string;
+  to?: string;
 }) {
   const [range, setRange] = useState<CashFlowRange>("daily");
+  const now = new Date();
+  const monthBounds = currentMonthBounds(now);
+  const yearBounds = {
+    from: `${now.getFullYear()}-01-01`,
+    to: `${now.getFullYear()}-12-31`,
+  };
+  const periodFrom =
+    from ?? (range === "monthly" ? yearBounds.from : monthBounds.from);
+  const periodTo =
+    to ?? (range === "monthly" ? yearBounds.to : monthBounds.to);
   const chartData = useMemo(
-    () => aggregateCashFlow(data, range),
-    [data, range]
+    () => aggregateCashFlow(data, range, periodFrom, periodTo),
+    [data, range, periodFrom, periodTo]
   );
 
   return (
@@ -329,7 +368,7 @@ export function CashFlowLineChart({
                   <ChartTooltipContent
                     className="w-[180px]"
                     labelFormatter={(value) =>
-                      formatRangeTooltip(String(value), range)
+                      formatRangeTooltip(String(value), range, periodTo)
                     }
                     formatter={(value, name) => (
                       <div className="flex w-full items-center justify-between gap-4">

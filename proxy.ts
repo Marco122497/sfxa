@@ -55,7 +55,9 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  if (GUEST_ONLY_ROUTES.includes(pathname)) {
+  const isServerAction = request.headers.has("next-action");
+
+  if (GUEST_ONLY_ROUTES.includes(pathname) && !isServerAction) {
     const url = request.nextUrl.clone();
     url.pathname = getDashboardPath(profile.role as UserRole);
     url.search = "";

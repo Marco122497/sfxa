@@ -8,7 +8,6 @@ import {
   ChevronRightIcon,
   ChurchIcon,
   ClipboardListIcon,
-  FileTextIcon,
   FolderTreeIcon,
   HeartHandshakeIcon,
   HistoryIcon,
@@ -156,11 +155,6 @@ function getNavItems(
         children: financeChildren,
       },
       {
-        title: "Financial Statements",
-        url: "/administrator/statements",
-        icon: FileTextIcon,
-      },
-      {
         title: "Cash Flow",
         url: "/administrator/cash-flow",
         icon: WalletIcon,
@@ -229,11 +223,6 @@ function getNavItems(
         icon: WalletIcon,
       },
       {
-        title: "Financial Statements",
-        url: "/treasurer/statements",
-        icon: FileTextIcon,
-      },
-      {
         title: "Reports",
         url: "/treasurer/reports",
         icon: ClipboardListIcon,
@@ -285,11 +274,6 @@ function getNavItems(
             title: "Cash Flow Summary",
             url: "/parish-officer/transparency/cash-flow",
             icon: WalletIcon,
-          },
-          {
-            title: "Approved Statements",
-            url: "/parish-officer/transparency/statements",
-            icon: FileTextIcon,
           },
         ],
       },

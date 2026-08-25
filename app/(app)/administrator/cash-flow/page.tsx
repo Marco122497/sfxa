@@ -1,10 +1,12 @@
 import { WalletIcon } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { resolveReportDateRange } from "@/lib/reports";
 import {
   getCashFlowStatement,
   getDailyCashFlow,
 } from "@/lib/cash-flow";
+import { CashFlowDateFilter } from "@/components/finance/cash-flow-filters";
 import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -16,10 +18,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-export default async function AdminCashFlowPage() {
+export default async function AdminCashFlowPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   await requireAdmin();
+  const { from, to } = resolveReportDateRange(await searchParams);
   const [statement, daily] = await Promise.all([
-    getCashFlowStatement(),
+    getCashFlowStatement({ from, to }),
     getDailyCashFlow(),
   ]);
 
@@ -35,10 +42,12 @@ export default async function AdminCashFlowPage() {
         <CardHeader>
           <CardTitle>Consolidated Statement of Cash Flows</CardTitle>
           <CardDescription>
-            Generated from treasurer receive and release transactions.
+            Generated from treasurer receive and release transactions for the
+            selected dates.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <CashFlowDateFilter from={from} to={to} />
           <CashFlowStatementView statement={statement} />
         </CardContent>
       </Card>

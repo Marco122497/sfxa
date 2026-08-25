@@ -88,9 +88,18 @@ function isoDate(date: Date) {
 export function currentYearDayKeys(now = new Date()) {
   const start = new Date(now.getFullYear(), 0, 1);
   const end = new Date(now.getFullYear(), 11, 31);
+  return dayKeysInRange(isoDate(start), isoDate(end));
+}
+
+export function dayKeysInRange(from: string, to: string) {
+  const start = from <= to ? from : to;
+  const end = from <= to ? to : from;
   const keys: string[] = [];
-  const cursor = new Date(start);
-  while (cursor <= end) {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const cursor = new Date(sy, sm - 1, sd);
+  const last = new Date(ey, em - 1, ed);
+  while (cursor <= last) {
     keys.push(isoDate(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
@@ -244,9 +253,13 @@ export async function getMonthlyCashFlow(): Promise<MonthlyCashFlowRow[]> {
   });
 }
 
-export async function getDailyCashFlow(): Promise<DailyCashFlowRow[]> {
+export async function getDailyCashFlow(
+  period?: CashFlowPeriod
+): Promise<DailyCashFlowRow[]> {
   const supabase = await createClient();
-  const keys = currentYearDayKeys();
+  const keys = period
+    ? dayKeysInRange(period.from, period.to)
+    : currentYearDayKeys();
   const [{ data: donations }, { data: expenses }] = await Promise.all([
     supabase.from("donations").select("amount, donation_date"),
     supabase.from("expenses").select("amount, expense_date"),

@@ -281,23 +281,6 @@ export function CashFlowPageSkeleton() {
   );
 }
 
-export function StatementsPageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <PageHeaderSkeleton titleWidth="w-64" />
-      <Card>
-        <CardHeader className="space-y-2">
-          <Skeleton className="h-5 w-56" />
-          <Skeleton className="h-4 w-72" />
-        </CardHeader>
-        <CardContent>
-          <TableRowsSkeleton rows={10} />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export function ReportsPageSkeleton() {
   return (
     <div className="space-y-6">

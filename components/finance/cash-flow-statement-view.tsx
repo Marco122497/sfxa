@@ -137,7 +137,7 @@ export function CashFlowStatementView({
       </Table>
       {fullHref ? (
         <Link href={fullHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-          View Full Statement
+          View cash flow
         </Link>
       ) : null}
     </div>

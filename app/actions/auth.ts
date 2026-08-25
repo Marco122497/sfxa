@@ -212,62 +212,70 @@ export async function login(
     return { error: "Email and password are required." };
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (error || !data.user) {
-    return { error: error?.message || "Invalid email or password." };
-  }
+    if (error || !data.user) {
+      return { error: error?.message || "Invalid email or password." };
+    }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role, status")
-    .eq("id", data.user.id)
-    .maybeSingle();
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role, status")
+      .eq("id", data.user.id)
+      .maybeSingle();
 
-  if (profileError || !profile) {
-    await supabase.auth.signOut();
+    if (profileError || !profile) {
+      await supabase.auth.signOut();
+      return {
+        error:
+          "Your account has no profile yet. Ask an administrator to set up your access.",
+      };
+    }
+
+    if (!profile.status) {
+      await supabase.auth.signOut();
+      return { error: "Your account is deactivated. Contact an administrator." };
+    }
+
+    const meta = await getRequestMeta();
+    const now = new Date().toISOString();
+
+    await supabase
+      .from("profiles")
+      .update({ last_login: now })
+      .eq("id", data.user.id);
+
+    await supabase.from("login_history").insert({
+      user_id: data.user.id,
+      login_time: now,
+      ip_address: meta.ip,
+      device_info: meta.device,
+    });
+
+    await supabase.from("audit_logs").insert({
+      user_id: data.user.id,
+      action: "LOGIN",
+      table_name: "profiles",
+      description: "User signed in",
+      ip_address: meta.ip,
+    });
+
     return {
-      error:
-        "Your account has no profile yet. Ask an administrator to set up your access.",
+      success: "Signed in successfully.",
+      redirectTo: getDashboardPath(profile.role),
     };
+  } catch (err) {
+    const message =
+      err instanceof Error && err.message && err.message !== "{}"
+        ? err.message
+        : "Sign in failed. Please try again.";
+    return { error: message };
   }
-
-  if (!profile.status) {
-    await supabase.auth.signOut();
-    return { error: "Your account is deactivated. Contact an administrator." };
-  }
-
-  const meta = await getRequestMeta();
-  const now = new Date().toISOString();
-
-  await supabase
-    .from("profiles")
-    .update({ last_login: now })
-    .eq("id", data.user.id);
-
-  await supabase.from("login_history").insert({
-    user_id: data.user.id,
-    login_time: now,
-    ip_address: meta.ip,
-    device_info: meta.device,
-  });
-
-  await supabase.from("audit_logs").insert({
-    user_id: data.user.id,
-    action: "LOGIN",
-    table_name: "profiles",
-    description: "User signed in",
-    ip_address: meta.ip,
-  });
-
-  return {
-    success: "Signed in successfully.",
-    redirectTo: getDashboardPath(profile.role),
-  };
 }
 
 export async function logout() {

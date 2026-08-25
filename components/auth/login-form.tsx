@@ -81,8 +81,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (state.redirectTo) {
-      router.push(state.redirectTo);
-      router.refresh();
+      router.replace(state.redirectTo);
     }
   }, [state.redirectTo, router]);
 

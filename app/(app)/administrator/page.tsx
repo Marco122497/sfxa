@@ -133,15 +133,15 @@ export default async function AdministratorDashboardPage() {
         <CardHeader>
           <CardTitle>Statement summary</CardTitle>
           <CardDescription>
-            Statement of Cash Flows for the current month. Open the full
-            statement for line-item detail.
+            Statement of Cash Flows for the current month. Open Cash Flow for
+            line-item detail.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <CashFlowStatementView
             statement={statement}
             compact
-            fullHref="/administrator/statements"
+            fullHref="/administrator/cash-flow"
           />
         </CardContent>
       </Card>
