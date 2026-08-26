@@ -10,6 +10,27 @@ import {
   getDashboardPath,
   type UserRole,
 } from "@/lib/auth/roles";
+import {
+  clearProfileOtpVerified,
+  clearResetOkCookie,
+  codesMatch,
+  generateOtpCode,
+  isOtpStillValid,
+  isOtpVerifiedRecently,
+  markProfileOtpVerified,
+  readOtpSessionCookie,
+  readProfileOtp,
+  readResetOkCookie,
+  saveProfileOtp,
+  setOtpSessionCookie,
+  setResetOkCookie,
+} from "@/lib/auth/password-reset-otp";
+import {
+  maskMobile,
+  normalizePhMobile,
+  phoneLookupVariants,
+  sendSemaphoreOtp,
+} from "@/lib/sms/semaphore";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,6 +38,8 @@ export type AuthActionState = {
   error?: string;
   success?: string;
   redirectTo?: string;
+  step?: "phone" | "otp";
+  phoneMasked?: string;
 };
 
 async function getRequestMeta() {
@@ -316,34 +339,244 @@ export async function logout() {
   redirect("/login");
 }
 
+async function findProfileByMobile(rawPhone: string) {
+  const admin = createAdminClient();
+  const number = normalizePhMobile(rawPhone);
+
+  if (!number) {
+    return { admin, profile: null, number: null as string | null };
+  }
+
+  const variants = phoneLookupVariants(number);
+  const { data, error } = await admin
+    .from("profiles")
+    .select("id, contact_number, status")
+    .not("contact_number", "is", null);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const profile =
+    (data ?? []).find((row) => {
+      const stored = String(row.contact_number || "").trim();
+      if (!stored) return false;
+      if (variants.includes(stored)) return true;
+      const normalizedStored = normalizePhMobile(stored);
+      return normalizedStored === number;
+    }) ?? null;
+
+  return { admin, profile, number };
+}
+
+async function issuePasswordResetOtp(
+  rawPhone: string
+): Promise<AuthActionState> {
+  let admin;
+  let profile;
+  let number: string | null;
+
+  try {
+    ({ admin, profile, number } = await findProfileByMobile(rawPhone));
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Unable to start password reset.";
+    if (message.includes("SUPABASE_SERVICE_ROLE_KEY")) {
+      return {
+        error:
+          "Password reset is not configured. Add SUPABASE_SERVICE_ROLE_KEY to .env.local, then restart the dev server.",
+        step: "phone",
+      };
+    }
+    return { error: message, step: "phone" };
+  }
+
+  if (!number) {
+    return {
+      error: "Enter a valid Philippine mobile number (e.g. 09XXXXXXXXX).",
+      step: "phone",
+    };
+  }
+
+  if (!profile) {
+    return {
+      error:
+        "This mobile number is not registered. Check the number or contact an administrator.",
+      step: "phone",
+    };
+  }
+
+  if (profile.status === false) {
+    return {
+      error: "Your account is deactivated. Contact an administrator.",
+      step: "phone",
+    };
+  }
+
+  const { data: authUser, error: authError } =
+    await admin.auth.admin.getUserById(profile.id);
+
+  if (authError || !authUser.user) {
+    return {
+      error:
+        "This mobile number is not registered. Check the number or contact an administrator.",
+      step: "phone",
+    };
+  }
+
+  const email = authUser.user.email?.toLowerCase() || "";
+  const code = generateOtpCode();
+  const phoneMasked = maskMobile(number);
+
+  try {
+    await sendSemaphoreOtp({
+      number,
+      code,
+      message:
+        "Your SFXA Finance password reset code is {otp}. Valid for 10 minutes. Do not share this code.",
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to send verification SMS.";
+    if (message.includes("SEMAPHORE_API_KEY")) {
+      return {
+        error:
+          "SMS is not configured. Add SEMAPHORE_API_KEY to .env.local, then restart the dev server.",
+        step: "phone",
+      };
+    }
+    return { error: message, step: "phone" };
+  }
+
+  try {
+    await saveProfileOtp(admin, profile.id, code);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to save verification code.";
+    if (/otp_code|column|schema/i.test(message)) {
+      return {
+        error:
+          "Database is missing OTP columns. In Supabase → SQL Editor, run sql/password-reset-otp.sql, then try again.",
+        step: "phone",
+      };
+    }
+    return { error: message, step: "phone" };
+  }
+
+  await setOtpSessionCookie({
+    userId: profile.id,
+    email,
+    phoneNormalized: number,
+    phoneMasked,
+  });
+
+  return {
+    success: "Verification code sent.",
+    step: "otp",
+    phoneMasked,
+  };
+}
+
 export async function forgotPassword(
   _prev: AuthActionState,
   formData: FormData
 ): Promise<AuthActionState> {
-  const email = String(formData.get("email") || "").trim();
+  const mobile = String(formData.get("mobile") || "").trim();
 
-  if (!email) {
-    return { error: "Email is required." };
+  if (!mobile) {
+    return { error: "Mobile number is required.", step: "phone" };
   }
 
-  const headerStore = await headers();
-  const origin =
-    headerStore.get("origin") ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    "http://localhost:3000";
+  return issuePasswordResetOtp(mobile);
+}
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/auth/callback?next=/reset-password`,
+export async function resendPasswordResetOtp(
+  _prev: AuthActionState,
+  _formData: FormData
+): Promise<AuthActionState> {
+  const challenge = await readOtpSessionCookie();
+  const phone = challenge?.phoneNormalized || "";
+
+  if (!phone) {
+    return {
+      error: "Enter your mobile number again to resend a code.",
+      step: "phone",
+    };
+  }
+
+  return issuePasswordResetOtp(phone);
+}
+
+export async function verifyPasswordResetOtp(
+  _prev: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const otp = String(formData.get("otp") || "").replace(/\D/g, "");
+
+  if (otp.length !== 6) {
+    return {
+      error: "Enter the 6-digit verification code.",
+      step: "otp",
+    };
+  }
+
+  const session = await readOtpSessionCookie();
+  if (!session) {
+    return {
+      error: "Your verification code expired. Request a new one.",
+      step: "phone",
+    };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Password reset is not configured.";
+    return { error: message, step: "otp", phoneMasked: session.phoneMasked };
+  }
+
+  let stored;
+  try {
+    stored = await readProfileOtp(admin, session.userId);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Failed to verify code.";
+    if (/otp_code|column|schema/i.test(message)) {
+      return {
+        error:
+          "Database is missing OTP columns. In Supabase → SQL Editor, run sql/password-reset-otp.sql, then try again.",
+        step: "phone",
+      };
+    }
+    return { error: message, step: "otp", phoneMasked: session.phoneMasked };
+  }
+
+  if (!stored?.otp_code || !isOtpStillValid(stored.otp_expires_at)) {
+    return {
+      error: "Your verification code expired. Request a new one.",
+      step: "phone",
+    };
+  }
+
+  if (!codesMatch(otp, stored.otp_code)) {
+    return {
+      error: "Invalid verification code. Please try again.",
+      step: "otp",
+      phoneMasked: session.phoneMasked,
+    };
+  }
+
+  await markProfileOtpVerified(admin, session.userId);
+  await setResetOkCookie({
+    userId: session.userId,
+    email: session.email,
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
   return {
-    success:
-      "If an account exists for that email, a password reset link has been sent.",
+    success: "Code verified. Choose a new password.",
+    redirectTo: "/reset-password",
   };
 }
 
@@ -429,36 +662,87 @@ export async function resetPassword(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-  if (error) {
-    return { error: error.message };
-  }
-
   const {
-    data: { user },
+    data: { user: sessionUser },
   } = await supabase.auth.getUser();
 
-  if (user) {
+  // Preferred path: recovery/magic-link session already established.
+  if (sessionUser) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      return { error: error.message };
+    }
+
     const meta = await getRequestMeta();
     await supabase.from("audit_logs").insert({
-      user_id: user.id,
+      user_id: sessionUser.id,
       action: "RESET_PASSWORD",
       table_name: "auth.users",
       description: "User reset password via email link",
       ip_address: meta.ip,
     });
 
+    await clearResetOkCookie();
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", user.id)
+      .eq("id", sessionUser.id)
       .maybeSingle();
 
     if (profile?.role) {
       redirect(getDashboardPath(profile.role));
     }
+
+    redirect("/login?reset=success");
   }
 
+  // OTP path: verified SMS code grants a short-lived reset cookie + DB flag.
+  const resetOk = await readResetOkCookie();
+  if (!resetOk) {
+    return {
+      error:
+        "Your password reset session expired. Start again from Forgot password.",
+    };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Password reset is not configured.";
+    return { error: message };
+  }
+
+  const stored = await readProfileOtp(admin, resetOk.userId);
+  if (!isOtpVerifiedRecently(stored?.otp_verified_at)) {
+    await clearResetOkCookie();
+    return {
+      error:
+        "Your password reset session expired. Start again from Forgot password.",
+    };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(resetOk.userId, {
+    password: newPassword,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const meta = await getRequestMeta();
+  await admin.from("audit_logs").insert({
+    user_id: resetOk.userId,
+    action: "RESET_PASSWORD",
+    table_name: "auth.users",
+    description: "User reset password via SMS OTP",
+    ip_address: meta.ip,
+  });
+
+  await clearProfileOtpVerified(admin, resetOk.userId);
+  await clearResetOkCookie();
   redirect("/login?reset=success");
 }

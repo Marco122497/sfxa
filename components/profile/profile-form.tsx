@@ -9,10 +9,10 @@ import {
   uploadProfilePicture,
   type ProfileActionState,
 } from "@/app/actions/profile";
+import { useActionToast } from "@/hooks/use-action-toast";
 import type { Profile } from "@/lib/auth/roles";
 import { formatDateTime } from "@/lib/auth/roles";
 import { displayRoleName } from "@/lib/income";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -73,6 +73,9 @@ export function ProfileForm({
     initialState
   );
 
+  useActionToast(profileState);
+  useActionToast(pictureState);
+
   useEffect(() => {
     setForm(profileToForm(profile));
   }, [profile.updated_at, profile]);
@@ -106,16 +109,6 @@ export function ProfileForm({
             </AvatarFallback>
           </Avatar>
           <form action={pictureAction} className="flex flex-1 flex-col gap-3">
-            {pictureState.error && (
-              <Alert variant="destructive">
-                <AlertDescription>{pictureState.error}</AlertDescription>
-              </Alert>
-            )}
-            {pictureState.success && (
-              <Alert>
-                <AlertDescription>{pictureState.success}</AlertDescription>
-              </Alert>
-            )}
             <input
               ref={fileInputRef}
               id="profile_picture"
@@ -158,17 +151,6 @@ export function ProfileForm({
         </CardHeader>
         <CardContent>
           <form action={profileAction} className="space-y-6">
-            {profileState.error && (
-              <Alert variant="destructive">
-                <AlertDescription>{profileState.error}</AlertDescription>
-              </Alert>
-            )}
-            {profileState.success && (
-              <Alert>
-                <AlertDescription>{profileState.success}</AlertDescription>
-              </Alert>
-            )}
-
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="email">Email</Label>

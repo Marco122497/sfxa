@@ -10,13 +10,14 @@ Run in this order:
 
 1. `db.sql` — core schema (profiles, parish information, finance tables, storage, admin seed)
 2. `sql/registration-trigger.sql` — only if registration returns HTTP 500
-3. `sql/phase2-admin.sql` — Admin RLS and parish publish fields
-4. `sql/phase3-categories.sql` — **Categories** (income categories, income services, expense categories)
-5. `sql/phase4-treasurer.sql` — Receive / Release Funds extras (receipts, donation status)
-6. `sql/phase5-budget.sql` — Budget allocations + history (uses expense categories)
-7. `sql/phase6-transparency.sql` — Parish Member / public approved summaries
-8. `sql/phase7-parish-settings.sql` — Parish priest name used on printed reports
-9. `sql/sample-parish-projects.sql` — optional sample projects
+3. `sql/password-reset-otp.sql` — profile OTP columns for SMS forgot-password
+4. `sql/phase2-admin.sql` — Admin RLS and parish publish fields
+5. `sql/phase3-categories.sql` — **Categories** (income categories, income services, expense categories)
+6. `sql/phase4-treasurer.sql` — Receive / Release Funds extras (receipts, donation status)
+7. `sql/phase5-budget.sql` — Budget allocations + history (uses expense categories)
+8. `sql/phase6-transparency.sql` — Parish Member / public approved summaries
+9. `sql/phase7-parish-settings.sql` — Parish priest name used on printed reports
+10. `sql/sample-parish-projects.sql` — optional sample projects
 
 ## How this maps to the system
 

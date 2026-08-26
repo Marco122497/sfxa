@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
+import {
+  DUPLICATE_CONTACT_NUMBER_MESSAGE,
+  isContactNumberTaken,
+} from "@/lib/auth/contact-number";
 import { buildFullName } from "@/lib/auth/roles";
 import { requireUser } from "@/lib/auth/session";
 
@@ -23,8 +27,7 @@ export async function updateProfile(
   const suffix = String(formData.get("suffix") || "").trim() || null;
   const sexRaw = String(formData.get("sex") || "").trim();
   const birth_date = String(formData.get("birth_date") || "").trim() || null;
-  const contact_number =
-    String(formData.get("contact_number") || "").trim() || null;
+  const contactRaw = String(formData.get("contact_number") || "").trim() || null;
   const address = String(formData.get("address") || "").trim() || null;
   const employee_no = String(formData.get("employee_no") || "").trim() || null;
 
@@ -32,8 +35,24 @@ export async function updateProfile(
     return { error: "First name and last name are required." };
   }
 
-  const sex =
-    sexRaw === "Male" || sexRaw === "Female" ? sexRaw : null;
+  let contact_number: string | null = null;
+  if (contactRaw) {
+    const {
+      taken,
+      normalized,
+      error: phoneError,
+    } = await isContactNumberTaken(contactRaw, user.id);
+
+    if (phoneError && !normalized) {
+      return { error: phoneError };
+    }
+    if (taken) {
+      return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+    }
+    contact_number = normalized ? `0${normalized.slice(2)}` : contactRaw;
+  }
+
+  const sex = sexRaw === "Male" || sexRaw === "Female" ? sexRaw : null;
 
   const full_name = buildFullName({
     first_name,
@@ -60,6 +79,9 @@ export async function updateProfile(
 
   if (error) {
     if (error.code === "23505") {
+      if (/contact_number/i.test(error.message)) {
+        return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+      }
       return { error: "Employee number is already in use." };
     }
     return { error: error.message };
