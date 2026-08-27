@@ -3,6 +3,7 @@
 import type { Profile } from "@/lib/auth/roles";
 import { getDashboardPath } from "@/lib/auth/roles";
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
+import { RequiredMobileDialog } from "@/components/auth/required-mobile-dialog";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
 import { RoutePageSkeleton } from "@/components/layout/route-page-skeleton";
@@ -74,6 +75,7 @@ function AppShellContent({
           )}
         </div>
       </SidebarInset>
+      <RequiredMobileDialog missing={!profile.contact_number?.trim()} />
     </>
   );
 }

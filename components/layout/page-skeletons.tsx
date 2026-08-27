@@ -325,19 +325,16 @@ export function SettingsPageSkeleton() {
   return (
     <div className="space-y-6">
       <PageHeaderSkeleton titleWidth="w-32" />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader className="space-y-2">
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-4 w-56" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-20" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardHeader className="space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-72" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-8 w-full max-w-md" />
+          <Skeleton className="h-9 w-28" />
+        </CardContent>
+      </Card>
     </div>
   );
 }

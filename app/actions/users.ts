@@ -3,6 +3,10 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import {
+  DUPLICATE_CONTACT_NUMBER_MESSAGE,
+  isContactNumberTaken,
+} from "@/lib/auth/contact-number";
 import { ROLES, buildFullName, type UserRole } from "@/lib/auth/roles";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -179,6 +183,7 @@ export async function updateUser(
   const last_name = String(formData.get("last_name") || "").trim();
   const suffix = String(formData.get("suffix") || "").trim() || null;
   const employee_no = String(formData.get("employee_no") || "").trim() || null;
+  const contactRaw = String(formData.get("contact_number") || "").trim() || null;
   const role = String(formData.get("role") || "").trim() as UserRole;
   const status = String(formData.get("status") || "1") === "1";
 
@@ -200,6 +205,23 @@ export async function updateUser(
 
   if (userId === actor.id && role !== "Administrator") {
     return { error: "You cannot change your own role away from Administrator." };
+  }
+
+  let contact_number: string | null = null;
+  if (contactRaw) {
+    const {
+      taken,
+      normalized,
+      error: phoneError,
+    } = await isContactNumberTaken(contactRaw, userId);
+
+    if (phoneError && !normalized) {
+      return { error: phoneError };
+    }
+    if (taken) {
+      return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+    }
+    contact_number = normalized ? `0${normalized.slice(2)}` : contactRaw;
   }
 
   const full_name = buildFullName({
@@ -243,6 +265,7 @@ export async function updateUser(
       last_name,
       suffix,
       employee_no,
+      contact_number,
       full_name,
       role,
     },
@@ -280,6 +303,7 @@ export async function updateUser(
       last_name,
       suffix,
       full_name,
+      contact_number,
       role,
       status,
     })
@@ -287,6 +311,9 @@ export async function updateUser(
 
   if (profileError) {
     if (profileError.code === "23505") {
+      if (/contact_number/i.test(profileError.message)) {
+        return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+      }
       return { error: "Employee number is already in use." };
     }
     return { error: `Account updated but profile failed: ${profileError.message}` };

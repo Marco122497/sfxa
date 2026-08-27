@@ -105,6 +105,65 @@ export async function updateProfile(
   return { success: "Profile updated successfully." };
 }
 
+export async function saveContactNumber(
+  _prev: ProfileActionState,
+  formData: FormData
+): Promise<ProfileActionState> {
+  const { supabase, user } = await requireUser();
+  const contactRaw = String(formData.get("contact_number") || "").trim();
+
+  if (!contactRaw) {
+    return { error: "Mobile number is required." };
+  }
+
+  const {
+    taken,
+    normalized,
+    error: phoneError,
+  } = await isContactNumberTaken(contactRaw, user.id);
+
+  if (phoneError && !normalized) {
+    return { error: phoneError };
+  }
+  if (taken) {
+    return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+  }
+
+  const contact_number = normalized
+    ? `0${normalized.slice(2)}`
+    : contactRaw;
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ contact_number })
+    .eq("id", user.id);
+
+  if (error) {
+    if (error.code === "23505" || /contact_number/i.test(error.message)) {
+      return { error: DUPLICATE_CONTACT_NUMBER_MESSAGE };
+    }
+    return { error: error.message };
+  }
+
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    null;
+
+  await supabase.from("audit_logs").insert({
+    user_id: user.id,
+    action: "UPDATE_CONTACT_NUMBER",
+    table_name: "profiles",
+    description: "Added required mobile number for password recovery",
+    ip_address: ip,
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/profile");
+  return { success: "Mobile number saved." };
+}
+
 export async function uploadProfilePicture(
   _prev: ProfileActionState,
   formData: FormData

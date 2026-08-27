@@ -66,7 +66,13 @@ function DetailRow({
   );
 }
 
-function UserHoverCard({ user }: { user: Profile }) {
+function UserHoverCard({
+  user,
+  isSelf,
+}: {
+  user: Profile;
+  isSelf?: boolean;
+}) {
   return (
     <HoverCard>
       <HoverCardTrigger className="flex cursor-default items-center gap-2.5 rounded-md outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring/50">
@@ -78,8 +84,15 @@ function UserHoverCard({ user }: { user: Profile }) {
             {initials(user) || <UserRoundIcon className="size-3.5" />}
           </AvatarFallback>
         </Avatar>
-        <span className="font-medium underline-offset-2 hover:underline">
-          {user.full_name}
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <span className="truncate font-medium underline-offset-2 hover:underline">
+            {user.full_name}
+          </span>
+          {isSelf ? (
+            <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary uppercase">
+              You
+            </span>
+          ) : null}
         </span>
       </HoverCardTrigger>
       <HoverCardContent side="top" align="start" className="w-80 p-3">
@@ -141,6 +154,7 @@ function EditUserForm({
   const [lastName, setLastName] = useState(user.last_name);
   const [suffix, setSuffix] = useState(user.suffix ?? "");
   const [employeeNo, setEmployeeNo] = useState(user.employee_no ?? "");
+  const [contactNumber, setContactNumber] = useState(user.contact_number ?? "");
   const [role, setRole] = useState(user.role);
   const [email, setEmail] = useState(user.email ?? "");
   const [password, setPassword] = useState("");
@@ -204,6 +218,19 @@ function EditUserForm({
               name="employee_no"
               value={employeeNo}
               onChange={(event) => setEmployeeNo(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-contact_number`}>Mobile number</Label>
+            <Input
+              id={`${formId}-contact_number`}
+              name="contact_number"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="09XXXXXXXXX"
+              value={contactNumber}
+              onChange={(event) => setContactNumber(event.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -469,7 +496,7 @@ export function UsersTable({
         <Input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search name, email, employee no.…"
+          placeholder="Search name, email, mobile, employee no.…"
           className="sm:col-span-1"
         />
         {lockedRole ? null : (
@@ -507,6 +534,7 @@ export function UsersTable({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Mobile</TableHead>
               <TableHead>Employee No.</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
@@ -515,13 +543,18 @@ export function UsersTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((user) => (
+            {filtered.map((user) => {
+              const isSelf = user.id === currentUserId;
+              return (
               <TableRow key={user.id}>
                 <TableCell>
-                  <UserHoverCard user={user} />
+                  <UserHoverCard user={user} isSelf={isSelf} />
                 </TableCell>
                 <TableCell className="max-w-[220px] truncate">
                   {user.email || "—"}
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {user.contact_number || "—"}
                 </TableCell>
                 <TableCell>{user.employee_no || "—"}</TableCell>
                 <TableCell>{displayRoleName(user.role)}</TableCell>
@@ -531,17 +564,18 @@ export function UsersTable({
                   <div className="flex items-center justify-end gap-0.5">
                     <EditUserButton
                       user={user}
-                      isSelf={user.id === currentUserId}
+                      isSelf={isSelf}
                     />
                     <DeleteUserButton
                       userId={user.id}
                       userName={user.full_name}
-                      disabled={user.id === currentUserId}
+                      disabled={isSelf}
                     />
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}
