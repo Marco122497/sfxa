@@ -307,16 +307,20 @@ export function ReportsPageSkeleton() {
   );
 }
 
+export function AuditTabContentSkeleton() {
+  return <TableCardSkeleton rows={8} toolbar />;
+}
+
 export function AuditPageSkeleton() {
   return (
     <div className="space-y-6">
       <PageHeaderSkeleton titleWidth="w-36" />
-      <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-8 w-24" />
-        <Skeleton className="h-8 w-24" />
+      <div className="inline-flex w-fit gap-1">
         <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-8 w-36" />
       </div>
-      <TableCardSkeleton rows={8} />
+      <AuditTabContentSkeleton />
     </div>
   );
 }
