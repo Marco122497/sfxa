@@ -13,6 +13,7 @@ import { getCashFlowStatement, getDailyCashFlow } from "@/lib/cash-flow";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { ExpenseDistributionPieChart } from "@/components/treasurer/dashboard-charts";
+import { PageHeading } from "@/components/layout/page-heading";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -45,21 +46,11 @@ export default async function TreasurerDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
-            <LayoutDashboardIcon className="size-4" aria-hidden />
-          </span>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Treasurer Dashboard
-          </h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Welcome, {profile.first_name}. Collect income, allocate a budget, then
-          record expenses. Expenses use budget and reduce cash — they do not
-          deduct from income.
-        </p>
-      </div>
+      <PageHeading
+        title="Treasurer Dashboard"
+        description={`Welcome, ${profile.first_name}. Collect income, allocate a budget, then record expenses. Expenses use budget and reduce cash — they do not deduct from income.`}
+        icon={LayoutDashboardIcon}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>

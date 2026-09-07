@@ -69,7 +69,7 @@ export function RequiredMobileDialog({ missing }: RequiredMobileDialogProps) {
     >
       <AlertDialogContent className="max-w-md" size="default">
         <AlertDialogHeader>
-          <AlertDialogMedia>
+          <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]">
             <PhoneIcon />
           </AlertDialogMedia>
           <AlertDialogTitle>Mobile number required</AlertDialogTitle>
@@ -100,6 +100,7 @@ export function RequiredMobileDialog({ missing }: RequiredMobileDialogProps) {
             type="submit"
             form="required-mobile-form"
             disabled={pending}
+            className="rounded-full font-bold"
           >
             {pending ? (
               <>

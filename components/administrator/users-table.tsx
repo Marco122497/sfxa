@@ -1,11 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Loader2, PencilIcon, Trash2Icon, UserRoundIcon } from "lucide-react";
+import {
+  CircleOffIcon,
+  Loader2,
+  PencilIcon,
+  PowerIcon,
+  Trash2Icon,
+  UserRoundIcon,
+} from "lucide-react";
 
+import { useActionToast } from "@/hooks/use-action-toast";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   deleteUser,
+  toggleUserStatus,
   updateUser,
   type UserActionState,
 } from "@/app/actions/users";
@@ -366,6 +375,114 @@ function EditUserButton({
   );
 }
 
+function ToggleUserStatusButton({
+  user,
+  disabled,
+}: {
+  user: Profile;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, formAction, pending] = useServerAction(
+    toggleUserStatus,
+    initialState,
+    () => setOpen(false)
+  );
+  useActionToast(state);
+  const formId = `toggle-user-status-${user.id}`;
+  const activating = !user.status;
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        disabled={disabled}
+        aria-label={activating ? "Activate user" : "Deactivate user"}
+        title={
+          disabled
+            ? "You cannot deactivate your own account"
+            : activating
+              ? "Activate user"
+              : "Deactivate user"
+        }
+        onClick={() => setOpen(true)}
+      >
+        {activating ? <PowerIcon /> : <CircleOffIcon />}
+      </Button>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogMedia
+              className={
+                activating
+                  ? "bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]"
+                  : "bg-destructive/10 text-destructive"
+              }
+            >
+              {activating ? <PowerIcon /> : <CircleOffIcon />}
+            </AlertDialogMedia>
+            <AlertDialogTitle>
+              {activating ? "Activate this user?" : "Deactivate this user?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {activating
+                ? `${user.full_name} will be able to sign in again.`
+                : `${user.full_name} will no longer be able to sign in. You can activate the account later.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {state.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {state.error}
+            </p>
+          ) : null}
+          <form action={formAction} id={formId}>
+            <input type="hidden" name="user_id" value={user.id} />
+            <input
+              type="hidden"
+              name="status"
+              value={activating ? "1" : "0"}
+            />
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              variant={activating ? "default" : "destructive"}
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Saving…
+                </>
+              ) : activating ? (
+                <>
+                  <PowerIcon />
+                  Activate
+                </>
+              ) : (
+                <>
+                  <CircleOffIcon />
+                  Deactivate
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function DeleteUserButton({
   userId,
   userName,
@@ -539,7 +656,7 @@ export function UsersTable({
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
-              <TableHead className="w-[88px]" />
+              <TableHead className="w-[120px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -558,13 +675,25 @@ export function UsersTable({
                 </TableCell>
                 <TableCell>{user.employee_no || "—"}</TableCell>
                 <TableCell>{displayRoleName(user.role)}</TableCell>
-                <TableCell>{user.status ? "Active" : "Inactive"}</TableCell>
+                <TableCell>
+                  {user.status ? (
+                    <span className="student-chum-pill">Active</span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                      Inactive
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell>{formatDateTime(user.last_login)}</TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-0.5">
                     <EditUserButton
                       user={user}
                       isSelf={isSelf}
+                    />
+                    <ToggleUserStatusButton
+                      user={user}
+                      disabled={isSelf}
                     />
                     <DeleteUserButton
                       userId={user.id}

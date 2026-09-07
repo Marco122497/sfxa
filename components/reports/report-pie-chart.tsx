@@ -11,16 +11,16 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 
-/** Flat monochrome blues — light to dark, matching the reference chart */
-const BLUE_PALETTE = [
-  "#93c5fd",
-  "#60a5fa",
-  "#3b82f6",
-  "#2563eb",
-  "#1d4ed8",
-  "#1e40af",
-  "#1e3a8a",
-  "#172554",
+/** Soft greens — light to deep, matching the Chum theme */
+const GREEN_PALETTE = [
+  "#9ae6b4",
+  "#68d391",
+  "#48bb78",
+  "#2dbe78",
+  "#1f9a5c",
+  "#276749",
+  "#22543d",
+  "#1c4532",
 ];
 
 function slugify(label: string, index: number) {
@@ -54,7 +54,7 @@ export function ReportPieChart({
 
   const chartData = breakdown.map((item, index) => {
     const key = slugify(item.label, index);
-    const fill = BLUE_PALETTE[index % BLUE_PALETTE.length];
+    const fill = GREEN_PALETTE[index % GREEN_PALETTE.length];
     return {
       key,
       category: item.label,
@@ -151,7 +151,7 @@ export function ReportPieChart({
             <span
               className="mt-1 size-2.5 shrink-0 rounded-full"
               style={{
-                backgroundColor: BLUE_PALETTE[index % BLUE_PALETTE.length],
+                backgroundColor: GREEN_PALETTE[index % GREEN_PALETTE.length],
               }}
             />
             <span className="min-w-0">

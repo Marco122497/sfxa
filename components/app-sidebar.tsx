@@ -6,7 +6,6 @@ import {
   ArrowDownToLineIcon,
   CalendarDaysIcon, 
   ChevronRightIcon,
-  ChurchIcon,
   ClipboardListIcon,
   FolderTreeIcon,
   HeartHandshakeIcon,
@@ -31,7 +30,9 @@ import { getDashboardPath } from "@/lib/auth/roles";
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
 import { FALLBACK_INCOME_CATEGORIES } from "@/lib/income-categories";
 import { getIncomeCategoryIcon } from "@/components/income-category-icon";
+import { SidebarAppFooter } from "@/components/layout/sidebar-app-footer";
 import { useNavigationPending } from "@/components/layout/navigation-pending";
+import { formatAppVersion } from "@/lib/app-meta";
 import {
   Collapsible,
   CollapsibleContent,
@@ -40,6 +41,7 @@ import {
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
@@ -50,6 +52,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -531,13 +534,19 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={() => onNavigate(home)}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <ChurchIcon className="size-4" />
+              <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg">
+                <img
+                  src="/SFXA.png"
+                  alt="SFXA Finance"
+                  width={48}
+                  height={48}
+                  className="size-12 object-contain"
+                />
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
                 <span className="font-medium">SFXA Finance</span>
                 <span className="text-xs text-muted-foreground">
-                  v1.0.0.0.1 beta
+                  {formatAppVersion()}
                 </span>
               </div>
             </SidebarMenuButton>
@@ -597,6 +606,10 @@ export function AppSidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="group-data-[collapsible=icon]:hidden">
+        <SidebarSeparator />
+        <SidebarAppFooter />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

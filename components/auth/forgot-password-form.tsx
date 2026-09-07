@@ -99,9 +99,9 @@ export function ForgotPasswordForm() {
 
   if (step === "otp") {
     return (
-      <Card className="w-full max-w-md border-border/80 shadow-sm">
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
+          <CardTitle className="flex items-center gap-2 text-2xl font-bold">
             <ShieldCheckIcon className="size-5" />
             Verify your identity
           </CardTitle>
@@ -170,7 +170,7 @@ export function ForgotPasswordForm() {
             <Field>
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full rounded-full font-bold"
                 disabled={otpPending || otp.length !== 6}
                 size="lg"
               >
@@ -195,9 +195,9 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <Card className="w-full max-w-md border-border/80 shadow-sm">
+    <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-2xl">
+        <CardTitle className="flex items-center gap-2 text-2xl font-bold">
           <PhoneIcon className="size-5" />
           Forgot password
         </CardTitle>
@@ -222,7 +222,7 @@ export function ForgotPasswordForm() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={phonePending} size="lg">
+          <Button type="submit" className="w-full rounded-full font-bold" disabled={phonePending} size="lg">
             {phonePending ? (
               <>
                 <Loader2 className="animate-spin" />

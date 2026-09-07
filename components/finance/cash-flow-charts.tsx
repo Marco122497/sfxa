@@ -45,8 +45,8 @@ const cashFlowConfig = {
 } satisfies ChartConfig;
 
 const lineChartConfig = {
-  inflow: { label: "Cash Inflow", color: "#2563eb" },
-  outflow: { label: "Cash Outflow", color: "#0ea5e9" },
+  inflow: { label: "Cash Inflow", color: "var(--chart-1)" },
+  outflow: { label: "Cash Outflow", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
 function parseISODate(value: string) {

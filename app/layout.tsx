@@ -1,16 +1,20 @@
-import { Source_Serif_4, DM_Sans } from "next/font/google";
+import { Nunito, Quicksand } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const display = Source_Serif_4({
-  variable: "--font-display",
+const chumSans = Nunito({
   subsets: ["latin"],
+  variable: "--font-chum-sans",
+  display: "swap",
 });
 
-const sans = DM_Sans({
-  variable: "--font-sans",
+const chumDisplay = Quicksand({
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-chum-display",
+  display: "swap",
 });
 
 export const metadata = {
@@ -27,17 +31,19 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${display.variable} ${sans.variable} h-full antialiased`}
+      className={`${chumSans.variable} ${chumDisplay.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="chum-app student-chum flex min-h-full flex-col font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster />
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

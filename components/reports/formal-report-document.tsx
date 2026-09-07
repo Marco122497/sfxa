@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { formatAppFooterLabel } from "@/lib/app-meta";
 import { formatMoney, formatDate } from "@/lib/format";
 import {
   buildReportNumber,
@@ -9,8 +10,6 @@ import {
 import type { FormalReportData } from "@/lib/reports-data";
 import { ReportDataTable } from "@/components/reports/report-data-table";
 import { ReportPieChart } from "@/components/reports/report-pie-chart";
-
-const APP_VERSION = "v1.0.0.0.1 beta";
 
 export function FormalReportDocument({
   data,
@@ -200,7 +199,7 @@ export function FormalReportDocument({
       ) : null}
 
       <footer className="report-doc-footer mt-12 flex items-end justify-between gap-4 border-t border-[#d1d5db] pt-2 text-[11px] text-[#6b7280]">
-        <span>Generated from SFXA Finance ({APP_VERSION})</span>
+        <span>{formatAppFooterLabel()}</span>
       </footer>
     </article>
   );

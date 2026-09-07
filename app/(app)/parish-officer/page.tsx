@@ -28,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { PageHeading } from "@/components/layout/page-heading";
 
 export default async function ParishOfficerDashboardPage() {
   const { profile } = await requireParishOfficer();
@@ -55,20 +56,11 @@ export default async function ParishOfficerDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
-            <LayoutDashboardIcon className="size-4" aria-hidden />
-          </span>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Saint Francis Xavier Parish
-          </h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Welcome, {profile.first_name}. Income stays collected. Expenses use
-          budget and reduce actual cash.
-        </p>
-      </div>
+      <PageHeading
+        title="Saint Francis Xavier Parish"
+        description={`Welcome, ${profile.first_name}. Income stays collected. Expenses use budget and reduce actual cash.`}
+        icon={LayoutDashboardIcon}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>

@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -27,6 +28,9 @@ export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, initialState);
   const [showPassword, setShowPassword] = useState(false);
   useActionToast(state);
+
+  const redirecting = Boolean(state.redirectTo);
+  const busy = pending || redirecting;
 
   const queryError = searchParams.get("error");
   const resetSuccess = searchParams.get("reset") === "success";
@@ -61,79 +65,102 @@ export function LoginForm() {
   }, [state.redirectTo, router]);
 
   return (
-    <Card className="w-full max-w-md border-border/80 shadow-sm">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">Sign in</CardTitle>
-        <CardDescription>
-          Access the SFXA parish finance system with your staff account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="sfxa@example"
-              required
-              disabled={pending}
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
-              <Input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
-                placeholder="Enter your Password"
-                required
-                disabled={pending}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-              >
-                {showPassword ? (
-                  <EyeOffIcon className="size-4" />
-                ) : (
-                  <EyeIcon className="size-4" />
-                )}
-              </button>
-            </div>
-          </div>
+    <>
+      {busy ? (
+        <div
+          className="pointer-events-none fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden bg-primary/10"
+          aria-hidden
+        >
+          <div className="login-top-progress h-full w-1/4 bg-primary" />
+        </div>
+      ) : null}
 
-          <Button type="submit" className="w-full" disabled={pending} size="lg">
-            {pending ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Signing in…
-              </>
-            ) : (
-              <>
-                <LogInIcon />
-                Sign in
-              </>
-            )}
-          </Button>
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
+          <CardDescription>
+            Access the SFXA parish finance system with your staff account.
+          </CardDescription>
+        </CardHeader>
+        <form action={formAction} aria-busy={busy}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                placeholder="sfxa@example"
+                required
+                disabled={busy}
+                className="h-10 rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative">
+                <Input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="Enter your Password"
+                  required
+                  disabled={busy}
+                  className="h-10 rounded-xl pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="size-4" />
+                  ) : (
+                    <EyeIcon className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              className="w-full rounded-full font-bold"
+              disabled={busy}
+              size="lg"
+            >
+              {redirecting ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Redirecting…
+                </>
+              ) : pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                <>
+                  <LogInIcon />
+                  Sign in
+                </>
+              )}
+            </Button>
+          </CardFooter>
         </form>
-      </CardContent>
-    </Card>
+      </Card>
+    </>
   );
 }

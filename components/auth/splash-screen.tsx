@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { AuthBackground } from "@/components/auth/auth-background";
+
 const SPLASH_SEEN_KEY = "sfxa-splash-seen";
 
 export function markSplashSeen() {
@@ -59,21 +61,22 @@ export function SplashScreen({
         exiting ? "opacity-0" : "opacity-100"
       }`}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_oklch(0.93_0.03_195),_transparent_55%),linear-gradient(to_bottom,_oklch(0.985_0.01_200),_oklch(0.95_0.02_220))] dark:bg-[radial-gradient(ellipse_at_top,_oklch(0.35_0.03_210),_transparent_55%),linear-gradient(to_bottom,_oklch(0.22_0.01_230),_oklch(0.18_0.015_230))]"
-      />
+      <AuthBackground />
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
-        <div className="splash-logo-wrap mb-4">
-          <p className="splash-logo font-[family-name:var(--font-display)] text-6xl font-semibold tracking-tight text-foreground sm:text-7xl">
-            SFXA
-          </p>
+        <div className="splash-logo-wrap mb-6">
+          <img
+            src="/SFXA.png"
+            alt="SFXA Finance"
+            width={160}
+            height={160}
+            className="splash-logo size-32 object-contain sm:size-40"
+          />
         </div>
 
-        {/* <p className="splash-title font-[family-name:var(--font-display)] text-xl font-medium tracking-tight text-foreground sm:text-2xl">
-          SFXA Finance
-        </p> */}
+        <p className="splash-title text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <span className="student-chum-marker">SFXA Finance</span>
+        </p>
         <p className="splash-subtitle mt-2 text-sm text-muted-foreground">
           Parish financial management
         </p>
@@ -101,16 +104,18 @@ export function AuthSplashGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (!ready) {
-    return <div className="fixed inset-0 z-50 bg-background" aria-hidden />;
+    return (
+      <div className="relative min-h-svh" aria-hidden>
+        <AuthBackground />
+      </div>
+    );
   }
 
-  return (
-    <>
-      {showSplash ? (
-        <SplashScreen durationMs={2000} onDone={() => setShowSplash(false)} />
-      ) : (
-        children
-      )}
-    </>
-  );
+  if (showSplash) {
+    return (
+      <SplashScreen durationMs={2000} onDone={() => setShowSplash(false)} />
+    );
+  }
+
+  return children;
 }

@@ -334,6 +334,69 @@ export async function updateUser(
   return { success: "User updated successfully." };
 }
 
+export async function toggleUserStatus(
+  _prev: UserActionState,
+  formData: FormData
+): Promise<UserActionState> {
+  const { user: actor } = await requireAdmin();
+  const userId = String(formData.get("user_id") || "").trim();
+  const status = String(formData.get("status") || "") === "1";
+
+  if (!userId) {
+    return { error: "Invalid user." };
+  }
+
+  if (userId === actor.id && !status) {
+    return { error: "You cannot deactivate your own account." };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return {
+      error:
+        "User management requires SUPABASE_SERVICE_ROLE_KEY (legacy eyJ… key) in .env.local.",
+    };
+  }
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, full_name, status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) {
+    return { error: "User not found." };
+  }
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ status })
+    .eq("id", userId);
+
+  if (profileError) {
+    return { error: profileError.message || "Failed to update user status." };
+  }
+
+  await writeAudit(
+    admin,
+    actor.id,
+    status ? "ACTIVATE_USER" : "DEACTIVATE_USER",
+    `${status ? "Activated" : "Deactivated"} user ${target.full_name}`
+  );
+
+  revalidatePath("/administrator/users");
+  revalidatePath("/administrator/users/treasurers");
+  revalidatePath("/administrator/users/members");
+  revalidatePath("/administrator");
+  return {
+    success: status
+      ? `${target.full_name} is now active.`
+      : `${target.full_name} has been deactivated.`,
+  };
+}
+
 export async function deleteUser(
   _prev: UserActionState,
   formData: FormData

@@ -5,6 +5,7 @@ import { getDashboardPath } from "@/lib/auth/roles";
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
 import { RequiredMobileDialog } from "@/components/auth/required-mobile-dialog";
 import { AppSidebar } from "@/components/app-sidebar";
+import { ChumTheme } from "@/components/chum-theme";
 import { AppBreadcrumb } from "@/components/layout/app-breadcrumb";
 import { RoutePageSkeleton } from "@/components/layout/route-page-skeleton";
 import {
@@ -46,7 +47,10 @@ function AppShellContent({
         incomeCategories={incomeCategories}
       />
       <SidebarInset className="print:overflow-visible">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur print:hidden">
+        <header
+          data-slot="app-topbar"
+          className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 print:hidden"
+        >
           <div className="flex min-w-0 items-center gap-2">
             <SidebarTrigger />
             <Separator
@@ -92,16 +96,18 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider className="overflow-x-auto">
-      <NavigationPendingProvider>
-        <AppShellContent
-          profile={profile}
-          notifications={notifications}
-          incomeCategories={incomeCategories}
-        >
-          {children}
-        </AppShellContent>
-      </NavigationPendingProvider>
-    </SidebarProvider>
+    <ChumTheme className="flex min-h-svh">
+      <SidebarProvider className="min-h-svh overflow-x-auto">
+        <NavigationPendingProvider>
+          <AppShellContent
+            profile={profile}
+            notifications={notifications}
+            incomeCategories={incomeCategories}
+          >
+            {children}
+          </AppShellContent>
+        </NavigationPendingProvider>
+      </SidebarProvider>
+    </ChumTheme>
   );
 }

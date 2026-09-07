@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 const initialState: AuthActionState = {};
 
 const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
+  "h-10 w-full rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function RegisterForm() {
   const router = useRouter();
@@ -43,9 +43,9 @@ export function RegisterForm() {
         : null;
 
   return (
-    <Card className="w-full max-w-lg border-border/80 shadow-sm">
+    <Card className="w-full max-w-lg">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl">Create account</CardTitle>
+        <CardTitle className="text-2xl font-bold">Create account</CardTitle>
         <CardDescription>
           Create your staff account, then sign in to access your dashboard.
         </CardDescription>
@@ -143,7 +143,7 @@ export function RegisterForm() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={pending} size="lg">
+          <Button type="submit" className="w-full rounded-full font-bold" disabled={pending} size="lg">
             {pending ? (
               <>
                 <Loader2 className="animate-spin" />

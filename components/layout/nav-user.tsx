@@ -147,7 +147,7 @@ export function NavUser({ profile }: { profile: Profile }) {
       >
         <AlertDialogContent size="sm">
           <AlertDialogHeader>
-            <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]">
               <LogOutIcon />
             </AlertDialogMedia>
             <AlertDialogTitle>Sign out?</AlertDialogTitle>
@@ -157,10 +157,13 @@ export function NavUser({ profile }: { profile: Profile }) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending} className="rounded-full">
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={pending}
+              className="rounded-full"
               onClick={handleLogout}
             >
               {pending ? (

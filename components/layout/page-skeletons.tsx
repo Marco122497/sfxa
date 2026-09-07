@@ -16,7 +16,7 @@ function PageHeaderSkeleton({
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0 space-y-2">
         <div className="flex items-center gap-2.5">
-          <Skeleton className="size-9 rounded-lg" />
+          <Skeleton className="size-10 rounded-[1rem]" />
           <Skeleton className={`h-9 ${titleWidth}`} />
         </div>
         <Skeleton className="h-4 w-80 max-w-full" />
@@ -287,7 +287,7 @@ export function ReportsPageSkeleton() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
-            <Skeleton className="size-9 rounded-lg" />
+            <Skeleton className="size-10 rounded-[1rem]" />
             <Skeleton className="h-9 w-56" />
           </div>
           <Skeleton className="h-4 w-80 max-w-full" />

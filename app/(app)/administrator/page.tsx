@@ -25,6 +25,7 @@ import {
   RecentFinancialActivitiesTable,
   RecentUserActivitiesTable,
 } from "@/components/administrator/dashboard-activity-tables";
+import { PageHeading } from "@/components/layout/page-heading";
 import {
   Card,
   CardContent,
@@ -79,21 +80,11 @@ export default async function AdministratorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
-            <LayoutDashboardIcon className="size-4" aria-hidden />
-          </span>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-            Administrator Dashboard
-          </h1>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Overall financial summary for {profile.first_name}: collected income,
-          budget usage, and actual cash. Expenses use budget and reduce cash —
-          they do not deduct from income.
-        </p>
-      </div>
+      <PageHeading
+        title="Administrator Dashboard"
+        description={`Overall financial summary for ${profile.first_name}: collected income, budget usage, and actual cash. Expenses use budget and reduce cash — they do not deduct from income.`}
+        icon={LayoutDashboardIcon}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (

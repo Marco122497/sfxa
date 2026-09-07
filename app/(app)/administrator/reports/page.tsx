@@ -11,6 +11,7 @@ import { getParishPriestName } from "@/lib/parish-settings";
 import { FormalReportDocument } from "@/components/reports/formal-report-document";
 import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 import { ReportFilters } from "@/components/reports/report-filters";
+import { PageHeading } from "@/components/layout/page-heading";
 
 export default async function AdminReportsPage({
   searchParams,
@@ -29,22 +30,13 @@ export default async function AdminReportsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
-              <FileTextIcon className="size-4" aria-hidden />
-            </span>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
-              Financial Reports
-            </h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Generate and view financial reports for donations, collections,
-            expenses, and budget utilization, then print the document.
-          </p>
-        </div>
-        <ReportExportButtons title={`SFXA ${data.title}`} />
+      <div className="print:hidden">
+        <PageHeading
+          title="Financial Reports"
+          description="Generate and view financial reports for donations, collections, expenses, and budget utilization, then print the document."
+          icon={FileTextIcon}
+          actions={<ReportExportButtons title={`SFXA ${data.title}`} />}
+        />
       </div>
 
       <ReportFilters

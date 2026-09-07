@@ -33,9 +33,9 @@ export function PasswordForm({ mode }: PasswordFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <Card className="w-full max-w-md border-border/80 shadow-sm">
+    <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
-        <CardTitle className="flex items-center gap-2 text-2xl">
+        <CardTitle className="flex items-center gap-2 text-2xl font-bold">
           <KeyRoundIcon className="size-5" />
           {mode === "change" ? "Change password" : "Set new password"}
         </CardTitle>
@@ -109,7 +109,7 @@ export function PasswordForm({ mode }: PasswordFormProps) {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full" disabled={pending} size="lg">
+          <Button type="submit" className="w-full rounded-full font-bold" disabled={pending} size="lg">
             {pending ? (
               <>
                 <Loader2 className="animate-spin" />
