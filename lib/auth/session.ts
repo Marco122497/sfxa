@@ -1,9 +1,10 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardPath, type Profile, type UserRole } from "@/lib/auth/roles";
 
-export async function getSessionUser() {
+export const getSessionUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,7 +26,7 @@ export async function getSessionUser() {
     user,
     profile: profile as Profile | null,
   };
-}
+});
 
 export async function requireUser() {
   const session = await getSessionUser();

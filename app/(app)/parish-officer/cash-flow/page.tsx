@@ -24,7 +24,7 @@ export default async function ParishCashFlowPage({
   const { from, to } = resolveReportDateRange(await searchParams);
   const [statement, daily] = await Promise.all([
     getCashFlowStatement({ from, to }),
-    getDailyCashFlow(),
+    getDailyCashFlow({ from, to }),
   ]);
 
   return (

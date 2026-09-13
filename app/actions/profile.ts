@@ -29,7 +29,10 @@ export async function updateProfile(
   const birth_date = String(formData.get("birth_date") || "").trim() || null;
   const contactRaw = String(formData.get("contact_number") || "").trim() || null;
   const address = String(formData.get("address") || "").trim() || null;
-  const employee_no = String(formData.get("employee_no") || "").trim() || null;
+  const employee_no =
+    profile.role === "Treasurer" || profile.role === "Parish Officer"
+      ? profile.employee_no
+      : String(formData.get("employee_no") || "").trim() || null;
 
   if (!first_name || !last_name) {
     return { error: "First name and last name are required." };

@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { classifyIncomeName } from "@/lib/income";
 import {
@@ -5,7 +7,7 @@ import {
   type IncomeCategoryRecord,
 } from "@/lib/income-categories";
 
-export async function loadIncomeCategories(): Promise<IncomeCategoryRecord[]> {
+export const loadIncomeCategories = cache(async (): Promise<IncomeCategoryRecord[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("income_categories")
@@ -21,9 +23,9 @@ export async function loadIncomeCategories(): Promise<IncomeCategoryRecord[]> {
     name: row.category_name,
     description: row.description,
   }));
-}
+});
 
-export async function loadIncomeKindLookup() {
+export const loadIncomeKindLookup = cache(async () => {
   const categories = await loadIncomeCategories();
   const nameByCode = new Map(categories.map((item) => [item.code, item.name]));
   const supabase = await createClient();
@@ -57,4 +59,4 @@ export async function loadIncomeKindLookup() {
   }
 
   return { categories, labelFor };
-}
+});

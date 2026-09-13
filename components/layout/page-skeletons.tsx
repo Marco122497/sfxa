@@ -1,3 +1,5 @@
+"use client";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Card,
@@ -36,12 +38,12 @@ function StatCardsSkeleton({
   return (
     <div className={`grid gap-4 ${columns}`}>
       {Array.from({ length: count }).map((_, index) => (
-        <Card key={index}>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <Skeleton className="h-4 w-28" />
+        <Card key={index} className="text-center">
+          <CardHeader className="items-center justify-items-center pb-2">
             <Skeleton className="size-4" />
+            <Skeleton className="h-4 w-28" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex justify-center">
             <Skeleton className="h-8 w-36" />
           </CardContent>
         </Card>
@@ -111,7 +113,22 @@ export function AdminDashboardSkeleton() {
   return (
     <div className="space-y-6">
       <PageHeaderSkeleton titleWidth="w-80" />
-      <StatCardsSkeleton count={5} />
+      <div className="space-y-3">
+        <StatCardsSkeleton count={3} columns="sm:grid-cols-3" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <Card key={index} size="sm" className="bg-muted/35 text-center">
+              <CardHeader className="items-center justify-items-center pb-2">
+                <Skeleton className="size-3.5" />
+                <Skeleton className="h-3 w-24" />
+              </CardHeader>
+              <CardContent className="flex justify-center">
+                <Skeleton className="h-6 w-28" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
       <div className="grid gap-4 xl:grid-cols-5">
         <ChartCardSkeleton className="xl:col-span-3" />
         <Card className="xl:col-span-2">
@@ -166,7 +183,7 @@ export function ParishDashboardSkeleton() {
   return (
     <div className="space-y-6">
       <PageHeaderSkeleton titleWidth="w-[22rem]" />
-      <StatCardsSkeleton count={3} />
+      <StatCardsSkeleton count={4} />
       <div className="grid gap-4 xl:grid-cols-5">
         <ChartCardSkeleton className="xl:col-span-3" />
         <Card className="xl:col-span-2">
@@ -179,6 +196,7 @@ export function ParishDashboardSkeleton() {
           </CardContent>
         </Card>
       </div>
+      <TableCardSkeleton rows={6} />
       <div className="grid gap-4 xl:grid-cols-2">
         <TableCardSkeleton rows={3} />
         <TableCardSkeleton rows={3} />

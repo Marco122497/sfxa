@@ -512,6 +512,7 @@ export function ExpenseCategoryManager({
   specifics: ExpenseSpecificCategory[];
 }) {
   const [query, setQuery] = useState("");
+  const [generalFilter, setGeneralFilter] = useState("");
 
   const generalById = useMemo(() => {
     return new Map(generals.map((g) => [g.id, g.name]));
@@ -525,15 +526,18 @@ export function ExpenseCategoryManager({
 
   const filteredSpecifics = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return specifics;
     return specifics.filter((s) => {
+      if (generalFilter && String(s.expense_category_id) !== generalFilter) {
+        return false;
+      }
+      if (!q) return true;
       const general = generalById.get(s.expense_category_id) ?? "";
       return (
         s.subcategory_name.toLowerCase().includes(q) ||
         general.toLowerCase().includes(q)
       );
     });
-  }, [specifics, query, generalById]);
+  }, [specifics, query, generalFilter, generalById]);
 
   return (
     <div className="space-y-2">
@@ -608,11 +612,28 @@ export function ExpenseCategoryManager({
             <AddSpecificDialog generals={generals} />
           </div>
 
+          <select
+            value={generalFilter}
+            onChange={(event) => setGeneralFilter(event.target.value)}
+            className={selectClassName}
+            aria-label="Filter specific categories by general category"
+            disabled={generals.length === 0}
+          >
+            <option value="">All general categories</option>
+            {generals.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+
           {filteredSpecifics.length === 0 ? (
             <p className="py-2 text-sm text-muted-foreground">
               {generals.length === 0
                 ? "Add a general category first, then add specific categories."
-                : "No specific categories yet."}
+                : generalFilter
+                  ? "No specific categories in this general category."
+                  : "No specific categories yet."}
             </p>
           ) : (
             <Table>

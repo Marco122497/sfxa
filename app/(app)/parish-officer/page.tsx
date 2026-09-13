@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   BanknoteIcon,
   LayoutDashboardIcon,
+  ScaleIcon,
   WalletCardsIcon,
   WalletIcon,
 } from "lucide-react";
@@ -19,6 +20,7 @@ import {
   CashFlowLineChart,
   IncomeSourcesPieChart,
 } from "@/components/finance/cash-flow-charts";
+import { CashFlowStatementView } from "@/components/finance/cash-flow-statement-view";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { PageHeading } from "@/components/layout/page-heading";
+import { SummaryStatCard } from "@/components/layout/summary-stat-card";
 
 export default async function ParishOfficerDashboardPage() {
   const { profile } = await requireParishOfficer();
@@ -62,46 +65,27 @@ export default async function ParishOfficerDashboardPage() {
         icon={LayoutDashboardIcon}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Income
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.totalInflows)}
-            </div>
-            <WalletIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Expenses
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.totalOutflows)}
-            </div>
-            <WalletCardsIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Actual Cash
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.endingBalance)}
-            </div>
-            <BanknoteIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryStatCard
+          title="Total Income"
+          value={formatMoney(statement.totalInflows)}
+          icon={WalletIcon}
+        />
+        <SummaryStatCard
+          title="Total Expenses"
+          value={formatMoney(statement.totalOutflows)}
+          icon={WalletCardsIcon}
+        />
+        <SummaryStatCard
+          title="Net Cash Flow"
+          value={formatMoney(statement.netCashFlow)}
+          icon={ScaleIcon}
+        />
+        <SummaryStatCard
+          title="Actual Cash"
+          value={formatMoney(statement.endingBalance)}
+          icon={BanknoteIcon}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
@@ -119,6 +103,23 @@ export default async function ParishOfficerDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Statement of Cash Flows</CardTitle>
+          <CardDescription>
+            Beginning balance, inflows, outflows, net cash flow, and ending
+            cash for the current month.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CashFlowStatementView
+            statement={statement}
+            compact
+            fullHref="/parish-officer/transparency/cash-flow"
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>

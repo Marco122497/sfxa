@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import { loadIncomeKindLookup } from "@/lib/income-categories-server";
 import { relationName } from "@/lib/treasurer/relations";
@@ -113,24 +115,34 @@ export function currentMonthRange(now = new Date()): CashFlowPeriod {
   return { from, to };
 }
 
+const loadCashFlowLedger = cache(async () => {
+  const supabase = await createClient();
+  const [{ data: donations }, { data: expenses }] = await Promise.all([
+    supabase
+      .from("donations")
+      .select(
+        "amount, donation_date, category_id, donation_categories(category_name)"
+      )
+      .order("donation_date"),
+    supabase
+      .from("expenses")
+      .select("amount, expense_date, expense_categories(category_name)")
+      .order("expense_date"),
+  ]);
+
+  return {
+    donations: donations ?? [],
+    expenses: expenses ?? [],
+  };
+});
+
 export async function getCashFlowStatement(
   period: CashFlowPeriod = currentMonthRange()
 ): Promise<CashFlowStatement> {
-  const supabase = await createClient();
-  const [{ data: donations }, { data: expenses }, { labelFor }] =
-    await Promise.all([
-      supabase
-        .from("donations")
-        .select(
-          "amount, donation_date, category_id, donation_categories(category_name)"
-        )
-        .order("donation_date"),
-      supabase
-        .from("expenses")
-        .select("amount, expense_date, expense_categories(category_name)")
-        .order("expense_date"),
-      loadIncomeKindLookup(),
-    ]);
+  const [{ donations, expenses }, { labelFor }] = await Promise.all([
+    loadCashFlowLedger(),
+    loadIncomeKindLookup(),
+  ]);
 
   let beginningIn = 0;
   let beginningOut = 0;
@@ -256,14 +268,10 @@ export async function getMonthlyCashFlow(): Promise<MonthlyCashFlowRow[]> {
 export async function getDailyCashFlow(
   period?: CashFlowPeriod
 ): Promise<DailyCashFlowRow[]> {
-  const supabase = await createClient();
+  const { donations, expenses } = await loadCashFlowLedger();
   const keys = period
     ? dayKeysInRange(period.from, period.to)
     : currentYearDayKeys();
-  const [{ data: donations }, { data: expenses }] = await Promise.all([
-    supabase.from("donations").select("amount, donation_date"),
-    supabase.from("expenses").select("amount, expense_date"),
-  ]);
 
   const map = new Map(keys.map((key) => [key, { inflow: 0, outflow: 0 }]));
   for (const row of donations ?? []) {

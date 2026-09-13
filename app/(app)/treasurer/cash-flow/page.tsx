@@ -27,7 +27,7 @@ export default async function TreasurerCashFlowPage({
   const { from, to } = resolveReportDateRange(await searchParams);
   const [statement, daily] = await Promise.all([
     getCashFlowStatement({ from, to }),
-    getDailyCashFlow(),
+    getDailyCashFlow({ from, to }),
   ]);
 
   return (

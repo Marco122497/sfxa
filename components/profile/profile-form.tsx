@@ -80,6 +80,9 @@ export function ProfileForm({
     setForm(profileToForm(profile));
   }, [profile.updated_at, profile]);
 
+  const lockIdentityFields =
+    profile.role === "Treasurer" || profile.role === "Parish Officer";
+
   function updateField<K extends keyof typeof form>(
     key: K,
     value: (typeof form)[K]
@@ -154,7 +157,13 @@ export function ProfileForm({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email || "—"} readOnly />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email || "—"}
+                  readOnly
+                  disabled={lockIdentityFields}
+                />
                 <p className="text-xs text-muted-foreground">
                   Used to sign in. Contact an administrator to change it.
                 </p>
@@ -163,13 +172,23 @@ export function ProfileForm({
                 <Label htmlFor="employee_no">Employee No.</Label>
                 <Input
                   id="employee_no"
-                  name="employee_no"
-                  value={form.employee_no}
-                  onChange={(event) =>
-                    updateField("employee_no", event.target.value)
+                  name={lockIdentityFields ? undefined : "employee_no"}
+                  value={form.employee_no || (lockIdentityFields ? "—" : "")}
+                  readOnly={lockIdentityFields}
+                  disabled={lockIdentityFields}
+                  onChange={
+                    lockIdentityFields
+                      ? undefined
+                      : (event) =>
+                          updateField("employee_no", event.target.value)
                   }
-                  placeholder="EMP-001"
+                  placeholder={lockIdentityFields ? undefined : "EMP-001"}
                 />
+                {lockIdentityFields ? (
+                  <p className="text-xs text-muted-foreground">
+                    Employee number is managed by an administrator.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="first_name">First Name</Label>

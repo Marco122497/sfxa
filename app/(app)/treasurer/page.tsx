@@ -14,6 +14,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { CashFlowLineChart } from "@/components/finance/cash-flow-charts";
 import { ExpenseDistributionPieChart } from "@/components/treasurer/dashboard-charts";
 import { PageHeading } from "@/components/layout/page-heading";
+import { SummaryStatCard } from "@/components/layout/summary-stat-card";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -53,45 +54,21 @@ export default async function TreasurerDashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Income
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.totalInflows)}
-            </div>
-            <WalletIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Expenses
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.totalOutflows)}
-            </div>
-            <WalletCardsIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Actual Cash
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl font-semibold tracking-tight">
-              {formatMoney(statement.endingBalance)}
-            </div>
-            <BanknoteIcon className="size-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
+        <SummaryStatCard
+          title="Total Income"
+          value={formatMoney(statement.totalInflows)}
+          icon={WalletIcon}
+        />
+        <SummaryStatCard
+          title="Total Expenses"
+          value={formatMoney(statement.totalOutflows)}
+          icon={WalletCardsIcon}
+        />
+        <SummaryStatCard
+          title="Actual Cash"
+          value={formatMoney(statement.endingBalance)}
+          icon={BanknoteIcon}
+        />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">

@@ -397,6 +397,75 @@ export async function toggleUserStatus(
   };
 }
 
+export async function resetUserPassword(
+  _prev: UserActionState,
+  formData: FormData
+): Promise<UserActionState> {
+  const { user: actor } = await requireAdmin();
+  const userId = String(formData.get("user_id") || "").trim();
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirm_password") || "");
+
+  if (!userId) {
+    return { error: "Invalid user." };
+  }
+
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+
+  if (password !== confirmPassword) {
+    return { error: "Passwords do not match." };
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return {
+      error:
+        "User management requires SUPABASE_SERVICE_ROLE_KEY (legacy eyJ… key) in .env.local.",
+    };
+  }
+
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, full_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!target) {
+    return { error: "User not found." };
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password,
+  });
+
+  if (error) {
+    const message = error.message || "Failed to update password.";
+    if (/jwt|kid|es256|unverifiable|bad_jwt/i.test(message)) {
+      return {
+        error:
+          "Invalid service role key. Use the Legacy service_role JWT (eyJ…) in .env.local.",
+      };
+    }
+    return { error: message };
+  }
+
+  await writeAudit(
+    admin,
+    actor.id,
+    "RESET_USER_PASSWORD",
+    `Changed password for user ${target.full_name}`
+  );
+
+  revalidatePath("/administrator/users");
+  revalidatePath("/administrator/users/treasurers");
+  revalidatePath("/administrator/users/members");
+  return { success: `Password updated for ${target.full_name}.` };
+}
+
 export async function deleteUser(
   _prev: UserActionState,
   formData: FormData

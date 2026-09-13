@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import type { Profile } from "@/lib/auth/roles";
 import { getDashboardPath } from "@/lib/auth/roles";
 import type { IncomeCategoryRecord } from "@/lib/income-categories";
@@ -38,6 +40,17 @@ function AppShellContent({
 }) {
   const dashboardHref = getDashboardPath(profile.role);
   const { isPending, pendingHref } = useNavigationPending();
+  const [showSkeleton, setShowSkeleton] = useState(false);
+
+  useEffect(() => {
+    if (!isPending || !pendingHref) {
+      setShowSkeleton(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setShowSkeleton(true), 120);
+    return () => window.clearTimeout(timeout);
+  }, [isPending, pendingHref]);
 
   return (
     <>
@@ -72,7 +85,7 @@ function AppShellContent({
           </div>
         </header>
         <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 print:overflow-visible print:p-0">
-          {isPending && pendingHref ? (
+          {showSkeleton && pendingHref ? (
             <RoutePageSkeleton href={pendingHref} />
           ) : (
             children

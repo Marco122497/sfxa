@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import {
   CircleOffIcon,
+  EyeIcon,
+  EyeOffIcon,
+  KeyRoundIcon,
   Loader2,
   PencilIcon,
   PowerIcon,
@@ -14,6 +17,7 @@ import { useActionToast } from "@/hooks/use-action-toast";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   deleteUser,
+  resetUserPassword,
   toggleUserStatus,
   updateUser,
   type UserActionState,
@@ -166,7 +170,6 @@ function EditUserForm({
   const [contactNumber, setContactNumber] = useState(user.contact_number ?? "");
   const [role, setRole] = useState(user.role);
   const [email, setEmail] = useState(user.email ?? "");
-  const [password, setPassword] = useState("");
   const [status, setStatus] = useState(user.status ? "1" : "0");
 
 
@@ -270,18 +273,6 @@ function EditUserForm({
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor={`${formId}-password`}>New Password</Label>
-            <Input
-              id={`${formId}-password`}
-              name="password"
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Leave blank to keep current"
             />
           </div>
           <div className="space-y-2">
@@ -483,6 +474,119 @@ function ToggleUserStatusButton({
   );
 }
 
+function ChangePasswordButton({ user }: { user: Profile }) {
+  const [open, setOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [state, formAction, pending] = useServerAction(
+    resetUserPassword,
+    initialState,
+    () => setOpen(false)
+  );
+  useActionToast(state);
+  const formId = `change-user-password-${user.id}`;
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-label="Change password"
+        title="Change password"
+        onClick={() => setOpen(true)}
+      >
+        <KeyRoundIcon />
+      </Button>
+      <AlertDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (pending) return;
+          setOpen(next);
+          if (!next) setShowPassword(false);
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]">
+              <KeyRoundIcon />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Change password</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set a new sign-in password for {user.full_name}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form action={formAction} id={formId} className="space-y-4">
+            <input type="hidden" name="user_id" value={user.id} />
+            {state.error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {state.error}
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor={`${formId}-password`}>New password</Label>
+              <div className="relative">
+                <Input
+                  id={`${formId}-password`}
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? (
+                    <EyeOffIcon className="size-4" />
+                  ) : (
+                    <EyeIcon className="size-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={`${formId}-confirm`}>Confirm password</Label>
+              <Input
+                id={`${formId}-confirm`}
+                name="confirm_password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                minLength={8}
+                required
+              />
+            </div>
+          </form>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              type="submit"
+              form={formId}
+              disabled={pending}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <KeyRoundIcon />
+                  Update password
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function DeleteUserButton({
   userId,
   userName,
@@ -656,7 +760,7 @@ export function UsersTable({
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
-              <TableHead className="w-[120px]" />
+              <TableHead className="w-[152px]" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -695,6 +799,7 @@ export function UsersTable({
                       user={user}
                       disabled={isSelf}
                     />
+                    <ChangePasswordButton user={user} />
                     <DeleteUserButton
                       userId={user.id}
                       userName={user.full_name}

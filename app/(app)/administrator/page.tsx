@@ -26,6 +26,7 @@ import {
   RecentUserActivitiesTable,
 } from "@/components/administrator/dashboard-activity-tables";
 import { PageHeading } from "@/components/layout/page-heading";
+import { SummaryStatCard } from "@/components/layout/summary-stat-card";
 import {
   Card,
   CardContent,
@@ -50,7 +51,7 @@ export default async function AdministratorDashboardPage() {
     getBudgetModuleData(),
   ]);
 
-  const cards = [
+  const primaryCards = [
     {
       title: "Total Income",
       value: formatMoney(statement.totalInflows),
@@ -62,6 +63,14 @@ export default async function AdministratorDashboardPage() {
       icon: ReceiptIcon,
     },
     {
+      title: "Actual Cash",
+      value: formatMoney(statement.endingBalance),
+      icon: BanknoteIcon,
+    },
+  ];
+
+  const secondaryCards = [
+    {
       title: "Remaining Budget",
       value: formatMoney(budget.totals.remaining),
       icon: PiggyBankIcon,
@@ -70,11 +79,6 @@ export default async function AdministratorDashboardPage() {
       title: "Net Cash Flow",
       value: formatMoney(statement.netCashFlow),
       icon: ScaleIcon,
-    },
-    {
-      title: "Actual Cash",
-      value: formatMoney(statement.endingBalance),
-      icon: BanknoteIcon,
     },
   ];
 
@@ -86,22 +90,28 @@ export default async function AdministratorDashboardPage() {
         icon={LayoutDashboardIcon}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <card.icon className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-semibold tracking-tight">
-                {card.value}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-3">
+          {primaryCards.map((card) => (
+            <SummaryStatCard
+              key={card.title}
+              title={card.title}
+              value={card.value}
+              icon={card.icon}
+            />
+          ))}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {secondaryCards.map((card) => (
+            <SummaryStatCard
+              key={card.title}
+              title={card.title}
+              value={card.value}
+              icon={card.icon}
+              variant="secondary"
+            />
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
