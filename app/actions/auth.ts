@@ -661,88 +661,104 @@ export async function resetPassword(
     return { error: "New password and confirmation do not match." };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user: sessionUser },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user: sessionUser },
+    } = await supabase.auth.getUser();
 
-  // Preferred path: recovery/magic-link session already established.
-  if (sessionUser) {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    // Preferred path: recovery/magic-link session already established.
+    if (sessionUser) {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      const meta = await getRequestMeta();
+      await supabase.from("audit_logs").insert({
+        user_id: sessionUser.id,
+        action: "RESET_PASSWORD",
+        table_name: "auth.users",
+        description: "User reset password via email link",
+        ip_address: meta.ip,
+      });
+
+      await clearResetOkCookie();
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", sessionUser.id)
+        .maybeSingle();
+
+      return {
+        success: "Password updated successfully.",
+        redirectTo: profile?.role
+          ? getDashboardPath(profile.role)
+          : "/login?reset=success",
+      };
+    }
+
+    // OTP path: verified SMS code grants a short-lived reset cookie + DB flag.
+    const resetOk = await readResetOkCookie();
+    if (!resetOk) {
+      return {
+        error:
+          "Your password reset session expired. Start again from Forgot password.",
+      };
+    }
+
+    let admin;
+    try {
+      admin = createAdminClient();
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Password reset is not configured.";
+      return { error: message };
+    }
+
+    const stored = await readProfileOtp(admin, resetOk.userId);
+    if (!isOtpVerifiedRecently(stored?.otp_verified_at)) {
+      await clearResetOkCookie();
+      return {
+        error:
+          "Your password reset session expired. Start again from Forgot password.",
+      };
+    }
+
+    const { error } = await admin.auth.admin.updateUserById(resetOk.userId, {
+      password: newPassword,
+    });
 
     if (error) {
       return { error: error.message };
     }
 
     const meta = await getRequestMeta();
-    await supabase.from("audit_logs").insert({
-      user_id: sessionUser.id,
+    await admin.from("audit_logs").insert({
+      user_id: resetOk.userId,
       action: "RESET_PASSWORD",
       table_name: "auth.users",
-      description: "User reset password via email link",
+      description: "User reset password via SMS OTP",
       ip_address: meta.ip,
     });
 
+    await clearProfileOtpVerified(admin, resetOk.userId);
     await clearResetOkCookie();
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", sessionUser.id)
-      .maybeSingle();
-
-    if (profile?.role) {
-      redirect(getDashboardPath(profile.role));
-    }
-
-    redirect("/login?reset=success");
-  }
-
-  // OTP path: verified SMS code grants a short-lived reset cookie + DB flag.
-  const resetOk = await readResetOkCookie();
-  if (!resetOk) {
     return {
-      error:
-        "Your password reset session expired. Start again from Forgot password.",
+      success: "Password updated successfully.",
+      redirectTo: "/login?reset=success",
     };
-  }
-
-  let admin;
-  try {
-    admin = createAdminClient();
   } catch (err) {
     const message =
-      err instanceof Error ? err.message : "Password reset is not configured.";
+      err instanceof Error && err.message && err.message !== "{}"
+        ? err.message
+        : "Could not update password. Please try again.";
     return { error: message };
   }
-
-  const stored = await readProfileOtp(admin, resetOk.userId);
-  if (!isOtpVerifiedRecently(stored?.otp_verified_at)) {
-    await clearResetOkCookie();
-    return {
-      error:
-        "Your password reset session expired. Start again from Forgot password.",
-    };
-  }
-
-  const { error } = await admin.auth.admin.updateUserById(resetOk.userId, {
-    password: newPassword,
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  const meta = await getRequestMeta();
-  await admin.from("audit_logs").insert({
-    user_id: resetOk.userId,
-    action: "RESET_PASSWORD",
-    table_name: "auth.users",
-    description: "User reset password via SMS OTP",
-    ip_address: meta.ip,
-  });
-
-  await clearProfileOtpVerified(admin, resetOk.userId);
-  await clearResetOkCookie();
-  redirect("/login?reset=success");
 }

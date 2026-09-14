@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { EyeIcon, EyeOffIcon, KeyRoundIcon, Loader2 } from "lucide-react";
 
 import {
@@ -72,10 +73,19 @@ type PasswordFormProps = {
 
 export function PasswordForm({ mode }: PasswordFormProps) {
   const action = mode === "change" ? changePassword : resetPassword;
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const redirecting = Boolean(state.redirectTo);
+  const busy = pending || redirecting;
+
+  useEffect(() => {
+    if (state.redirectTo) {
+      router.replace(state.redirectTo);
+    }
+  }, [state.redirectTo, router]);
 
   return (
     <Card className="w-full max-w-md">
@@ -138,8 +148,13 @@ export function PasswordForm({ mode }: PasswordFormProps) {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full rounded-full font-bold" disabled={pending} size="lg">
-            {pending ? (
+          <Button type="submit" className="w-full rounded-full font-bold" disabled={busy} size="lg">
+            {redirecting ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Redirecting…
+              </>
+            ) : pending ? (
               <>
                 <Loader2 className="animate-spin" />
                 Saving…
