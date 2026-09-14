@@ -1,8 +1,10 @@
+import { getServerEnv } from "@/lib/server-env";
+
 const OTP_ENDPOINT = "https://api.semaphore.co/api/v4/otp";
 
 export function getSemaphoreConfig() {
-  const apiKey = process.env.SEMAPHORE_API_KEY?.trim();
-  const senderName = process.env.SEMAPHORE_SENDER_NAME?.trim() || "CKCMSYS";
+  const apiKey = getServerEnv("SEMAPHORE_API_KEY");
+  const senderName = getServerEnv("SEMAPHORE_SENDER_NAME") || "CKCMSYS";
 
   if (!apiKey) {
     throw new Error(

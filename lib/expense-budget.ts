@@ -75,3 +75,19 @@ export function resolveExpenseBudgetCap(
 
   return pool.find((cap) => cap.expenseSubcategoryId == null) ?? null;
 }
+
+export function hasExpenseBudgetCap(
+  caps: ExpenseBudgetCap[],
+  expenseCategoryId: number | "",
+  expenseSubcategoryId: number | "",
+  fiscalYear: number
+) {
+  return (
+    resolveExpenseBudgetCap(
+      caps,
+      expenseCategoryId,
+      expenseSubcategoryId,
+      fiscalYear
+    ) != null
+  );
+}

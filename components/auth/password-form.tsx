@@ -23,6 +23,49 @@ import { Label } from "@/components/ui/label";
 
 const initialState: AuthActionState = {};
 
+function PasswordInput({
+  id,
+  name,
+  autoComplete,
+  visible,
+  onToggle,
+  minLength,
+}: {
+  id: string;
+  name: string;
+  autoComplete: string;
+  visible: boolean;
+  onToggle: () => void;
+  minLength?: number;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        name={name}
+        type={visible ? "text" : "password"}
+        autoComplete={autoComplete}
+        minLength={minLength}
+        required
+        className="pr-10"
+      />
+      <button
+        type="button"
+        className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+        onClick={onToggle}
+        aria-label={visible ? "Hide password" : "Show password"}
+        aria-pressed={visible}
+      >
+        {visible ? (
+          <EyeOffIcon className="size-4" />
+        ) : (
+          <EyeIcon className="size-4" />
+        )}
+      </button>
+    </div>
+  );
+}
+
 type PasswordFormProps = {
   mode: "change" | "reset";
 };
@@ -30,7 +73,9 @@ type PasswordFormProps = {
 export function PasswordForm({ mode }: PasswordFormProps) {
   const action = mode === "change" ? changePassword : resetPassword;
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   return (
     <Card className="w-full max-w-md">
@@ -60,51 +105,35 @@ export function PasswordForm({ mode }: PasswordFormProps) {
           {mode === "change" && (
             <div className="space-y-2">
               <Label htmlFor="current_password">Current password</Label>
-              <div className="relative">
-                <Input
-                  id="current_password"
-                  name="current_password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  className="absolute top-1/2 right-1.5 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  aria-pressed={showPassword}
-                >
-                  {showPassword ? (
-                    <EyeOffIcon className="size-4" />
-                  ) : (
-                    <EyeIcon className="size-4" />
-                  )}
-                </button>
-              </div>
+              <PasswordInput
+                id="current_password"
+                name="current_password"
+                autoComplete="current-password"
+                visible={showCurrent}
+                onToggle={() => setShowCurrent((value) => !value)}
+              />
             </div>
           )}
           <div className="space-y-2">
             <Label htmlFor="new_password">New password</Label>
-            <Input
+            <PasswordInput
               id="new_password"
               name="new_password"
-              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               minLength={8}
-              required
+              visible={showNew}
+              onToggle={() => setShowNew((value) => !value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm_password">Confirm new password</Label>
-            <Input
+            <PasswordInput
               id="confirm_password"
               name="confirm_password"
-              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               minLength={8}
-              required
+              visible={showConfirm}
+              onToggle={() => setShowConfirm((value) => !value)}
             />
           </div>
         </CardContent>

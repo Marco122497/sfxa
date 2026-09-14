@@ -19,6 +19,7 @@ import {
 } from "@/app/actions/finance";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import {
+  hasExpenseBudgetCap,
   resolveExpenseBudgetCap,
   type ExpenseBudgetCap,
 } from "@/lib/expense-budget";
@@ -93,11 +94,23 @@ function ExpenseFormFields({
   onBlockedChange?: (blocked: boolean) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const firstBudgeted = categories.find((c) => c.has_budget);
+  const selectableCategories = useMemo(() => {
+    const budgeted = categories.filter((category) => category.has_budget);
+    const currentId = defaults?.expense_category_id;
+    if (
+      currentId &&
+      !budgeted.some((category) => category.expense_category_id === currentId)
+    ) {
+      const current = categories.find(
+        (category) => category.expense_category_id === currentId
+      );
+      return current ? [current, ...budgeted] : budgeted;
+    }
+    return budgeted;
+  }, [categories, defaults?.expense_category_id]);
   const [categoryId, setCategoryId] = useState<number | "">(
     defaults?.expense_category_id ??
-      firstBudgeted?.expense_category_id ??
-      categories[0]?.expense_category_id ??
+      selectableCategories[0]?.expense_category_id ??
       ""
   );
   const specificForCategory = useMemo(
@@ -107,29 +120,52 @@ function ExpenseFormFields({
       ),
     [subcategories, categoryId]
   );
+  const [expenseDate, setExpenseDate] = useState(
+    defaults?.expense_date ?? today
+  );
+  const fiscalYear =
+    Number(expenseDate.slice(0, 4)) || new Date().getFullYear();
+  const firstBudgetedSub = specificForCategory.find((sub) =>
+    hasExpenseBudgetCap(
+      budgetCaps,
+      categoryId,
+      sub.subcategory_id,
+      fiscalYear
+    )
+  );
   const [subcategoryId, setSubcategoryId] = useState<number | "">(
     defaults?.expense_subcategory_id &&
       specificForCategory.some(
         (s) => s.subcategory_id === defaults.expense_subcategory_id
       )
       ? defaults.expense_subcategory_id
-      : (specificForCategory[0]?.subcategory_id ?? "")
-  );
-  const [expenseDate, setExpenseDate] = useState(
-    defaults?.expense_date ?? today
+      : (firstBudgetedSub?.subcategory_id ?? "")
   );
   const [amount, setAmount] = useState(
     defaults?.amount != null ? String(defaults.amount) : ""
   );
 
   useEffect(() => {
-    const stillValid = specificForCategory.some(
+    const stillListed = specificForCategory.some(
       (s) => s.subcategory_id === subcategoryId
     );
-    if (!stillValid) {
-      setSubcategoryId(specificForCategory[0]?.subcategory_id ?? "");
+    const stillBudgeted =
+      stillListed &&
+      hasExpenseBudgetCap(budgetCaps, categoryId, subcategoryId, fiscalYear);
+    const keepCurrent =
+      stillListed && defaults?.expense_subcategory_id === subcategoryId;
+    if (!stillListed || (!stillBudgeted && !keepCurrent)) {
+      setSubcategoryId(firstBudgetedSub?.subcategory_id ?? "");
     }
-  }, [specificForCategory, subcategoryId]);
+  }, [
+    budgetCaps,
+    categoryId,
+    defaults?.expense_subcategory_id,
+    firstBudgetedSub?.subcategory_id,
+    fiscalYear,
+    specificForCategory,
+    subcategoryId,
+  ]);
 
   const cap = resolveExpenseBudgetCap(
     budgetCaps,
@@ -158,8 +194,11 @@ function ExpenseFormFields({
   const blocked =
     overBudget ||
     overCash ||
-    (remaining != null && remaining <= 0) ||
-    availableCash <= 0;
+    remaining == null ||
+    remaining <= 0 ||
+    availableCash <= 0 ||
+    categoryId === "" ||
+    subcategoryId === "";
 
   useEffect(() => {
     onBlockedChange?.(blocked);
@@ -178,17 +217,20 @@ function ExpenseFormFields({
             setCategoryId(event.target.value ? Number(event.target.value) : "")
           }
           className={selectClassName}
+          disabled={selectableCategories.length === 0}
         >
-          {categories.map((category) => (
-            <option
-              key={category.expense_category_id}
-              value={category.expense_category_id}
-              disabled={!category.has_budget}
-            >
-              {category.category_name}
-              {category.has_budget ? "" : " — needs budget allocation"}
-            </option>
-          ))}
+          {selectableCategories.length === 0 ? (
+            <option value="">No budgeted general categories</option>
+          ) : (
+            selectableCategories.map((category) => (
+              <option
+                key={category.expense_category_id}
+                value={category.expense_category_id}
+              >
+                {category.category_name}
+              </option>
+            ))
+          )}
         </select>
       </div>
       <div className="space-y-2">
@@ -204,16 +246,31 @@ function ExpenseFormFields({
             )
           }
           className={selectClassName}
-          disabled={specificForCategory.length === 0}
+          disabled={specificForCategory.length === 0 || !firstBudgetedSub}
         >
           {specificForCategory.length === 0 ? (
             <option value="">No specific categories</option>
+          ) : !firstBudgetedSub ? (
+            <option value="">No budgeted specific categories</option>
           ) : (
-            specificForCategory.map((sub) => (
-              <option key={sub.subcategory_id} value={sub.subcategory_id}>
-                {sub.subcategory_name}
-              </option>
-            ))
+            specificForCategory.map((sub) => {
+              const budgeted = hasExpenseBudgetCap(
+                budgetCaps,
+                categoryId,
+                sub.subcategory_id,
+                fiscalYear
+              );
+              return (
+                <option
+                  key={sub.subcategory_id}
+                  value={sub.subcategory_id}
+                  disabled={!budgeted}
+                >
+                  {sub.subcategory_name}
+                  {budgeted ? "" : " — needs budget allocation"}
+                </option>
+              );
+            })
           )}
         </select>
       </div>

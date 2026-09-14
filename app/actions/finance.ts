@@ -186,7 +186,9 @@ async function ensureExpenseWithinBudget(
     expenseSubcategoryId,
     Number(expenseDate.slice(0, 4)) || new Date().getFullYear()
   );
-  if (!cap) return null;
+  if (!cap) {
+    return "This specific category has no budget allocation.";
+  }
 
   const remaining = Math.max(0, cap.remaining + credit);
   if (amount - remaining > 0.0001) {

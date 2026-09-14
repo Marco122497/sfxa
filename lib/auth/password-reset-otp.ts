@@ -2,6 +2,7 @@ import { createHmac, randomInt, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
 import type { createAdminClient } from "@/lib/supabase/admin";
+import { getServerEnv } from "@/lib/server-env";
 
 export const OTP_COOKIE = "sfxa_pw_reset_otp";
 export const RESET_OK_COOKIE = "sfxa_pw_reset_ok";
@@ -28,9 +29,9 @@ type ResetOkPayload = {
 
 function signingSecret(): string {
   const key =
-    process.env.PASSWORD_RESET_OTP_SECRET?.trim() ||
-    process.env.SEMAPHORE_API_KEY?.trim() ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    getServerEnv("PASSWORD_RESET_OTP_SECRET") ||
+    getServerEnv("SEMAPHORE_API_KEY") ||
+    getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
 
   if (!key) {
     throw new Error("Missing signing secret for password-reset OTP.");
