@@ -33,6 +33,7 @@ import {
 } from "@/lib/sms/semaphore";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { missingSmsConfigMessage } from "@/lib/server-env";
 
 export type AuthActionState = {
   error?: string;
@@ -438,10 +439,12 @@ async function issuePasswordResetOtp(
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to send verification SMS.";
-    if (message.includes("SEMAPHORE_API_KEY")) {
+    if (
+      message.includes("SEMAPHORE_API_KEY") ||
+      message.includes("SMS is not configured")
+    ) {
       return {
-        error:
-          "SMS is not configured. Add SEMAPHORE_API_KEY to .env.local, then restart the dev server.",
+        error: missingSmsConfigMessage(),
         step: "phone",
       };
     }

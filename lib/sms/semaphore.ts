@@ -1,4 +1,4 @@
-import { getServerEnv } from "@/lib/server-env";
+import { getServerEnv, missingSmsConfigMessage } from "@/lib/server-env";
 
 const OTP_ENDPOINT = "https://api.semaphore.co/api/v4/otp";
 
@@ -7,9 +7,7 @@ export function getSemaphoreConfig() {
   const senderName = getServerEnv("SEMAPHORE_SENDER_NAME") || "CKCMSYS";
 
   if (!apiKey) {
-    throw new Error(
-      "Missing SEMAPHORE_API_KEY. Add it to .env.local, then restart the dev server."
-    );
+    throw new Error(missingSmsConfigMessage());
   }
 
   return { apiKey, senderName };
