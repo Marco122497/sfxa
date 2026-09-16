@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import { createClient } from "@/lib/supabase/server";
 import { loadIncomeKindLookup } from "@/lib/income-categories-server";
+import { generalIncomeServiceName } from "@/lib/income-access";
 import { relationName } from "@/lib/treasurer/relations";
 import { toNumber } from "@/lib/format";
 import { actualCash } from "@/lib/finance-ledgers";
@@ -137,7 +138,8 @@ const loadCashFlowLedger = cache(async () => {
 });
 
 export async function getCashFlowStatement(
-  period: CashFlowPeriod = currentMonthRange()
+  period: CashFlowPeriod = currentMonthRange(),
+  options?: { generalServices?: boolean }
 ): Promise<CashFlowStatement> {
   const [{ donations, expenses }, { labelFor }] = await Promise.all([
     loadCashFlowLedger(),
@@ -173,7 +175,10 @@ export async function getCashFlowStatement(
       items: new Map<string, number>(),
     };
     group.amount += amount;
-    group.items.set(name, (group.items.get(name) ?? 0) + amount);
+    const itemLabel = options?.generalServices
+      ? generalIncomeServiceName(name)
+      : name;
+    group.items.set(itemLabel, (group.items.get(itemLabel) ?? 0) + amount);
     inflowGroups.set(kindLabel, group);
     periodIn += amount;
   }
@@ -335,7 +340,8 @@ export async function getIncomeServiceCategorySlices(): Promise<
   for (const row of donations ?? []) {
     const name =
       relationName(row.donation_categories as never) || "Unspecified";
-    totals.set(name, (totals.get(name) ?? 0) + toNumber(row.amount));
+    const general = generalIncomeServiceName(name);
+    totals.set(general, (totals.get(general) ?? 0) + toNumber(row.amount));
   }
 
   return [...totals.entries()]

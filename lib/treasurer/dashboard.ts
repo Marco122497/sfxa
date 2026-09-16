@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
+import { loadIncomeKindFor } from "@/lib/income-kind";
 import { relationName } from "@/lib/treasurer/relations";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { actualCash } from "@/lib/finance-ledgers";
@@ -88,6 +88,7 @@ export async function getTreasurerDashboardData() {
     { data: recentDonations },
     expensesRecentResult,
     budgetModule,
+    kindFor,
   ] = await Promise.all([
     supabase
       .from("donation_categories")
@@ -115,6 +116,7 @@ export async function getTreasurerDashboardData() {
       .order("expense_date", { ascending: false })
       .limit(12),
     getBudgetModuleData(),
+    loadIncomeKindFor(supabase),
   ]);
 
   let expenses = expensesResult.data as
@@ -159,7 +161,9 @@ export async function getTreasurerDashboardData() {
 
   const collectionIds = new Set(
     (donationCategories ?? [])
-      .filter((row) => isCollectionCategoryName(row.category_name))
+      .filter(
+        (row) => kindFor(row.category_name, row.category_id) === "collection"
+      )
       .map((row) => row.category_id)
   );
 

@@ -1,7 +1,8 @@
 import { ShoppingBasketIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { isCollectionCategoryName } from "@/lib/categories";
+import { loadIncomeKindFor } from "@/lib/income-kind";
+import { generalIncomeServiceName } from "@/lib/income-access";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import { isReportPeriod } from "@/lib/reports";
 import { startOfPeriod } from "@/lib/reports-period";
@@ -34,7 +35,8 @@ export default async function ParishCollectionsPage({
   const fromDate = startOfPeriod(period);
   const supabase = await createClient();
 
-  const [{ data: categories }, { data: donations }] = await Promise.all([
+  const [kindFor, { data: categories }, { data: donations }] = await Promise.all([
+    loadIncomeKindFor(supabase),
     supabase
       .from("donation_categories")
       .select("category_id, category_name")
@@ -46,8 +48,8 @@ export default async function ParishCollectionsPage({
       .order("donation_date", { ascending: false }),
   ]);
 
-  const collectionCategories = (categories ?? []).filter((row) =>
-    isCollectionCategoryName(row.category_name)
+  const collectionCategories = (categories ?? []).filter(
+    (row) => kindFor(row.category_name, row.category_id) === "collection"
   );
   const collectionIds = new Set(
     collectionCategories.map((row) => row.category_id)
@@ -68,10 +70,18 @@ export default async function ParishCollectionsPage({
     grandTotal += amount;
   }
 
-  const summaryRows = collectionCategories.map((category) => ({
-    ...category,
-    total: totals.get(category.category_id) ?? 0,
-  }));
+  const totalsByGeneral = new Map<string, number>();
+  for (const category of collectionCategories) {
+    const general = generalIncomeServiceName(category.category_name);
+    totalsByGeneral.set(
+      general,
+      (totalsByGeneral.get(general) ?? 0) +
+        (totals.get(category.category_id) ?? 0)
+    );
+  }
+  const summaryRows = [...totalsByGeneral.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([category_name, total]) => ({ category_name, total }));
 
   return (
     <div className="space-y-6">
@@ -108,7 +118,7 @@ export default async function ParishCollectionsPage({
               </TableHeader>
               <TableBody>
                 {summaryRows.map((row) => (
-                  <TableRow key={row.category_id}>
+                  <TableRow key={row.category_name}>
                     <TableCell>{row.category_name}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(row.total)}
@@ -145,7 +155,9 @@ export default async function ParishCollectionsPage({
                   <TableRow key={row.donation_id}>
                     <TableCell>{formatDate(row.donation_date)}</TableCell>
                     <TableCell>
-                      {nameById.get(row.category_id!) || "—"}
+                      {generalIncomeServiceName(
+                        nameById.get(row.category_id!) || "—"
+                      )}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {row.remarks || "—"}

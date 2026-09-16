@@ -112,3 +112,12 @@ export function displayRoleName(role: string | null | undefined) {
   if (role === "Parish Officer") return "Parish Member";
   return role || "—";
 }
+
+export {
+  INCOME_ACCESS_TYPES,
+  formatIncomeServiceName,
+  incomeAccessTypeLabel,
+  isIncomeAccessType,
+  parseIncomeAccessType,
+  type IncomeAccessType,
+} from "@/lib/income-access";

@@ -19,7 +19,9 @@ export default async function TreasurerReportsPage({
 }) {
   const { supabase, profile } = await requireTreasurer();
   const params = await searchParams;
-  const type: ReportType = isReportType(params.type) ? params.type : "donations";
+  const type: ReportType = isReportType(params.type)
+    ? params.type
+    : "church_services";
   const { from, to } = resolveReportDateRange(params);
   const data = await getFormalReportData(supabase, type, from, to);
   const parishPriestName = await getParishPriestName(supabase);

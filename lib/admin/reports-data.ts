@@ -1,18 +1,22 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { isCollectionCategoryName } from "@/lib/categories";
+import { incomeCategoryLabel } from "@/lib/income";
+import { incomeServiceReportLabel } from "@/lib/income-access";
+import { loadIncomeKindFor } from "@/lib/income-kind";
 import { toNumber } from "@/lib/format";
 import {
   getAdminReportTypeMeta,
+  getIncomeReportTypeMeta,
   type AdminReportType,
 } from "@/lib/reports";
-import type {
-  FormalReportData,
-  ReportBreakdownItem,
-  ReportColumn,
-  ReportMetric,
-  ReportRow,
-  ReportSummaryLine,
+import {
+  getIncomeKindFormalReport,
+  type FormalReportData,
+  type ReportBreakdownItem,
+  type ReportColumn,
+  type ReportMetric,
+  type ReportRow,
+  type ReportSummaryLine,
 } from "@/lib/reports-data";
 import { relationName } from "@/lib/treasurer/relations";
 import { actualCash } from "@/lib/finance-ledgers";
@@ -77,10 +81,18 @@ export async function getAdminFormalReportData(
   switch (type) {
     case "summary":
       return getFinancialSummaryReport(supabase, from, to, meta.title);
-    case "donations":
-      return getDonationReport(supabase, from, to, meta.title);
+    case "church_services":
     case "collections":
-      return getCollectionReport(supabase, from, to, meta.title);
+    case "donations":
+    case "other_income":
+      return getIncomeKindFormalReport(
+        supabase,
+        getIncomeReportTypeMeta(type).kind,
+        from,
+        to,
+        meta.title,
+        type
+      );
     case "expenses":
       return getExpenseReport(supabase, from, to, meta.title);
     case "budget":
@@ -95,16 +107,12 @@ async function getFinancialSummaryReport(
   title: string
 ): Promise<FormalReportData> {
   const categories = await loadDonationCategories(supabase);
-  const collectionIds = new Set(
-    categories
-      .filter((row) => isCollectionCategoryName(row.category_name))
-      .map((row) => row.category_id)
-  );
   const categoryNameById = new Map(
     categories.map((row) => [row.category_id, row.category_name])
   );
 
-  const [{ data: donations }, expensesResult] = await Promise.all([
+  const [kindFor, { data: donations }, expensesResult] = await Promise.all([
+    loadIncomeKindFor(supabase),
     supabase
       .from("donations")
       .select(
@@ -141,8 +149,12 @@ async function getFinancialSummaryReport(
 
   let totalDonations = 0;
   let totalCollections = 0;
+  let totalChurchServices = 0;
+  let totalOtherIncome = 0;
   const donationBreakdown = new Map<string, number>();
   const collectionBreakdown = new Map<string, number>();
+  const churchServiceBreakdown = new Map<string, number>();
+  const otherIncomeBreakdown = new Map<string, number>();
 
   for (const row of donations ?? []) {
     const amount = toNumber(row.amount);
@@ -157,12 +169,25 @@ async function getFinancialSummaryReport(
         ? categoryNameById.get(row.category_id)
         : null) ||
       "Uncategorized";
+    const kind = kindFor(category, row.category_id);
 
-    if (row.category_id != null && collectionIds.has(row.category_id)) {
+    if (kind === "collection") {
       totalCollections += amount;
       collectionBreakdown.set(
         category,
         (collectionBreakdown.get(category) ?? 0) + amount
+      );
+    } else if (kind === "church_service") {
+      totalChurchServices += amount;
+      churchServiceBreakdown.set(
+        category,
+        (churchServiceBreakdown.get(category) ?? 0) + amount
+      );
+    } else if (kind === "other_income") {
+      totalOtherIncome += amount;
+      otherIncomeBreakdown.set(
+        category,
+        (otherIncomeBreakdown.get(category) ?? 0) + amount
       );
     } else {
       totalDonations += amount;
@@ -185,47 +210,18 @@ async function getFinancialSummaryReport(
     return sum + amount;
   }, 0);
 
-  const totalIncome = totalDonations + totalCollections;
+  const totalIncome =
+    totalDonations +
+    totalCollections +
+    totalChurchServices +
+    totalOtherIncome;
   const cashOnHand = actualCash(totalIncome, totalExpenses);
-
-  const metrics: ReportMetric[] = [
-    {
-      id: "donations",
-      label: "Total Donations",
-      value: formatMoneyPlain(totalDonations),
-      tone: "green",
-    },
-    {
-      id: "collections",
-      label: "Total Collections",
-      value: formatMoneyPlain(totalCollections),
-      tone: "gold",
-    },
-    {
-      id: "income",
-      label: "Total Income",
-      value: formatMoneyPlain(totalIncome),
-      tone: "navy",
-    },
-    {
-      id: "expenses",
-      label: "Total Expenses",
-      value: formatMoneyPlain(totalExpenses),
-      tone: "purple",
-    },
-    {
-      id: "net",
-      label: "Actual Cash",
-      value: formatMoneyPlain(cashOnHand),
-      tone: "green",
-    },
-  ];
 
   function toChildren(map: Map<string, number>) {
     return [...map.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([label, amount]) => ({
-        label,
+        label: incomeServiceReportLabel(label),
         amount,
         display: formatMoneyPlain(amount),
       }));
@@ -233,38 +229,75 @@ async function getFinancialSummaryReport(
 
   const donationChildren = toChildren(donationBreakdown);
   const collectionChildren = toChildren(collectionBreakdown);
+  const churchServiceChildren = toChildren(churchServiceBreakdown);
+  const otherIncomeChildren = toChildren(otherIncomeBreakdown);
   const expenseChildren = toChildren(expenseBreakdown);
-  const incomeChildren = [
-    {
-      label: "Donations",
-      amount: totalDonations,
-      display: formatMoneyPlain(totalDonations),
-    },
-    {
-      label: "Collections",
-      amount: totalCollections,
-      display: formatMoneyPlain(totalCollections),
-    },
-  ].filter((item) => item.amount > 0);
 
-  const summaryRows = [
+  const incomeServices = [
     {
-      id: "donations",
-      label: "Total Donations",
-      amount: totalDonations,
-      children: donationChildren,
+      id: "church_service",
+      label: incomeCategoryLabel("church_service"),
+      amount: totalChurchServices,
+      children: churchServiceChildren,
     },
     {
-      id: "collections",
-      label: "Total Collections",
+      id: "collection",
+      label: incomeCategoryLabel("collection"),
       amount: totalCollections,
       children: collectionChildren,
     },
     {
+      id: "donation",
+      label: incomeCategoryLabel("donation"),
+      amount: totalDonations,
+      children: donationChildren,
+    },
+    {
+      id: "other_income",
+      label: incomeCategoryLabel("other_income"),
+      amount: totalOtherIncome,
+      children: otherIncomeChildren,
+    },
+  ];
+
+  const metrics: ReportMetric[] = [
+    ...incomeServices.map((item, index) => ({
+      id: item.id,
+      label: item.label,
+      value: formatMoneyPlain(item.amount),
+      tone: (["navy", "gold", "green", "purple"] as const)[index],
+    })),
+    {
+      id: "income",
+      label: "Total Income",
+      value: formatMoneyPlain(totalIncome),
+      tone: "navy" as const,
+    },
+    {
+      id: "expenses",
+      label: "Total Expenses",
+      value: formatMoneyPlain(totalExpenses),
+      tone: "purple" as const,
+    },
+    {
+      id: "net",
+      label: "Actual Cash",
+      value: formatMoneyPlain(cashOnHand),
+      tone: "green" as const,
+    },
+  ];
+
+  const summaryRows = [
+    ...incomeServices,
+    {
       id: "income",
       label: "Total Income",
       amount: totalIncome,
-      children: incomeChildren,
+      children: incomeServices.map((item) => ({
+        label: item.label,
+        amount: item.amount,
+        display: formatMoneyPlain(item.amount),
+      })),
     },
     {
       id: "expenses",
@@ -272,7 +305,7 @@ async function getFinancialSummaryReport(
       amount: totalExpenses,
       children: expenseChildren,
     },
-    { id: "net", label: "Actual Cash", amount: cashOnHand },
+    { id: "net", label: "Actual Cash", amount: cashOnHand, children: [] },
   ];
 
   const columns: ReportColumn[] = [
@@ -293,16 +326,12 @@ async function getFinancialSummaryReport(
   const summaryLines: ReportSummaryLine[] = summaryRows.map((row) => ({
     label: row.label,
     amount: row.amount,
-    emphasis: row.id === "net",
+    emphasis: row.id === "income" || row.id === "net",
   }));
 
   const breakdown = buildBreakdown(
-    new Map([
-      ["Donations", totalDonations],
-      ["Collections", totalCollections],
-      ["Expenses", totalExpenses],
-    ])
-  ).filter((item) => item.amount > 0);
+    new Map(incomeServices.map((item) => [item.label, item.amount]))
+  );
 
   const exportRows = [
     ["Description", "Amount"],
@@ -327,234 +356,8 @@ async function getFinancialSummaryReport(
     breakdown,
     tableTitle: "Summary Table",
     notes:
-      "Expand Total Donations, Collections, Income, or Expenses in the summary table to view category breakdowns. This financial summary provides an overall picture of the parish's financial condition for the selected period.",
+      "Expand Donations, Collections / Offerings, Church Services, Other Income, Total Income, or Expenses to view category breakdowns. Public and private services, such as Wedding (Public) and Wedding (Private), appear as separate lines.",
     exportRows,
-  };
-}
-
-async function getDonationReport(
-  supabase: SupabaseClient,
-  from: string,
-  to: string,
-  title: string
-): Promise<FormalReportData> {
-  const categories = await loadDonationCategories(supabase);
-  const donationIds = new Set(
-    categories
-      .filter((row) => !isCollectionCategoryName(row.category_name))
-      .map((row) => row.category_id)
-  );
-
-  const { data } = await supabase
-    .from("donations")
-    .select(
-      "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
-    )
-    .gte("donation_date", from)
-    .lte("donation_date", to)
-    .order("donation_date", { ascending: true });
-
-  const filtered = (data ?? []).filter(
-    (row) => row.category_id == null || donationIds.has(row.category_id)
-  );
-
-  const amountsByType = new Map<string, number>();
-  let total = 0;
-
-  const columns: ReportColumn[] = [
-    { key: "date", label: "Date" },
-    { key: "donor", label: "Donor" },
-    { key: "type", label: "Donation Type" },
-    { key: "amount", label: "Amount", align: "right" },
-  ];
-
-  const rows: ReportRow[] = filtered.map((row) => {
-    const type =
-      relationName(
-        row.donation_categories as
-          | { category_name?: string }
-          | { category_name?: string }[]
-          | null
-      ) || "Donation";
-    const amount = toNumber(row.amount);
-    total += amount;
-    amountsByType.set(type, (amountsByType.get(type) ?? 0) + amount);
-
-    return {
-      id: String(row.donation_id),
-      amount,
-      cells: {
-        date: row.donation_date,
-        donor: row.donor_name?.trim() || "Anonymous",
-        type,
-        amount: formatMoneyPlain(amount),
-      },
-    };
-  });
-
-  const metrics: ReportMetric[] = [
-    {
-      id: "total",
-      label: "Total Donations",
-      value: formatMoneyPlain(total),
-      tone: "green",
-    },
-    {
-      id: "count",
-      label: "Number of Donations",
-      value: String(filtered.length),
-      tone: "navy",
-    },
-    {
-      id: "types",
-      label: "Donation Types",
-      value: String(amountsByType.size),
-      tone: "gold",
-    },
-    {
-      id: "average",
-      label: "Average Donation",
-      value: formatMoneyPlain(filtered.length ? total / filtered.length : 0),
-      tone: "purple",
-    },
-  ];
-
-  return {
-    type: "donations",
-    title,
-    from,
-    to,
-    metrics,
-    columns,
-    rows,
-    summaryLines: [
-      { label: "Total Donations", amount: total },
-      {
-        label: "Number of Donations",
-        amount: filtered.length,
-        display: String(filtered.length),
-        emphasis: true,
-      },
-    ],
-    breakdown: buildBreakdown(amountsByType),
-    tableTitle: "Donation Transactions",
-    notes:
-      "This report reflects all donations received and recorded within the specified period.",
-    exportRows: [
-      columns.map((col) => col.label),
-      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "Total Donations", formatMoneyPlain(total)],
-    ],
-  };
-}
-
-async function getCollectionReport(
-  supabase: SupabaseClient,
-  from: string,
-  to: string,
-  title: string
-): Promise<FormalReportData> {
-  const categories = await loadDonationCategories(supabase);
-  const collectionIds = new Set(
-    categories
-      .filter((row) => isCollectionCategoryName(row.category_name))
-      .map((row) => row.category_id)
-  );
-
-  const { data } = await supabase
-    .from("donations")
-    .select(
-      "donation_id, category_id, amount, donation_date, remarks, donation_categories(category_name)"
-    )
-    .gte("donation_date", from)
-    .lte("donation_date", to)
-    .order("donation_date", { ascending: true });
-
-  const filtered = (data ?? []).filter(
-    (row) => row.category_id != null && collectionIds.has(row.category_id)
-  );
-
-  const amountsByType = new Map<string, number>();
-  let total = 0;
-
-  const columns: ReportColumn[] = [
-    { key: "date", label: "Date" },
-    { key: "event", label: "Mass/Event" },
-    { key: "type", label: "Collection Type" },
-    { key: "amount", label: "Amount", align: "right" },
-  ];
-
-  const rows: ReportRow[] = filtered.map((row) => {
-    const type =
-      relationName(
-        row.donation_categories as
-          | { category_name?: string }
-          | { category_name?: string }[]
-          | null
-      ) || "Collection";
-    const amount = toNumber(row.amount);
-    total += amount;
-    amountsByType.set(type, (amountsByType.get(type) ?? 0) + amount);
-
-    return {
-      id: String(row.donation_id),
-      amount,
-      cells: {
-        date: row.donation_date,
-        event: row.remarks?.trim() || type,
-        type,
-        amount: formatMoneyPlain(amount),
-      },
-    };
-  });
-
-  const metrics: ReportMetric[] = [
-    {
-      id: "total",
-      label: "Total Collections",
-      value: formatMoneyPlain(total),
-      tone: "green",
-    },
-    {
-      id: "count",
-      label: "Number of Collections",
-      value: String(filtered.length),
-      tone: "navy",
-    },
-    {
-      id: "types",
-      label: "Collection Types",
-      value: String(amountsByType.size),
-      tone: "gold",
-    },
-    {
-      id: "average",
-      label: "Average Collection",
-      value: formatMoneyPlain(filtered.length ? total / filtered.length : 0),
-      tone: "purple",
-    },
-  ];
-
-  return {
-    type: "collections",
-    title,
-    from,
-    to,
-    metrics,
-    columns,
-    rows,
-    summaryLines: [
-      { label: "Total Collections", amount: total, emphasis: true },
-    ],
-    breakdown: buildBreakdown(amountsByType),
-    tableTitle: "Collection Transactions",
-    notes:
-      "This report reflects parish collections recorded within the selected period.",
-    exportRows: [
-      columns.map((col) => col.label),
-      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "Total Collections", formatMoneyPlain(total)],
-    ],
   };
 }
 

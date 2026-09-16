@@ -9,7 +9,7 @@ import {
 
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { getCashFlowStatement, getDailyCashFlow, getIncomeServiceCategorySlices } from "@/lib/cash-flow";
+import { getCashFlowStatement, getDailyCashFlow, getIncomeServiceCategorySlices, currentMonthRange } from "@/lib/cash-flow";
 import { formatDateTime } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import {
@@ -38,7 +38,7 @@ export default async function ParishOfficerDashboardPage() {
   const supabase = await createClient();
   const [statement, daily, services, { data: announcements }] =
     await Promise.all([
-      getCashFlowStatement(),
+      getCashFlowStatement(currentMonthRange(), { generalServices: true }),
       getDailyCashFlow(),
       getIncomeServiceCategorySlices(),
       supabase
@@ -95,7 +95,8 @@ export default async function ParishOfficerDashboardPage() {
           <CardHeader>
             <CardTitle>Income Service Categories</CardTitle>
             <CardDescription>
-              Amounts collected by each income service type.
+              Amounts collected by each income service. Public and private
+              variants are combined.
             </CardDescription>
           </CardHeader>
           <CardContent>

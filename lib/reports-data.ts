@@ -1,9 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { isCollectionCategoryName } from "@/lib/categories";
+import { type IncomeCategoryId } from "@/lib/income";
+import {
+  incomeAccessTypeLabel,
+  incomeServiceReportLabel,
+  parseIncomeAccessType,
+} from "@/lib/income-access";
+import { loadIncomeKindFor } from "@/lib/income-kind";
 import { toNumber } from "@/lib/format";
 import {
+  getIncomeReportTypeMeta,
   getReportTypeMeta,
+  isIncomeReportType,
   type ReportType,
 } from "@/lib/reports";
 import { relationName } from "@/lib/treasurer/relations";
@@ -98,14 +106,6 @@ function buildBreakdown(
     }));
 }
 
-async function loadDonationCategories(supabase: SupabaseClient) {
-  const { data } = await supabase
-    .from("donation_categories")
-    .select("category_id, category_name")
-    .order("category_name");
-  return data ?? [];
-}
-
 export async function getFormalReportData(
   supabase: SupabaseClient,
   type: ReportType,
@@ -114,8 +114,15 @@ export async function getFormalReportData(
 ): Promise<FormalReportData> {
   const meta = getReportTypeMeta(type);
 
-  if (type === "donations" || type === "collections") {
-    return getDonationStyleReport(supabase, type, from, to, meta.title);
+  if (isIncomeReportType(type)) {
+    return getIncomeKindFormalReport(
+      supabase,
+      getIncomeReportTypeMeta(type).kind,
+      from,
+      to,
+      meta.title,
+      type
+    );
   }
   if (type === "expenses") {
     return getExpenseReport(supabase, from, to, meta.title);
@@ -123,59 +130,145 @@ export async function getFormalReportData(
   return getBudgetReport(supabase, from, to, meta.title);
 }
 
-async function getDonationStyleReport(
+const INCOME_KIND_REPORT: Record<
+  IncomeCategoryId,
+  {
+    fallbackType: string;
+    extraKey: string;
+    extraLabel: string;
+    typeColumn: string;
+    countLabel: string;
+    totalLabel: string;
+    typesLabel: string;
+    averageLabel: string;
+    tableTitle: string;
+    notes: string;
+    extraValue: (row: {
+      donor_name?: string | null;
+      remarks?: string | null;
+    }, typeName: string) => string;
+  }
+> = {
+  donation: {
+    fallbackType: "Donation",
+    extraKey: "extra",
+    extraLabel: "Donor",
+    typeColumn: "Donation Type",
+    countLabel: "Number of Donations",
+    totalLabel: "Total Donations",
+    typesLabel: "Donation Types",
+    averageLabel: "Average Donation",
+    tableTitle: "Donation Transactions",
+    notes:
+      "This report reflects all donations received and recorded within the specified period.",
+    extraValue: (row) => row.donor_name?.trim() || "Anonymous",
+  },
+  collection: {
+    fallbackType: "Collection",
+    extraKey: "extra",
+    extraLabel: "Mass/Event",
+    typeColumn: "Collection Type",
+    countLabel: "Number of Collections",
+    totalLabel: "Total Collections / Offerings",
+    typesLabel: "Collection Types",
+    averageLabel: "Average Collection",
+    tableTitle: "Collection / Offering Transactions",
+    notes:
+      "This report reflects parish collections and offerings recorded within the specified period.",
+    extraValue: (row, typeName) => row.remarks?.trim() || typeName,
+  },
+  church_service: {
+    fallbackType: "Church Service",
+    extraKey: "extra",
+    extraLabel: "Remarks",
+    typeColumn: "Service Type",
+    countLabel: "Number of Services",
+    totalLabel: "Total Church Services",
+    typesLabel: "Service Types",
+    averageLabel: "Average Amount",
+    tableTitle: "Church Service Transactions",
+    notes:
+      "This report reflects church service income recorded within the specified period.",
+    extraValue: (row) => row.remarks?.trim() || "—",
+  },
+  other_income: {
+    fallbackType: "Other Income",
+    extraKey: "extra",
+    extraLabel: "Remarks",
+    typeColumn: "Income Type",
+    countLabel: "Number of Receipts",
+    totalLabel: "Total Other Income",
+    typesLabel: "Income Types",
+    averageLabel: "Average Amount",
+    tableTitle: "Other Income Transactions",
+    notes:
+      "This report reflects other income recorded within the specified period.",
+    extraValue: (row) => row.remarks?.trim() || "—",
+  },
+};
+
+export async function getIncomeKindFormalReport(
   supabase: SupabaseClient,
-  type: "donations" | "collections",
+  kind: IncomeCategoryId,
   from: string,
   to: string,
-  title: string
+  title: string,
+  type: string
 ): Promise<FormalReportData> {
-  const categories = await loadDonationCategories(supabase);
-  const collectionIds = new Set(
-    categories
-      .filter((row) => isCollectionCategoryName(row.category_name))
-      .map((row) => row.category_id)
-  );
-  const donationIds = new Set(
-    categories
-      .filter((row) => !isCollectionCategoryName(row.category_name))
-      .map((row) => row.category_id)
-  );
+  const config = INCOME_KIND_REPORT[kind];
+  const [kindFor, donationsResult] = await Promise.all([
+    loadIncomeKindFor(supabase),
+    supabase
+      .from("donations")
+      .select(
+        "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+      )
+      .gte("donation_date", from)
+      .lte("donation_date", to)
+      .order("donation_date", { ascending: true }),
+  ]);
 
-  const { data } = await supabase
-    .from("donations")
-    .select(
-      "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
-    )
-    .gte("donation_date", from)
-    .lte("donation_date", to)
-    .order("donation_date", { ascending: true });
-
-  const filtered = (data ?? []).filter((row) => {
-    if (type === "collections") {
-      return row.category_id != null && collectionIds.has(row.category_id);
-    }
-    return (
-      row.category_id == null || donationIds.has(row.category_id)
+  const filtered = (donationsResult.data ?? []).filter((row) => {
+    const categoryName = relationName(
+      row.donation_categories as
+        | { category_name?: string }
+        | { category_name?: string }[]
+        | null
     );
+    return kindFor(categoryName, row.category_id) === kind;
   });
 
-  const amountsByCategory = new Map<string, number>();
+  const amountsByType = new Map<string, number>();
   let total = 0;
 
+  const columns: ReportColumn[] = [
+    { key: "date", label: "Date" },
+    { key: config.extraKey, label: config.extraLabel },
+    { key: "type", label: config.typeColumn },
+    { key: "access", label: "Public / Private" },
+    { key: "amount", label: "Amount", align: "right" },
+  ];
+
+  let publicTotal = 0;
+  let privateTotal = 0;
+
   const rows: ReportRow[] = filtered.map((row) => {
-    const category =
+    const typeName =
       relationName(
         row.donation_categories as
           | { category_name?: string }
           | { category_name?: string }[]
           | null
-      ) || (type === "collections" ? "Collection" : "Donation");
+      ) || config.fallbackType;
+    const { baseName, accessType } = parseIncomeAccessType(typeName);
     const amount = toNumber(row.amount);
     total += amount;
-    amountsByCategory.set(
-      category,
-      (amountsByCategory.get(category) ?? 0) + amount
+    if (accessType === "public") publicTotal += amount;
+    if (accessType === "private") privateTotal += amount;
+    const breakdownName = incomeServiceReportLabel(typeName);
+    amountsByType.set(
+      breakdownName,
+      (amountsByType.get(breakdownName) ?? 0) + amount
     );
 
     return {
@@ -183,86 +276,39 @@ async function getDonationStyleReport(
       amount,
       cells: {
         date: row.donation_date,
-        name:
-          type === "collections"
-            ? category
-            : row.donor_name?.trim() || "Anonymous",
-        type: category,
+        [config.extraKey]: config.extraValue(row, typeName),
+        type: baseName || typeName,
+        access: incomeAccessTypeLabel(accessType),
         amount: formatMoneyPlain(amount),
       },
     };
   });
 
-  const categoryCount = amountsByCategory.size;
-  const average = filtered.length > 0 ? total / filtered.length : 0;
-
-  const isCollection = type === "collections";
-  const columns: ReportColumn[] = isCollection
-    ? [
-        { key: "date", label: "Date" },
-        { key: "type", label: "Collection Type" },
-        { key: "amount", label: "Amount (₱)", align: "right" },
-      ]
-    : [
-        { key: "date", label: "Date" },
-        { key: "name", label: "Donor Name" },
-        { key: "type", label: "Donation Type" },
-        { key: "amount", label: "Amount (₱)", align: "right" },
-      ];
-
   const metrics: ReportMetric[] = [
     {
-      id: "count",
-      label: isCollection
-        ? "Total Number of Collections"
-        : "Total Number of Donations",
-      value: String(filtered.length),
-      tone: "navy",
-    },
-    {
       id: "total",
-      label: isCollection ? "Total Collection Amount" : "Total Donation Amount",
+      label: config.totalLabel,
       value: formatMoneyPlain(total),
       tone: "green",
     },
     {
-      id: "categories",
-      label: isCollection ? "Collection Types" : "Donation Types",
-      value: String(categoryCount),
+      id: "count",
+      label: config.countLabel,
+      value: String(filtered.length),
+      tone: "navy",
+    },
+    {
+      id: "types",
+      label: config.typesLabel,
+      value: String(amountsByType.size),
       tone: "gold",
     },
     {
       id: "average",
-      label: isCollection ? "Average Collection" : "Average Donation",
-      value: formatMoneyPlain(average),
+      label: config.averageLabel,
+      value: formatMoneyPlain(filtered.length ? total / filtered.length : 0),
       tone: "purple",
     },
-  ];
-
-  const breakdown = buildBreakdown(amountsByCategory);
-  const leadingBreakdown = breakdown.slice(0, 4);
-  const otherAmount = breakdown
-    .slice(4)
-    .reduce((sum, item) => sum + item.amount, 0);
-  const summaryLines: ReportSummaryLine[] = [
-    ...leadingBreakdown.map((item) => ({
-      label: item.label,
-      amount: item.amount,
-    })),
-    ...(otherAmount > 0
-      ? [{ label: "Other categories", amount: otherAmount }]
-      : []),
-    { label: "GRAND TOTAL", amount: total, emphasis: true },
-  ];
-
-  const exportRows = [
-    columns.map((col) => col.label),
-    ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-    [
-      ...Array(Math.max(columns.length - 2, 0)).fill(""),
-      "Grand Total",
-      formatMoneyPlain(total),
-    ],
   ];
 
   return {
@@ -273,12 +319,30 @@ async function getDonationStyleReport(
     metrics,
     columns,
     rows,
-    summaryLines,
-    breakdown,
-    notes: isCollection
-      ? "This report reflects all parish collections recorded within the specified period."
-      : "This report reflects all donations received and recorded within the specified period.",
-    exportRows,
+    summaryLines: [
+      ...(publicTotal > 0
+        ? [{ label: "Public", amount: publicTotal }]
+        : []),
+      ...(privateTotal > 0
+        ? [{ label: "Private", amount: privateTotal }]
+        : []),
+      { label: config.totalLabel, amount: total, emphasis: true },
+    ],
+    breakdown: buildBreakdown(amountsByType),
+    tableTitle: config.tableTitle,
+    notes:
+      publicTotal > 0 || privateTotal > 0
+        ? `${config.notes} Public and private types, such as Wedding (Public) and Wedding (Private), are listed separately.`
+        : config.notes,
+    exportRows: [
+      columns.map((col) => col.label),
+      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
+      [
+        ...Array(Math.max(columns.length - 2, 0)).fill(""),
+        config.totalLabel,
+        formatMoneyPlain(total),
+      ],
+    ],
   };
 }
 

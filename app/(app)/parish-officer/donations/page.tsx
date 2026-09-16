@@ -1,7 +1,8 @@
 import { HandCoinsIcon } from "lucide-react";
 import { requireParishOfficer } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { isCollectionCategoryName } from "@/lib/categories";
+import { loadIncomeKindFor } from "@/lib/income-kind";
+import { generalIncomeServiceName } from "@/lib/income-access";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
 import { isReportPeriod } from "@/lib/reports";
 import { startOfPeriod } from "@/lib/reports-period";
@@ -35,13 +36,16 @@ export default async function ParishDonationsPage({
   const fromDate = startOfPeriod(period);
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("donations")
-    .select(
-      "donation_id, donor_name, amount, donation_date, remarks, donation_categories(category_name)"
-    )
-    .gte("donation_date", fromDate)
-    .order("donation_date", { ascending: false });
+  const [kindFor, { data }] = await Promise.all([
+    loadIncomeKindFor(supabase),
+    supabase
+      .from("donations")
+      .select(
+        "donation_id, donor_name, amount, donation_date, remarks, category_id, donation_categories(category_name)"
+      )
+      .gte("donation_date", fromDate)
+      .order("donation_date", { ascending: false }),
+  ]);
 
   const rows = (data ?? []).filter((row) => {
     const category = relationName(
@@ -50,7 +54,7 @@ export default async function ParishDonationsPage({
         | { category_name?: string }[]
         | null
     );
-    return !isCollectionCategoryName(category);
+    return kindFor(category, row.category_id) !== "collection";
   });
   const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
 
@@ -102,7 +106,9 @@ export default async function ParishDonationsPage({
                     <TableRow key={row.donation_id}>
                       <TableCell>{formatDate(row.donation_date)}</TableCell>
                       <TableCell>{row.donor_name || "—"}</TableCell>
-                      <TableCell>{category || "—"}</TableCell>
+                      <TableCell>
+                        {generalIncomeServiceName(category) || "—"}
+                      </TableCell>
                       <TableCell className="max-w-[200px] truncate">
                         {row.remarks || "—"}
                       </TableCell>

@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
+import { loadIncomeKindFor } from "@/lib/income-kind";
 import { relationName } from "@/lib/treasurer/relations";
 import { actualCash, remainingBudget as remainingBudgetFromUsage } from "@/lib/finance-ledgers";
 
@@ -108,6 +108,7 @@ export async function getAdminDashboardData() {
     expensesRecentResult,
     { data: recentBudgetHistory },
     { data: recentAudits },
+    kindFor,
   ] = await Promise.all([
     admin
       .from("donation_categories")
@@ -148,6 +149,7 @@ export async function getAdminDashboardData() {
       )
       .order("created_at", { ascending: false })
       .limit(8),
+    loadIncomeKindFor(admin),
   ]);
 
   let expenses = expensesResult.data as
@@ -192,7 +194,9 @@ export async function getAdminDashboardData() {
 
   const collectionIds = new Set(
     (donationCategories ?? [])
-      .filter((row) => isCollectionCategoryName(row.category_name))
+      .filter(
+        (row) => kindFor(row.category_name, row.category_id) === "collection"
+      )
       .map((row) => row.category_id)
   );
 

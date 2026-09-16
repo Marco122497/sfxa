@@ -23,7 +23,7 @@ export default async function ParishCashFlowPage({
   await requireParishOfficer();
   const { from, to } = resolveReportDateRange(await searchParams);
   const [statement, daily] = await Promise.all([
-    getCashFlowStatement({ from, to }),
+    getCashFlowStatement({ from, to }, { generalServices: true }),
     getDailyCashFlow({ from, to }),
   ]);
 

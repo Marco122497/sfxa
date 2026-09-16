@@ -22,7 +22,7 @@ export default async function ParishOfficerReportsPage({
   const params = await searchParams;
   const type: ParishReportType = isParishReportType(params.type)
     ? params.type
-    : "donations";
+    : "church_services";
   const { from, to } = resolveReportDateRange(params);
   const data = await getAdminFormalReportData(supabase, type, from, to);
   const parishPriestName = await getParishPriestName(supabase);
@@ -33,7 +33,7 @@ export default async function ParishOfficerReportsPage({
       <div className="print:hidden">
         <PageHeading
           title="Financial Reports"
-          description="View approved monthly, quarterly, and annual financial reports, then print the document."
+          description="View church services, collections, donations, other income, and expense reports, then print the document."
           icon={FileTextIcon}
           actions={<ReportExportButtons title={`SFXA ${data.title}`} />}
         />

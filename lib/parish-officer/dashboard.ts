@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { isCollectionCategoryName } from "@/lib/categories";
 import { toNumber } from "@/lib/format";
+import { loadIncomeKindFor } from "@/lib/income-kind";
 import { relationName } from "@/lib/treasurer/relations";
 import { actualCash } from "@/lib/finance-ledgers";
 
@@ -111,6 +111,7 @@ export async function getParishOfficerDashboardData() {
     { data: budgets },
     { data: recentDonations },
     expensesRecentResult,
+    kindFor,
   ] = await Promise.all([
     supabase
       .from("donation_categories")
@@ -136,6 +137,7 @@ export async function getParishOfficerDashboardData() {
       )
       .order("expense_date", { ascending: false })
       .limit(10),
+    loadIncomeKindFor(supabase),
   ]);
 
   let expenses = expensesResult.data as
@@ -179,7 +181,9 @@ export async function getParishOfficerDashboardData() {
 
   const collectionIds = new Set(
     (donationCategories ?? [])
-      .filter((row) => isCollectionCategoryName(row.category_name))
+      .filter(
+        (row) => kindFor(row.category_name, row.category_id) === "collection"
+      )
       .map((row) => row.category_id)
   );
 

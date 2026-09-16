@@ -1,4 +1,4 @@
-export const APP_VERSION = "1.1.1.24-beta";
+export const APP_VERSION = "1.1.1.35-beta";
 
 export const APP_DEVELOPER = "D O R I G";
 

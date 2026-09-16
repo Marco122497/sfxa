@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  formatIncomeServiceName,
+  isIncomeAccessType,
+} from "@/lib/income-access";
+import {
   ADDABLE_INCOME_CATEGORIES,
   isIncomeCategoryId,
   type IncomeCategoryId,
@@ -51,8 +55,13 @@ export async function createIncomeService(
 ): Promise<IncomeServiceActionState> {
   await requireAdmin();
   const supabase = createAdminClient();
-  const service_name = String(formData.get("service_name") || "").trim();
+  const rawName = String(formData.get("service_name") || "").trim();
+  const accessType = String(formData.get("access_type") || "").trim();
   const category = String(formData.get("category") || "").trim();
+  if (!isIncomeAccessType(accessType)) {
+    return { error: "Choose whether this service is public, private, or not specified." };
+  }
+  const service_name = formatIncomeServiceName(rawName, accessType);
   if (!service_name || !(await isKnownCategory(supabase, category))) {
     return { error: "Name and category are required." };
   }
@@ -81,8 +90,10 @@ export async function createIncomeService(
   });
   if (error) {
     return {
-      error: error.message.includes("does not exist")
-        ? "Run sql/phase3-categories.sql in Supabase first."
+      error: error.code === "23505"
+        ? "That income service already exists."
+        : error.message.includes("does not exist")
+          ? "Run sql/phase3-categories.sql in Supabase first."
         : error.message,
     };
   }
@@ -115,8 +126,13 @@ export async function updateIncomeService(
   await requireAdmin();
   const supabase = createAdminClient();
   const service_id = Number(formData.get("service_id"));
-  const service_name = String(formData.get("service_name") || "").trim();
+  const rawName = String(formData.get("service_name") || "").trim();
+  const accessType = String(formData.get("access_type") || "").trim();
   const category = String(formData.get("category") || "").trim();
+  if (!isIncomeAccessType(accessType)) {
+    return { error: "Choose whether this service is public, private, or not specified." };
+  }
+  const service_name = formatIncomeServiceName(rawName, accessType);
   if (!service_id || !service_name || !(await isKnownCategory(supabase, category))) {
     return { error: "Name and category are required." };
   }

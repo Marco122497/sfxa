@@ -11,14 +11,51 @@ export function isReportPeriod(value: string | undefined): value is ReportPeriod
   return REPORT_PERIODS.some((item) => item.id === value);
 }
 
-export const REPORT_TYPES = [
-  { id: "donations", label: "Donations", title: "DONATION REPORT", code: "DR" },
+export const INCOME_REPORT_TYPES = [
+  {
+    id: "church_services",
+    kind: "church_service",
+    label: "Church Services",
+    title: "CHURCH SERVICES REPORT",
+    code: "CS",
+  },
   {
     id: "collections",
-    label: "Collections",
-    title: "COLLECTION REPORT",
+    kind: "collection",
+    label: "Collections / Offerings",
+    title: "COLLECTIONS / OFFERINGS REPORT",
     code: "CR",
   },
+  {
+    id: "donations",
+    kind: "donation",
+    label: "Donations",
+    title: "DONATION REPORT",
+    code: "DR",
+  },
+  {
+    id: "other_income",
+    kind: "other_income",
+    label: "Other Income",
+    title: "OTHER INCOME REPORT",
+    code: "OI",
+  },
+] as const;
+
+export type IncomeReportType = (typeof INCOME_REPORT_TYPES)[number]["id"];
+
+export function isIncomeReportType(
+  value: string | undefined
+): value is IncomeReportType {
+  return INCOME_REPORT_TYPES.some((item) => item.id === value);
+}
+
+export function getIncomeReportTypeMeta(type: IncomeReportType) {
+  return INCOME_REPORT_TYPES.find((item) => item.id === type)!;
+}
+
+export const REPORT_TYPES = [
+  ...INCOME_REPORT_TYPES,
   { id: "expenses", label: "Expenses", title: "EXPENSE REPORT", code: "ER" },
   { id: "budget", label: "Budget", title: "BUDGET REPORT", code: "BR" },
 ] as const;
@@ -40,18 +77,7 @@ export const ADMIN_REPORT_TYPES = [
     title: "FINANCIAL SUMMARY REPORT",
     code: "FS",
   },
-  {
-    id: "donations",
-    label: "Donation Report",
-    title: "DONATION REPORT",
-    code: "DR",
-  },
-  {
-    id: "collections",
-    label: "Collection Report",
-    title: "COLLECTION REPORT",
-    code: "CR",
-  },
+  ...INCOME_REPORT_TYPES,
   {
     id: "expenses",
     label: "Expense Report",
@@ -80,18 +106,7 @@ export function getAdminReportTypeMeta(type: AdminReportType) {
 
 /** View-only report types available to parish officers. */
 export const PARISH_REPORT_TYPES = [
-  {
-    id: "donations",
-    label: "Donation Report",
-    title: "DONATION REPORT",
-    code: "DR",
-  },
-  {
-    id: "collections",
-    label: "Collection Report",
-    title: "COLLECTION REPORT",
-    code: "CR",
-  },
+  ...INCOME_REPORT_TYPES,
   {
     id: "expenses",
     label: "Expense Report",

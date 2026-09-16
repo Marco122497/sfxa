@@ -20,6 +20,11 @@ import {
 } from "@/app/actions/income-services";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
+  INCOME_ACCESS_TYPES,
+  incomeAccessTypeLabel,
+  parseIncomeAccessType,
+} from "@/lib/income-access";
+import {
   ADDABLE_INCOME_CATEGORIES,
   incomeCategoryLabel,
 } from "@/lib/income";
@@ -47,6 +52,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 const initialState: IncomeServiceActionState = {};
 
@@ -106,7 +112,12 @@ export function IncomeServiceManager({
       if (!q) return true;
       return (
         service.service_name.toLowerCase().includes(q) ||
-        categoryLabel(service.category, options).toLowerCase().includes(q)
+        categoryLabel(service.category, options).toLowerCase().includes(q) ||
+        incomeAccessTypeLabel(
+          parseIncomeAccessType(service.service_name).accessType
+        )
+          .toLowerCase()
+          .includes(q)
       );
     });
   }, [filter, options, query, services]);
@@ -161,10 +172,17 @@ export function IncomeServiceManager({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((service) => (
+            {filtered.map((service) => {
+              const { baseName, accessType } = parseIncomeAccessType(
+                service.service_name
+              );
+              return (
               <TableRow key={service.service_id}>
                 <TableCell className="px-2 py-1.5 font-medium">
-                  {service.service_name}
+                  <IncomeServiceName
+                    baseName={baseName}
+                    accessType={accessType}
+                  />
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
                   {categoryLabel(service.category, options)}
@@ -183,10 +201,70 @@ export function IncomeServiceManager({
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}
+    </div>
+  );
+}
+
+function IncomeServiceName({
+  baseName,
+  accessType,
+}: {
+  baseName: string;
+  accessType: string;
+}) {
+  if (accessType !== "public" && accessType !== "private") {
+    return <>{baseName}</>;
+  }
+
+  const isPublic = accessType === "public";
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span>{baseName}</span>
+      <span
+        className={cn(
+          "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tracking-wide",
+          isPublic
+            ? "bg-emerald-100 text-emerald-800"
+            : "bg-slate-200 text-slate-800"
+        )}
+      >
+        {isPublic ? "(Public)" : "(Private)"}
+      </span>
+    </span>
+  );
+}
+
+function AccessTypeField({
+  id,
+  defaultValue = "",
+}: {
+  id: string;
+  defaultValue?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>Public or private</Label>
+      <select
+        id={id}
+        name="access_type"
+        defaultValue={defaultValue}
+        className={selectClassName}
+      >
+        {INCOME_ACCESS_TYPES.map((item) => (
+          <option key={item.id || "none"} value={item.id}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+      <p className="text-xs text-muted-foreground">
+        Optional. Use this for services such as Wedding so the Treasurer can
+        record a public wedding and a private wedding separately.
+      </p>
     </div>
   );
 }
@@ -213,7 +291,8 @@ function AddServiceDialog({
           <AlertDialogTitle>Add income service</AlertDialogTitle>
           <AlertDialogDescription>
             New services become selectable when the Treasurer records cash
-            inflow under the matching income category.
+            inflow under the matching income category. For a wedding, add Public
+            and Private as separate services.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id="add-income-service" className="space-y-4">
@@ -228,9 +307,10 @@ function AddServiceDialog({
               id="service_name"
               name="service_name"
               required
-              placeholder="e.g. Baptism, Sunday Offering"
+              placeholder="e.g. Wedding, Baptism, Sunday Offering"
             />
           </div>
+          <AccessTypeField id="access_type" />
           <div className="space-y-2">
             <Label htmlFor="category">Income category</Label>
             <select
@@ -270,6 +350,7 @@ function EditServiceDialog({
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useServerAction(updateIncomeService, initialState, () => setOpen(false));
   const formId = `edit-income-service-${service.service_id}`;
+  const { baseName, accessType } = parseIncomeAccessType(service.service_name);
 
 
   return (
@@ -291,7 +372,8 @@ function EditServiceDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Edit income service</AlertDialogTitle>
           <AlertDialogDescription>
-            Rename this service or move it to another income category.
+            Rename this service, set public or private, or move it to another
+            income category.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id={formId} className="space-y-4">
@@ -306,13 +388,18 @@ function EditServiceDialog({
               Service name
             </Label>
             <Input
-              key={service.service_name}
+              key={`${service.service_name}-name`}
               id={`edit-service-name-${service.service_id}`}
               name="service_name"
               required
-              defaultValue={service.service_name}
+              defaultValue={baseName}
             />
           </div>
+          <AccessTypeField
+            key={`${service.service_name}-access`}
+            id={`edit-access-type-${service.service_id}`}
+            defaultValue={accessType}
+          />
           <div className="space-y-2">
             <Label htmlFor={`edit-service-category-${service.service_id}`}>
               Income category
