@@ -51,7 +51,7 @@ const pageLabels: Record<string, string> = {
 const dashboardLabels: Record<string, string> = {
   administrator: "Administrator Dashboard",
   treasurer: "Treasurer Dashboard",
-  "parish-officer": "Parish Member Dashboard",
+  "parish-officer": "Parish Officer Dashboard",
 };
 
 export function AppBreadcrumb({

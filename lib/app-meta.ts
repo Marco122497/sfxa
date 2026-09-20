@@ -10,6 +10,6 @@ export function formatAppVersion() {
   return `v${APP_VERSION}`;
 }
 
-export function formatAppFooterLabel() {
+export function formatAppFooterLabel() { 
   return `Generated from SFXA Finance (${formatAppVersion()})`;
 }
