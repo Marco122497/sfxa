@@ -371,6 +371,10 @@
   box-shadow: 0 4px 12px -8px rgb(45 190 120 / 55%);
 }
 
+.student-chum [data-slot="button"].shadow-none {
+  box-shadow: none;
+}
+
 .student-chum [data-slot="input"],
 .student-chum [data-slot="select-trigger"],
 .student-chum textarea,
