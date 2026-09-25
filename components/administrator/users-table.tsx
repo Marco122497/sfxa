@@ -22,7 +22,12 @@ import {
   updateUser,
   type UserActionState,
 } from "@/app/actions/users";
-import { ROLES, formatDateTime, type Profile } from "@/lib/auth/roles";
+import {
+  ROLES,
+  formatDateTime,
+  isProtectedAdminAccount,
+  type Profile,
+} from "@/lib/auth/roles";
 import { displayRoleName } from "@/lib/income";
 import { formatDate } from "@/lib/format";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -611,7 +616,7 @@ function DeleteUserButton({
         aria-label="Delete user"
         title={
           disabled
-            ? "You cannot delete your own account"
+            ? "This account cannot be deleted"
             : state.error || "Delete user"
         }
         onClick={() => setOpen(true)}
@@ -766,6 +771,8 @@ export function UsersTable({
           <TableBody>
             {filtered.map((user) => {
               const isSelf = user.id === currentUserId;
+              const cannotDelete =
+                isSelf || isProtectedAdminAccount(user.email);
               return (
               <TableRow key={user.id}>
                 <TableCell>
@@ -803,7 +810,7 @@ export function UsersTable({
                     <DeleteUserButton
                       userId={user.id}
                       userName={user.full_name}
-                      disabled={isSelf}
+                      disabled={cannotDelete}
                     />
                   </div>
                 </TableCell>

@@ -7,7 +7,12 @@ import {
   DUPLICATE_CONTACT_NUMBER_MESSAGE,
   isContactNumberTaken,
 } from "@/lib/auth/contact-number";
-import { ROLES, buildFullName, type UserRole } from "@/lib/auth/roles";
+import {
+  ROLES,
+  buildFullName,
+  isProtectedAdminAccount,
+  type UserRole,
+} from "@/lib/auth/roles";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -491,14 +496,21 @@ export async function deleteUser(
     };
   }
 
-  const { data: target } = await admin
-    .from("profiles")
-    .select("id, full_name, role")
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data: target }, { data: authUser }] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("id", userId)
+      .maybeSingle(),
+    admin.auth.admin.getUserById(userId),
+  ]);
 
   if (!target) {
     return { error: "User not found." };
+  }
+
+  if (isProtectedAdminAccount(authUser.user?.email)) {
+    return { error: "This account cannot be deleted." };
   }
 
   // Clear nullable FKs so profile/auth delete is not blocked.
