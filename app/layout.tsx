@@ -1,19 +1,12 @@
-import { Nunito, Quicksand } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const chumSans = Nunito({
+const chumSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-chum-sans",
-  display: "swap",
-});
-
-const chumDisplay = Quicksand({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-  variable: "--font-chum-display",
   display: "swap",
 });
 
@@ -31,7 +24,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${chumSans.variable} ${chumDisplay.variable} h-full antialiased`}
+      className={`${chumSans.variable} h-full antialiased`}
     >
       <body className="chum-app student-chum flex min-h-full flex-col font-sans">
         <ThemeProvider

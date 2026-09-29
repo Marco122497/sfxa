@@ -87,9 +87,11 @@ function DetailRow({
 function UserHoverCard({
   user,
   isSelf,
+  secured,
 }: {
   user: Profile;
   isSelf?: boolean;
+  secured?: boolean;
 }) {
   return (
     <HoverCard>
@@ -109,6 +111,11 @@ function UserHoverCard({
           {isSelf ? (
             <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-primary uppercase">
               You
+            </span>
+          ) : null}
+          {secured ? (
+            <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+              Secured
             </span>
           ) : null}
         </span>
@@ -176,6 +183,7 @@ function EditUserForm({
   const [role, setRole] = useState(user.role);
   const [email, setEmail] = useState(user.email ?? "");
   const [status, setStatus] = useState(user.status ? "1" : "0");
+  const emailLocked = isProtectedAdminAccount(user.email);
 
 
   return (
@@ -273,12 +281,15 @@ function EditUserForm({
             <Label htmlFor={`${formId}-email`}>Email</Label>
             <Input
               id={`${formId}-email`}
-              name="email"
+              name={emailLocked ? undefined : "email"}
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
+              disabled={emailLocked}
+              readOnly={emailLocked}
             />
+            {emailLocked ? <input type="hidden" name="email" value={email} /> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`${formId}-status`}>Status</Label>
@@ -321,9 +332,11 @@ function EditUserForm({
 function EditUserButton({
   user,
   isSelf,
+  disabled,
 }: {
   user: Profile;
   isSelf: boolean;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
@@ -334,8 +347,9 @@ function EditUserButton({
         type="button"
         variant="ghost"
         size="icon-sm"
+        disabled={disabled}
         aria-label="Edit user"
-        title="Edit user"
+        title={disabled ? "This account is secured" : "Edit user"}
         onClick={() => setOpen(true)}
       >
         <PencilIcon />
@@ -374,9 +388,11 @@ function EditUserButton({
 function ToggleUserStatusButton({
   user,
   disabled,
+  secured,
 }: {
   user: Profile;
   disabled?: boolean;
+  secured?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useServerAction(
@@ -398,7 +414,9 @@ function ToggleUserStatusButton({
         aria-label={activating ? "Activate user" : "Deactivate user"}
         title={
           disabled
-            ? "You cannot deactivate your own account"
+            ? secured
+              ? "This account is secured"
+              : "You cannot deactivate your own account"
             : activating
               ? "Activate user"
               : "Deactivate user"
@@ -419,7 +437,7 @@ function ToggleUserStatusButton({
             <AlertDialogMedia
               className={
                 activating
-                  ? "bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]"
+                  ? "bg-[color:var(--chum-green-soft,#e7f5f2)] text-[color:var(--chum-green-deep,#115e59)]"
                   : "bg-destructive/10 text-destructive"
               }
             >
@@ -479,7 +497,13 @@ function ToggleUserStatusButton({
   );
 }
 
-function ChangePasswordButton({ user }: { user: Profile }) {
+function ChangePasswordButton({
+  user,
+  disabled,
+}: {
+  user: Profile;
+  disabled?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [state, formAction, pending] = useServerAction(
@@ -496,8 +520,9 @@ function ChangePasswordButton({ user }: { user: Profile }) {
         type="button"
         variant="ghost"
         size="icon-sm"
+        disabled={disabled}
         aria-label="Change password"
-        title="Change password"
+        title={disabled ? "This account is secured" : "Change password"}
         onClick={() => setOpen(true)}
       >
         <KeyRoundIcon />
@@ -512,7 +537,7 @@ function ChangePasswordButton({ user }: { user: Profile }) {
       >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]">
+            <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e7f5f2)] text-[color:var(--chum-green-deep,#115e59)]">
               <KeyRoundIcon />
             </AlertDialogMedia>
             <AlertDialogTitle>Change password</AlertDialogTitle>
@@ -596,10 +621,12 @@ function DeleteUserButton({
   userId,
   userName,
   disabled,
+  secured,
 }: {
   userId: string;
   userName: string;
   disabled?: boolean;
+  secured?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useServerAction(deleteUser, initialState, () => setOpen(false));
@@ -616,7 +643,9 @@ function DeleteUserButton({
         aria-label="Delete user"
         title={
           disabled
-            ? "This account cannot be deleted"
+            ? secured
+              ? "This account is secured"
+              : "This account cannot be deleted"
             : state.error || "Delete user"
         }
         onClick={() => setOpen(true)}
@@ -771,12 +800,17 @@ export function UsersTable({
           <TableBody>
             {filtered.map((user) => {
               const isSelf = user.id === currentUserId;
-              const cannotDelete =
-                isSelf || isProtectedAdminAccount(user.email);
+              const isSecured =
+                isProtectedAdminAccount(user.email) && !isSelf;
+              const cannotDelete = isSelf || isSecured;
               return (
               <TableRow key={user.id}>
                 <TableCell>
-                  <UserHoverCard user={user} isSelf={isSelf} />
+                  <UserHoverCard
+                    user={user}
+                    isSelf={isSelf}
+                    secured={isSecured}
+                  />
                 </TableCell>
                 <TableCell className="max-w-[220px] truncate">
                   {user.email || "—"}
@@ -801,16 +835,19 @@ export function UsersTable({
                     <EditUserButton
                       user={user}
                       isSelf={isSelf}
+                      disabled={isSecured}
                     />
                     <ToggleUserStatusButton
                       user={user}
-                      disabled={isSelf}
+                      disabled={isSelf || isSecured}
+                      secured={isSecured}
                     />
-                    <ChangePasswordButton user={user} />
+                    <ChangePasswordButton user={user} disabled={isSecured} />
                     <DeleteUserButton
                       userId={user.id}
                       userName={user.full_name}
                       disabled={cannotDelete}
+                      secured={isSecured}
                     />
                   </div>
                 </TableCell>

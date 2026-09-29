@@ -30,6 +30,19 @@ async function getIp() {
   );
 }
 
+async function securedAccountError(
+  admin: ReturnType<typeof createAdminClient>,
+  actorId: string,
+  userId: string,
+) {
+  if (actorId === userId) return null;
+  const { data } = await admin.auth.admin.getUserById(userId);
+  if (isProtectedAdminAccount(data.user?.email)) {
+    return "This account is secured.";
+  }
+  return null;
+}
+
 async function writeAudit(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
@@ -256,6 +269,18 @@ export async function updateUser(
     return { error: "User not found." };
   }
 
+  const secured = await securedAccountError(admin, actor.id, userId);
+  if (secured) return { error: secured };
+
+  const { data: authTarget } = await admin.auth.admin.getUserById(userId);
+  const currentEmail = authTarget.user?.email?.trim() ?? "";
+  if (
+    isProtectedAdminAccount(currentEmail) &&
+    email.trim().toLowerCase() !== currentEmail.toLowerCase()
+  ) {
+    return { error: "This account email cannot be changed." };
+  }
+
   const authUpdate: {
     email: string;
     email_confirm?: boolean;
@@ -375,6 +400,9 @@ export async function toggleUserStatus(
     return { error: "User not found." };
   }
 
+  const secured = await securedAccountError(admin, actor.id, userId);
+  if (secured) return { error: secured };
+
   const { error: profileError } = await admin
     .from("profiles")
     .update({ status })
@@ -443,6 +471,9 @@ export async function resetUserPassword(
     return { error: "User not found." };
   }
 
+  const secured = await securedAccountError(admin, actor.id, userId);
+  if (secured) return { error: secured };
+
   const { error } = await admin.auth.admin.updateUserById(userId, {
     password,
   });
@@ -510,7 +541,7 @@ export async function deleteUser(
   }
 
   if (isProtectedAdminAccount(authUser.user?.email)) {
-    return { error: "This account cannot be deleted." };
+    return { error: "This account is secured." };
   }
 
   // Clear nullable FKs so profile/auth delete is not blocked.

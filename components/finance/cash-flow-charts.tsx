@@ -39,14 +39,14 @@ import {
 } from "@/components/ui/chart";
 
 const cashFlowConfig = {
-  inflow: { label: "Cash Inflow", color: "var(--chart-4)" },
-  outflow: { label: "Cash Outflow", color: "var(--chart-5)" },
-  net: { label: "Net Cash Flow", color: "var(--chart-1)" },
+  inflow: { label: "Cash Inflow", color: "var(--chart-1)" },
+  outflow: { label: "Cash Outflow", color: "var(--chart-2)" },
+  net: { label: "Net Cash Flow", color: "var(--chart-3)" },
 } satisfies ChartConfig;
 
 const lineChartConfig = {
   inflow: { label: "Cash Inflow", color: "var(--chart-1)" },
-  outflow: { label: "Cash Outflow", color: "var(--chart-3)" },
+  outflow: { label: "Cash Outflow", color: "var(--chart-2)" },
 } satisfies ChartConfig;
 
 function parseISODate(value: string) {

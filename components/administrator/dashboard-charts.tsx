@@ -28,11 +28,11 @@ import {
 const incomeExpenseConfig = {
   income: {
     label: "Income",
-    color: "var(--chart-4)",
+    color: "var(--chart-1)",
   },
   expenses: {
     label: "Expenses",
-    color: "var(--chart-5)",
+    color: "var(--chart-2)",
   },
 } satisfies ChartConfig;
 

@@ -69,7 +69,7 @@ export function RequiredMobileDialog({ missing }: RequiredMobileDialogProps) {
     >
       <AlertDialogContent className="max-w-md" size="default">
         <AlertDialogHeader>
-          <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e8f8ef)] text-[color:var(--chum-green-deep,#1f9a5c)]">
+          <AlertDialogMedia className="bg-[color:var(--chum-green-soft,#e7f5f2)] text-[color:var(--chum-green-deep,#115e59)]">
             <PhoneIcon />
           </AlertDialogMedia>
           <AlertDialogTitle>Mobile number required</AlertDialogTitle>
