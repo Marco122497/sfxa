@@ -18,7 +18,7 @@ const chumDisplay = Quicksand({
 });
 
 export const metadata = {
-  title: "SFXA Finance",
+  title: "SXFP Finance",
   description: "Parish finance management system",
 };
 

@@ -79,7 +79,7 @@ export function LoginForm() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Sign in</CardTitle>
           <CardDescription>
-            Access the SFXA parish finance system with your staff account.
+            Access the SFXP parish finance system with your staff account.
           </CardDescription>
         </CardHeader>
         <form action={formAction} aria-busy={busy}>
@@ -91,7 +91,7 @@ export function LoginForm() {
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="sfxa@example"
+                placeholder="sfxp@example"
                 required
                 disabled={busy}
                 className="h-10 rounded-xl"

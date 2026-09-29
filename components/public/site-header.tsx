@@ -88,7 +88,7 @@ export function TransparencySiteHeader({
             scrolled || mobileOpen ? "text-[#1c2a20]" : "text-white"
           )}
         >
-          SFXA Finance
+          SXFP Finance
         </a>
 
         <nav className="hidden items-center gap-1 md:flex">

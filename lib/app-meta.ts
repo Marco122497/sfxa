@@ -11,5 +11,5 @@ export function formatAppVersion() {
 }
 
 export function formatAppFooterLabel() { 
-  return `Generated from SFXA Finance (${formatAppVersion()})`;
+  return `Generated from SXFP Finance (${formatAppVersion()})`;
 }

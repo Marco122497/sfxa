@@ -8,7 +8,7 @@ export default function ChangePasswordPage() {
     <div className="space-y-6">
       <PageHeading
         title="Change password"
-        description="Update the password used to sign in to SFXA Finance."
+        description="Update the password used to sign in to SXFP Finance."
         icon={KeyRoundIcon}
       />
       <PasswordForm mode="change" />

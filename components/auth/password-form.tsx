@@ -97,7 +97,7 @@ export function PasswordForm({ mode }: PasswordFormProps) {
         <CardDescription>
           {mode === "change"
             ? "Confirm your current password, then choose a new one."
-            : "Choose a new password for your SFXA Finance account."}
+            : "Choose a new password for your SXFP Finance account."}
         </CardDescription>
       </CardHeader>
       <form action={formAction}>

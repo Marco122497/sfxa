@@ -67,7 +67,7 @@ export async function sendSemaphoreOtp(params: {
   const { apiKey, senderName } = getSemaphoreConfig();
   const message =
     params.message ??
-    "Your SFXA Finance password reset code is {otp}. Valid for 10 minutes.";
+    "Your SXFP Finance password reset code is {otp}. Valid for 10 minutes.";
 
   const body = new URLSearchParams({
     apikey: apiKey,

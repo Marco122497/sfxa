@@ -17,7 +17,7 @@ export function AppHeader({ profile }: { profile: Profile }) {
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-6">
           <Link href={home} className="font-semibold tracking-tight">
-            SFXA Finance
+            SXFP Finance
           </Link>
           <nav className="hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
             <Link href={home} className="hover:text-foreground">

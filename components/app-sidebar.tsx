@@ -537,14 +537,14 @@ export function AppSidebar({
               <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg">
                 <img
                   src="/SFXA.png"
-                  alt="SFXA Finance"
+                  alt="SXFP Finance"
                   width={48}
                   height={48}
                   className="size-12 object-contain"
                 />
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
-                <span className="font-medium">SFXA Finance</span>
+                <span className="font-medium">SXFP Finance</span>
                 <span className="text-xs text-muted-foreground">
                   {formatAppVersion()}
                 </span>

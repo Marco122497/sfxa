@@ -67,7 +67,7 @@ export function SplashScreen({
         <div className="splash-logo-wrap mb-6">
           <img
             src="/SFXA.png"
-            alt="SFXA Finance"
+            alt="SXFP Finance"
             width={160}
             height={160}
             className="splash-logo size-32 object-contain sm:size-40"
@@ -75,7 +75,7 @@ export function SplashScreen({
         </div>
 
         <p className="splash-title text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          <span className="student-chum-marker">SFXA Finance</span>
+          <span className="student-chum-marker">SFXP Finance</span>
         </p>
         <p className="splash-subtitle mt-2 text-sm text-muted-foreground">
           Parish financial management

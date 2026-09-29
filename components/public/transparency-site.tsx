@@ -130,7 +130,7 @@ export function TransparencySite({
 
         <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-20 pt-28 md:px-6 md:pb-28 md:pt-36">
           <p className="animate-in fade-in slide-in-from-bottom-4 fill-mode-both duration-700 font-[family-name:var(--font-display)] text-5xl font-semibold tracking-tight text-white md:text-7xl lg:text-8xl">
-            SFXA Finance
+            SXFP Finance
           </p>
           <h1 className="mt-5 max-w-xl animate-in fade-in slide-in-from-bottom-4 fill-mode-both text-xl font-medium text-white/90 duration-700 delay-150 md:text-2xl">
             Open books for the parish community
@@ -574,7 +574,7 @@ export function TransparencySite({
         <div className="relative mx-auto flex max-w-6xl flex-col gap-8 px-4 py-14 md:flex-row md:items-end md:justify-between md:px-6 md:py-20">
           <div>
             <p className="font-[family-name:var(--font-display)] text-3xl font-semibold">
-              SFXA Finance
+              SXFP Finance
             </p>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-[#f7f4ef]/60">
               Built for community trust. Donor identities, expense details, and

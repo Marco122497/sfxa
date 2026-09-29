@@ -21,13 +21,13 @@ export default function AuthLayout({
             <div className="mb-8 flex flex-col items-center text-center">
               <img
                 src="/SFXA.png"
-                alt="SFXA Finance"
+                alt="SXFP Finance"
                 width={128}
                 height={128}
                 className="mb-4 size-28 object-contain sm:size-32"
               />
               <p className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                <span className="student-chum-marker">SFXA Finance</span>
+                <span className="student-chum-marker">SFXP Finance</span>
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Parish financial management

@@ -35,7 +35,7 @@ export default async function ParishOfficerReportsPage({
           title="Financial Reports"
           description="View church services, collections, donations, other income, and expense reports, then print the document."
           icon={FileTextIcon}
-          actions={<ReportExportButtons title={`SFXA ${data.title}`} />}
+          actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />
       </div>
 

@@ -152,7 +152,7 @@ export function NavUser({ profile }: { profile: Profile }) {
             </AlertDialogMedia>
             <AlertDialogTitle>Sign out?</AlertDialogTitle>
             <AlertDialogDescription>
-              You will be signed out of SFXA Finance and returned to the login
+              You will be signed out of SXFP Finance and returned to the login
               page.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -34,7 +34,7 @@ export default async function TreasurerReportsPage({
           title="Financial Reports"
           description="Generate and view financial reports, then print the document."
           icon={FileTextIcon}
-          actions={<ReportExportButtons title={`SFXA ${data.title}`} />}
+          actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />
       </div>
 

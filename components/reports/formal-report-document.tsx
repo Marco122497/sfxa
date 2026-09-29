@@ -79,7 +79,7 @@ export function FormalReportDocument({
               Stewardship in faith; transparency in service
             </p>
             <p className="mt-1 text-[11px] text-[#4b5563]">
-              SFXA Finance · Parish Financial Management
+              SXFP Finance · Parish Financial Management
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export function FormalReportDocument({
         </div>
 
         <p className="mt-4 text-center text-[15px] font-semibold tracking-[0.12em] text-[#111111] uppercase">
-          SFXA Finance – {data.title}
+          SXFP Finance – {data.title}
         </p>
 
         <p className="mt-4 text-[12px] italic text-[#4b5563]">

@@ -47,7 +47,7 @@ export default async function MyReceiptsPage() {
                 {rows.map((row) => (
                   <TableRow key={row.donation_id}>
                     <TableCell className="font-medium">
-                      SFXA-{String(row.donation_id).padStart(5, "0")}
+                      SXFP-{String(row.donation_id).padStart(5, "0")}
                     </TableCell>
                     <TableCell>{formatDate(row.donation_date)}</TableCell>
                     <TableCell>{row.category_name || "Donation"}</TableCell>

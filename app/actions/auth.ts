@@ -434,7 +434,7 @@ async function issuePasswordResetOtp(
       number,
       code,
       message:
-        "Your SFXA Finance password reset code is {otp}. Valid for 10 minutes. Do not share this code.",
+        "Your SXFP Finance password reset code is {otp}. Valid for 10 minutes. Do not share this code.",
     });
   } catch (err) {
     const message =
