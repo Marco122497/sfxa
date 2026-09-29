@@ -1,17 +1,24 @@
 "use client";
 
 import {
+  AdminBudgetSkeleton,
   AdminDashboardSkeleton,
   AnnouncementManagerSkeleton,
   AuditPageSkeleton,
   BudgetAllocationSkeleton,
+  BudgetHistorySkeleton,
   BudgetMonitoringSkeleton,
   CashFlowPageSkeleton,
+  ExpenseCategoriesSkeleton,
   ExpensesPageSkeleton,
-  FormPageSkeleton,
+  IncomeCategoriesSkeleton,
   IncomeOverviewSkeleton,
+  IncomeServicesSkeleton,
   ParishDashboardSkeleton,
+  ParishInfoSkeleton,
   ParishListSkeleton,
+  PasswordPageSkeleton,
+  ProfilePageSkeleton,
   ReceiveFundsSkeleton,
   ReportsPageSkeleton,
   SettingsPageSkeleton,
@@ -65,15 +72,20 @@ export function RoutePageSkeleton({ href }: { href: string }) {
     return <BudgetMonitoringSkeleton cards={4} />;
   }
 
-  if (
-    path === "/administrator/finance/budgets" ||
-    path === "/parish-officer/budget"
-  ) {
+  if (path === "/administrator/finance/budgets") {
+    return <AdminBudgetSkeleton />;
+  }
+
+  if (path === "/parish-officer/budget") {
     return <BudgetMonitoringSkeleton />;
   }
 
   if (path === "/treasurer/budgets/allocation") {
     return <BudgetAllocationSkeleton />;
+  }
+
+  if (path === "/treasurer/budgets/history") {
+    return <BudgetHistorySkeleton />;
   }
 
   if (
@@ -82,6 +94,18 @@ export function RoutePageSkeleton({ href }: { href: string }) {
       !path.endsWith("/finance"))
   ) {
     return <ReceiveFundsSkeleton />;
+  }
+
+  if (path === "/administrator/categories/income") {
+    return <IncomeCategoriesSkeleton />;
+  }
+
+  if (path === "/administrator/categories/income-services") {
+    return <IncomeServicesSkeleton />;
+  }
+
+  if (path === "/administrator/categories/expenses") {
+    return <ExpenseCategoriesSkeleton />;
   }
 
   if (path.startsWith("/administrator/categories/")) {
@@ -96,14 +120,16 @@ export function RoutePageSkeleton({ href }: { href: string }) {
     return <AnnouncementManagerSkeleton />;
   }
 
-  if (path === "/treasurer/parish-info") {
-    return <ParishListSkeleton columns={2} />;
+  if (
+    path === "/treasurer/parish-info" ||
+    path === "/parish-officer/parish-info"
+  ) {
+    return <ParishInfoSkeleton />;
   }
 
   if (
     path === "/parish-officer/activities" ||
-    path === "/parish-officer/notices" ||
-    path === "/parish-officer/parish-info"
+    path === "/parish-officer/notices"
   ) {
     return <ParishListSkeleton />;
   }
@@ -116,12 +142,19 @@ export function RoutePageSkeleton({ href }: { href: string }) {
     return <ViewTableSkeleton />;
   }
 
-  if (path === "/profile" || path === "/change-password") {
-    return <FormPageSkeleton />;
-  }
+  if (path === "/profile") return <ProfilePageSkeleton />;
+  if (path === "/change-password") return <PasswordPageSkeleton />;
 
   if (path.includes("/budgets/history") || path.includes("/budgets/categories")) {
-    return <TableManagerSkeleton action={false} />;
+    return <BudgetHistorySkeleton />;
+  }
+
+  if (path === "/administrator/finance" || path === "/treasurer/receive") {
+    return path.startsWith("/treasurer") ? (
+      <ReceiveFundsSkeleton />
+    ) : (
+      <IncomeOverviewSkeleton />
+    );
   }
 
   return <TableManagerSkeleton />;
