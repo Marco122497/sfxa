@@ -5,6 +5,7 @@ import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import {
   createDonation,
   deleteDonation,
@@ -493,9 +494,9 @@ export function DonationManager({
               <TableHead className="h-8 px-2">Remarks</TableHead>
               <TableHead className="h-8 px-2 text-right">Amount</TableHead>
               {showActions ? (
-                <TableHead
-                  className={`h-8 px-2 ${canEdit && canDelete ? "w-[88px]" : "w-[48px]"}`}
-                />
+                <TableHead className="h-8 w-12 px-2">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               ) : null}
             </TableRow>
           </TableHeader>
@@ -521,7 +522,9 @@ export function DonationManager({
                 </TableCell>
                 {showActions ? (
                   <TableCell className="px-2 py-1.5">
-                    <div className="flex justify-end gap-1">
+                    <RowActionsDialog
+                      label={`${row.category_name || "Record"} · ${formatMoney(row.amount)}`}
+                    >
                       {canEdit ? (
                         <EditDonationDialog
                           row={row}
@@ -536,7 +539,7 @@ export function DonationManager({
                           label={`${formatMoney(row.amount)} · ${row.category_name || "Uncategorized"} · ${formatDate(row.donation_date)}`}
                         />
                       ) : null}
-                    </div>
+                    </RowActionsDialog>
                   </TableCell>
                 ) : null}
               </TableRow>

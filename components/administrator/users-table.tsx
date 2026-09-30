@@ -43,6 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Button } from "@/components/ui/button";
 import {
   HoverCard,
@@ -794,7 +795,9 @@ export function UsersTable({
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
-              <TableHead className="w-[152px]" />
+              <TableHead className="w-12">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -831,7 +834,7 @@ export function UsersTable({
                 </TableCell>
                 <TableCell>{formatDateTime(user.last_login)}</TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-0.5">
+                  <RowActionsDialog label={user.full_name}>
                     <EditUserButton
                       user={user}
                       isSelf={isSelf}
@@ -849,7 +852,7 @@ export function UsersTable({
                       disabled={cannotDelete}
                       secured={isSecured}
                     />
-                  </div>
+                  </RowActionsDialog>
                 </TableCell>
               </TableRow>
               );

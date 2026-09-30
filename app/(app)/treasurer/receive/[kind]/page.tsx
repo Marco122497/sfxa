@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { requireTreasurer } from "@/lib/auth/session";
 import { loadReceiveIncome } from "@/lib/treasurer/receive-income";
@@ -23,9 +23,12 @@ export default async function TreasurerReceiveKindPage({
   const incomeCategories = await loadIncomeCategories();
   const meta = resolveIncomeCategory(incomeCategories, kind);
   if (!meta) notFound();
+  if (meta.code !== kind) {
+    redirect(`/treasurer/receive/${meta.code}`);
+  }
 
   const withPending = isDonationLike(meta.code, meta.name);
-  const { categories, rows: mapped } = await loadReceiveIncome(kind, {
+  const { categories, rows: mapped } = await loadReceiveIncome(meta.code, {
     withStatus: withPending,
   });
   const pending = withPending

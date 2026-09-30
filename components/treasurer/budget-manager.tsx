@@ -5,6 +5,7 @@ import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import {
   createBudget,
   deleteBudget,
@@ -488,9 +489,9 @@ export function BudgetManager({
               <TableHead className="h-8 px-2 text-right">Remaining</TableHead>
               <TableHead className="h-8 px-2">Remarks</TableHead>
               {showActions ? (
-                <TableHead
-                  className={`h-8 px-2 ${canEdit && canDelete ? "w-[88px]" : "w-[48px]"}`}
-                />
+                <TableHead className="h-8 w-12 px-2">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               ) : null}
             </TableRow>
           </TableHeader>
@@ -544,7 +545,9 @@ export function BudgetManager({
                       </TableCell>
                       {showActions ? (
                         <TableCell className="px-2 py-1.5">
-                          <div className="flex justify-end gap-1">
+                          <RowActionsDialog
+                            label={`${row.subcategory_name || row.category_name || "Allocation"} · FY ${row.fiscal_year}`}
+                          >
                             {canEdit ? (
                               <EditBudgetDialog
                                 row={row}
@@ -557,7 +560,7 @@ export function BudgetManager({
                                 label={`${formatMoney(allocated)} · ${row.subcategory_name || row.category_name || "allocation"} · FY ${row.fiscal_year}`}
                               />
                             ) : null}
-                          </div>
+                          </RowActionsDialog>
                         </TableCell>
                       ) : null}
                     </TableRow>

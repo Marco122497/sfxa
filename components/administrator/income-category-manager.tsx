@@ -11,6 +11,7 @@ import {
   type IncomeCategoryActionState,
 } from "@/app/actions/income-categories";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -335,7 +336,9 @@ export function IncomeCategoryManager({
               <TableHead className="h-8 px-2">Name</TableHead>
               <TableHead className="h-8 px-2">Description</TableHead>
               <TableHead className="h-8 px-2 text-right">Services</TableHead>
-              <TableHead className="h-8 w-[88px] px-2" />
+              <TableHead className="h-8 w-12 px-2">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -351,10 +354,10 @@ export function IncomeCategoryManager({
                   {row.service_count}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
-                  <div className="flex justify-end gap-1">
+                  <RowActionsDialog label={row.category_name}>
                     <EditIncomeCategoryDialog row={row} />
                     <DeleteIncomeCategoryButton row={row} />
-                  </div>
+                  </RowActionsDialog>
                 </TableCell>
               </TableRow>
             ))}

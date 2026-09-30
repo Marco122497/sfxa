@@ -19,6 +19,7 @@ import {
   type AnnouncementActionState,
 } from "@/app/actions/announcements";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { formatDateTime } from "@/lib/auth/roles";
 import {
   parishContentKind,
@@ -302,6 +303,7 @@ function PublishAnnouncementButton({ item }: { item: AnnouncementRow }) {
         variant="outline"
         size="sm"
         disabled={pending}
+        aria-label={item.is_published ? "Unpublish" : "Publish"}
         title={state.error || undefined}
       >
         {pending ? (
@@ -433,7 +435,9 @@ export function AnnouncementManager({
               <TableHead>Status</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead>Published</TableHead>
-              <TableHead className="w-[160px]" />
+              <TableHead className="w-12">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -466,11 +470,11 @@ export function AnnouncementManager({
                     : "—"}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-1">
+                  <RowActionsDialog label={stripParishPrefix(item.title)}>
                     <EditAnnouncementDialog item={item} kind={kind} />
                     <PublishAnnouncementButton item={item} />
                     <DeleteAnnouncementButton item={item} />
-                  </div>
+                  </RowActionsDialog>
                 </TableCell>
               </TableRow>
             ))}

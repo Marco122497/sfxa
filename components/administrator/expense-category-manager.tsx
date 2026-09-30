@@ -14,6 +14,7 @@ import {
   type CategoryActionState,
 } from "@/app/actions/categories";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -574,7 +575,9 @@ export function ExpenseCategoryManager({
               <TableHeader>
                 <TableRow>
                   <TableHead className="h-8 px-2">Name</TableHead>
-                  <TableHead className="h-8 w-[88px] px-2" />
+                  <TableHead className="h-8 w-12 px-2">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -584,13 +587,13 @@ export function ExpenseCategoryManager({
                       {row.name}
                     </TableCell>
                     <TableCell className="px-2 py-1.5">
-                      <div className="flex justify-end gap-1">
+                      <RowActionsDialog label={row.name}>
                         <EditGeneralDialog row={row} />
                         <DeleteGeneralButton
                           categoryId={row.id}
                           categoryName={row.name}
                         />
-                      </div>
+                      </RowActionsDialog>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -641,7 +644,9 @@ export function ExpenseCategoryManager({
                 <TableRow>
                   <TableHead className="h-8 px-2">General</TableHead>
                   <TableHead className="h-8 px-2">Specific</TableHead>
-                  <TableHead className="h-8 w-[88px] px-2" />
+                  <TableHead className="h-8 w-12 px-2">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -654,13 +659,13 @@ export function ExpenseCategoryManager({
                       {row.subcategory_name}
                     </TableCell>
                     <TableCell className="px-2 py-1.5">
-                      <div className="flex justify-end gap-1">
+                      <RowActionsDialog label={row.subcategory_name}>
                         <EditSpecificDialog row={row} generals={generals} />
                         <DeleteSpecificButton
                           subcategoryId={row.subcategory_id}
                           subcategoryName={row.subcategory_name}
                         />
-                      </div>
+                      </RowActionsDialog>
                     </TableCell>
                   </TableRow>
                 ))}

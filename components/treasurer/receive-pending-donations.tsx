@@ -8,6 +8,7 @@ import {
   type ReceiveDonationState,
 } from "@/app/actions/receive-funds";
 import { formatDate, formatMoney } from "@/lib/format";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -46,7 +47,9 @@ export function ReceivePendingDonations({ rows }: { rows: PendingDonation[] }) {
             <TableHead>Donor</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="text-right">Amount</TableHead>
-            <TableHead />
+            <TableHead className="w-12">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -72,16 +75,25 @@ function PendingRow({ row }: { row: PendingDonation }) {
         {formatMoney(row.amount)}
       </TableCell>
       <TableCell className="text-right">
-        <form action={formAction}>
-          <input type="hidden" name="donation_id" value={row.donation_id} />
-          {state.error ? (
-            <p className="mb-1 text-xs text-destructive">{state.error}</p>
-          ) : null}
-          <Button type="submit" size="sm" disabled={pending}>
-            {pending ? <Loader2 className="animate-spin" /> : null}
-            Receive
-          </Button>
-        </form>
+        {state.error ? (
+          <p className="mb-1 text-xs text-destructive">{state.error}</p>
+        ) : null}
+        <RowActionsDialog
+          label={`${row.donor_name || "Donation"} · ${formatMoney(row.amount)}`}
+        >
+          <form action={formAction}>
+            <input type="hidden" name="donation_id" value={row.donation_id} />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={pending}
+              aria-label="Receive donation"
+            >
+              {pending ? <Loader2 className="animate-spin" /> : null}
+              Receive
+            </Button>
+          </form>
+        </RowActionsDialog>
       </TableCell>
     </TableRow>
   );

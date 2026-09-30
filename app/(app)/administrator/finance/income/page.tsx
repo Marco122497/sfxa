@@ -44,11 +44,11 @@ export default async function AdminIncomeMonitoringPage() {
         description="Totals for every income category configured in Categories."
         icon={HeartHandshakeIcon}
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-5 gap-4">
         {cards.map((card) => (
-          <Card key={card.title} size="sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+          <Card key={card.title} size="sm" className="min-w-0">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium leading-snug text-muted-foreground">
                 {card.title}
               </CardTitle>
               <card.icon className="size-4 text-muted-foreground" />

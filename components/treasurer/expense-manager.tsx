@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 
 import {
   createExpense,
@@ -661,9 +662,9 @@ export function ExpenseManager({
               <TableHead className="h-8 px-2">Specific</TableHead>
               <TableHead className="h-8 px-2 text-right">Amount</TableHead>
               {showActions ? (
-                <TableHead
-                  className={`h-8 px-2 ${canEdit && canDelete ? "w-[88px]" : "w-[48px]"}`}
-                />
+                <TableHead className="h-8 w-12 px-2">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               ) : null}
             </TableRow>
           </TableHeader>
@@ -684,7 +685,9 @@ export function ExpenseManager({
                 </TableCell>
                 {showActions ? (
                   <TableCell className="px-2 py-1.5">
-                    <div className="flex justify-end gap-1">
+                    <RowActionsDialog
+                      label={`${row.subcategory_name || row.category_name || "Expense"} · ${formatMoney(row.amount)}`}
+                    >
                       {canEdit ? (
                         <EditExpenseDialog
                           row={row}
@@ -700,7 +703,7 @@ export function ExpenseManager({
                           label={`${formatMoney(row.amount)} · ${row.subcategory_name || row.category_name || row.description || "expense"} · ${formatDate(row.expense_date)}`}
                         />
                       ) : null}
-                    </div>
+                    </RowActionsDialog>
                   </TableCell>
                 ) : null}
               </TableRow>

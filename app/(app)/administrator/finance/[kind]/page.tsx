@@ -1,11 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { loadReceiveIncome } from "@/lib/treasurer/receive-income";
-import {
-  isReservedFinanceKind,
-  resolveIncomeCategory,
-} from "@/lib/income-categories";
+import { resolveIncomeCategory } from "@/lib/income-categories";
 import { loadIncomeCategories } from "@/lib/income-categories-server";
 import { getIncomeCategoryIcon } from "@/components/income-category-icon";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
@@ -20,15 +17,14 @@ export default async function AdminFinanceKindPage({
   await requireAdmin();
   const { kind } = await params;
 
-  if (isReservedFinanceKind(kind)) {
-    notFound();
-  }
-
   const incomeCategories = await loadIncomeCategories();
   const meta = resolveIncomeCategory(incomeCategories, kind);
   if (!meta) notFound();
+  if (meta.code !== kind) {
+    redirect(`/administrator/finance/${meta.code}`);
+  }
 
-  const { categories, rows } = await loadReceiveIncome(kind);
+  const { categories, rows } = await loadReceiveIncome(meta.code);
   const CategoryIcon = getIncomeCategoryIcon(meta.code, meta.name);
 
   return (

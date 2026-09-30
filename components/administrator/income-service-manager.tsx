@@ -19,6 +19,7 @@ import {
   type IncomeServiceActionState,
 } from "@/app/actions/income-services";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import {
   INCOME_ACCESS_TYPES,
   incomeAccessTypeLabel,
@@ -168,7 +169,9 @@ export function IncomeServiceManager({
               <TableHead className="h-8 px-2">Income Service</TableHead>
               <TableHead className="h-8 px-2">Income Category</TableHead>
               <TableHead className="h-8 px-2">Status</TableHead>
-              <TableHead className="h-8 w-[120px] px-2" />
+              <TableHead className="h-8 w-12 px-2">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -191,14 +194,14 @@ export function IncomeServiceManager({
                   {service.is_active ? "Active" : "Inactive"}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
-                  <div className="flex justify-end gap-1">
+                  <RowActionsDialog label={service.service_name}>
                     <EditServiceDialog
                       service={service}
                       incomeCategories={options}
                     />
                     <ToggleServiceDialog service={service} />
                     <DeleteServiceDialog service={service} />
-                  </div>
+                  </RowActionsDialog>
                 </TableCell>
               </TableRow>
               );

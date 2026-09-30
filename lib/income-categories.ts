@@ -24,10 +24,13 @@ export const FINANCE_RESERVED_KINDS = [
   "expenses",
   "budgets",
   "disbursements",
-  "collections",
-  "donations",
-  "services",
-  "other",
+] as const;
+
+const INCOME_KIND_ALIASES = [
+  ["donation", "donations"],
+  ["collection", "collections"],
+  ["church_service", "church_services", "services", "service"],
+  ["other_income", "other"],
 ] as const;
 
 export function isReservedFinanceKind(kind: string) {
@@ -59,11 +62,45 @@ export function incomeCategoryIconKind(
   return "other";
 }
 
+function aliasesForKind(kind: string): readonly string[] {
+  const normalized = kind.trim().toLowerCase();
+  const group = INCOME_KIND_ALIASES.find((aliases) =>
+    (aliases as readonly string[]).includes(normalized)
+  );
+  return group ?? [normalized];
+}
+
 export function resolveIncomeCategory(
   categories: IncomeCategoryRecord[],
   kind: string
 ) {
-  return categories.find((item) => item.code === kind) ?? null;
+  const normalized = kind.trim().toLowerCase();
+  const exact = categories.find(
+    (item) => item.code.trim().toLowerCase() === normalized
+  );
+  if (exact) return exact;
+
+  const aliases = aliasesForKind(normalized);
+  const aliasMatch = categories.find((item) =>
+    aliases.includes(item.code.trim().toLowerCase())
+  );
+  if (aliasMatch) return aliasMatch;
+
+  const loose = categories.filter((item) => {
+    if (aliases.includes("donation")) return isDonationLike(item.code, item.name);
+    if (aliases.includes("collection")) {
+      return isCollectionLike(item.code, item.name);
+    }
+    if (aliases.includes("church_service")) {
+      return incomeCategoryIconKind(item.code, item.name) === "church_service";
+    }
+    if (aliases.includes("other_income")) {
+      return incomeCategoryIconKind(item.code, item.name) === "other";
+    }
+    return false;
+  });
+
+  return loose.length === 1 ? loose[0] : null;
 }
 
 export type IncomeRecordCopy = {

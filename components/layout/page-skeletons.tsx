@@ -548,7 +548,7 @@ export function IncomeOverviewSkeleton() {
       <PageHeaderSkeleton titleWidth="w-28" />
       <StatCardsSkeleton
         count={5}
-        columns="sm:grid-cols-2 lg:grid-cols-3"
+        columns="grid-cols-5"
         layout="inline"
       />
       {Array.from({ length: 4 }).map((_, index) => (
