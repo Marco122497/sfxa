@@ -534,17 +534,17 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={() => onNavigate(home)}>
-              <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg">
+              <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-primary/15">
                 <img
                   src="/SFXA.png"
                   alt="SXFP Finance"
                   width={48}
                   height={48}
-                  className="size-12 object-contain"
+                  className="size-9 object-contain"
                 />
               </div>
               <div className="flex flex-col gap-0.5 leading-none">
-                <span className="font-medium">SXFP Finance</span>
+                <span className="font-semibold tracking-tight">SXFP Finance</span>
                 <span className="text-xs text-muted-foreground">
                   {formatAppVersion()}
                 </span>

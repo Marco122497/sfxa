@@ -1,11 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function SummaryStatCard({
@@ -24,37 +19,36 @@ export function SummaryStatCard({
   return (
     <Card
       size={isSecondary ? "sm" : "default"}
-      className={cn(
-        "text-center",
-        isSecondary && "bg-muted/35 text-muted-foreground shadow-none"
-      )}
+      className={cn(isSecondary && "bg-muted/40 shadow-none")}
     >
-      <CardHeader className="items-center justify-items-center pb-2">
-        <Icon
+      <CardContent className="flex flex-col items-center gap-2 text-center">
+        <span
           className={cn(
-            "text-muted-foreground",
-            isSecondary ? "size-3.5" : "size-4"
-          )}
-        />
-        <CardTitle
-          className={cn(
-            "font-medium text-muted-foreground",
-            isSecondary ? "text-xs" : "text-sm"
-          )}
-        >
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div
-          className={cn(
-            "font-semibold tracking-tight",
+            "inline-flex shrink-0 items-center justify-center rounded-2xl",
             isSecondary
-              ? "text-lg text-foreground/80"
-              : "text-2xl text-foreground"
+              ? "size-9 bg-background text-muted-foreground"
+              : "size-11 bg-primary/10 text-primary"
           )}
         >
-          {value}
+          <Icon className={isSecondary ? "size-4" : "size-5"} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <CardTitle
+            className={cn(
+              "font-medium text-muted-foreground",
+              isSecondary ? "text-xs" : "text-sm"
+            )}
+          >
+            {title}
+          </CardTitle>
+          <div
+            className={cn(
+              "mt-0.5 font-semibold tracking-tight text-foreground",
+              isSecondary ? "text-lg" : "text-2xl"
+            )}
+          >
+            {value}
+          </div>
         </div>
       </CardContent>
     </Card>

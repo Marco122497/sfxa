@@ -59,10 +59,10 @@ function AppShellContent({
         profile={profile}
         incomeCategories={incomeCategories}
       />
-      <SidebarInset className="print:overflow-visible">
+      <SidebarInset className="h-full min-h-0 overflow-hidden print:h-auto print:overflow-visible">
         <header
           data-slot="app-topbar"
-          className="flex h-14 shrink-0 items-center justify-between gap-2 border-b px-3 print:hidden"
+          className="z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border bg-sidebar px-3 print:hidden"
         >
           <div className="flex min-w-0 items-center gap-2">
             <SidebarTrigger />
@@ -84,7 +84,7 @@ function AppShellContent({
             <NavUser profile={profile} />
           </div>
         </header>
-        <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 print:overflow-visible print:p-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-auto overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:p-6 print:overflow-visible print:p-0">
           {showSkeleton && pendingHref ? (
             <RoutePageSkeleton href={pendingHref} />
           ) : (
@@ -109,8 +109,8 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <ChumTheme className="flex min-h-svh">
-      <SidebarProvider className="min-h-svh overflow-x-auto">
+    <ChumTheme className="flex h-dvh max-h-dvh min-h-0 overflow-hidden print:h-auto print:max-h-none print:overflow-visible">
+      <SidebarProvider className="h-full min-h-0 overflow-hidden print:h-auto print:overflow-visible">
         <NavigationPendingProvider>
           <AppShellContent
             profile={profile}

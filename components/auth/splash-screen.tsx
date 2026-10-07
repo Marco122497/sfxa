@@ -64,18 +64,18 @@ export function SplashScreen({
       <AuthBackground />
 
       <div className="relative z-10 flex flex-col items-center px-6 text-center">
-        <div className="splash-logo-wrap mb-6">
+        <div className="splash-logo-wrap mb-6 flex size-28 items-center justify-center rounded-[2rem] bg-card/80 shadow-[0_16px_50px_rgb(16_24_40_/_10%)] ring-1 ring-border/80 backdrop-blur sm:size-32">
           <img
             src="/SFXA.png"
             alt="SXFP Finance"
             width={160}
             height={160}
-            className="splash-logo size-32 object-contain sm:size-40"
+            className="splash-logo size-20 object-contain sm:size-24"
           />
         </div>
 
         <p className="splash-title text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          <span className="student-chum-marker">SFXP Finance</span>
+          SFXP Finance
         </p>
         <p className="splash-subtitle mt-2 text-sm text-muted-foreground">
           Parish financial management

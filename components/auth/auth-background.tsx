@@ -1,55 +1,15 @@
-/** Minimal slanted-square vector backdrop for auth pages. */
+/** Soft mesh backdrop for auth and splash screens. */
 export function AuthBackground() {
-  const cols = 18;
-  const rows = 22;
-  const size = 5.2;
-  const gap = 1.1;
-  const step = size + gap;
-  const originX = -6;
-  const originY = -8;
-
-  const squares = Array.from({ length: rows * cols }, (_, i) => {
-    const row = Math.floor(i / cols);
-    const col = i % cols;
-    return {
-      key: `sq-${i}`,
-      x: originX + col * step,
-      y: originY + row * step,
-      size,
-    };
-  });
-
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 overflow-hidden"
+      className="pointer-events-none absolute inset-0 overflow-hidden bg-background"
     >
-      <div className="absolute inset-0 bg-background" />
-      <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_8%_-8%,_rgb(15_118_110_/_0.1),_transparent_52%),radial-gradient(80%_60%_at_100%_100%,_rgb(224_122_74_/_0.1),_transparent_48%)] dark:bg-[radial-gradient(120%_80%_at_8%_-8%,_rgb(20_184_166_/_0.12),_transparent_52%),radial-gradient(80%_60%_at_100%_100%,_rgb(251_146_60_/_0.08),_transparent_48%)]" />
-
-      <svg
-        className="absolute -inset-[24%] size-[148%] text-[color:var(--chum-green,#0f766e)]/[0.08] dark:text-[color:var(--chum-green,#14b8a6)]/[0.12]"
-        viewBox="0 0 100 100"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        preserveAspectRatio="xMidYMid slice"
-      >
-        <g transform="rotate(-22 50 50)">
-          {squares.map((square) => (
-            <rect
-              key={square.key}
-              x={square.x}
-              y={square.y}
-              width={square.size}
-              height={square.size}
-              stroke="currentColor"
-              strokeWidth="0.12"
-            />
-          ))}
-        </g>
-      </svg>
-
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_22%,_var(--background)_95%)]" />
+      <div className="absolute -top-24 -left-16 size-[28rem] rounded-full bg-primary/20 blur-3xl" />
+      <div className="absolute top-1/3 -right-24 size-[22rem] rounded-full bg-[color:var(--chum-amber)]/15 blur-3xl" />
+      <div className="absolute -bottom-32 left-1/3 size-[26rem] rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,color-mix(in_srgb,var(--background)_35%,transparent))]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,var(--background)_88%)]" />
     </div>
   );
 }
