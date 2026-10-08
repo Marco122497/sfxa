@@ -1,10 +1,10 @@
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
-const chumSans = Plus_Jakarta_Sans({
+const chumSans = Outfit({
   subsets: ["latin"],
   variable: "--font-chum-sans",
   display: "swap",

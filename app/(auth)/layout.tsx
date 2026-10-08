@@ -19,15 +19,13 @@ export default function AuthLayout({
           <AuthBackground />
           <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12">
             <div className="mb-8 flex flex-col items-center text-center">
-              <div className="mb-5 flex size-20 items-center justify-center rounded-3xl bg-card/80 shadow-[0_12px_40px_rgb(16_24_40_/_8%)] ring-1 ring-border/80 backdrop-blur sm:size-24">
-                <img
-                  src="/SFXA.png"
-                  alt="SXFP Finance"
-                  width={128}
-                  height={128}
-                  className="size-16 object-contain sm:size-20"
-                />
-              </div>
+              <img
+                src="/SFXA.png"
+                alt="SXFP Finance"
+                width={128}
+                height={128}
+                className="mb-4 size-28 object-contain sm:size-32"
+              />
               <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                 SFXP Finance
               </p>
