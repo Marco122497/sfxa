@@ -51,86 +51,86 @@
 
 :root {
   --font-display: var(--font-chum-sans);
-  --chum-green: #0f766e;
-  --chum-green-deep: #134e4a;
-  --chum-green-soft: #e8f6f4;
+  --chum-green: #465fff;
+  --chum-green-deep: #3641f5;
+  --chum-green-soft: #ecf3ff;
   --chum-ink: #101828;
   --chum-muted: #667085;
-  --chum-amber: #d97757;
-  --background: #f4f6f8;
+  --chum-amber: #7592ff;
+  --background: #f9fafb;
   --foreground: #101828;
   --card: #ffffff;
   --card-foreground: #101828;
   --popover: #ffffff;
   --popover-foreground: #101828;
-  --primary: #0f766e;
+  --primary: #465fff;
   --primary-foreground: #ffffff;
-  --secondary: #eef2f4;
-  --secondary-foreground: #101828;
-  --muted: #eef2f4;
+  --secondary: #f2f4f7;
+  --secondary-foreground: #344054;
+  --muted: #f2f4f7;
   --muted-foreground: #667085;
-  --accent: #e8f6f4;
-  --accent-foreground: #115e59;
-  --destructive: oklch(0.55 0.18 25);
-  --border: #e6eaee;
-  --input: #e6eaee;
-  --ring: #0f766e;
-  --chart-1: #0d9488;
-  --chart-2: #f59e0b;
-  --chart-3: #3b82f6;
-  --chart-4: #8b5cf6;
-  --chart-5: #ec4899;
-  --chart-6: #14b8a6;
-  --radius: 0.9rem;
+  --accent: #ecf3ff;
+  --accent-foreground: #3641f5;
+  --destructive: #f04438;
+  --border: #e4e7ec;
+  --input: #e4e7ec;
+  --ring: #465fff;
+  --chart-1: #465fff;
+  --chart-2: #f79009;
+  --chart-3: #12b76a;
+  --chart-4: #7a5af8;
+  --chart-5: #ee46bc;
+  --chart-6: #0ba5ec;
+  --radius: 0.75rem;
   --sidebar: #ffffff;
-  --sidebar-foreground: #101828;
-  --sidebar-primary: #0f766e;
+  --sidebar-foreground: #344054;
+  --sidebar-primary: #465fff;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8f6f4;
-  --sidebar-accent-foreground: #115e59;
-  --sidebar-border: #e8edf1;
-  --sidebar-ring: #0f766e;
+  --sidebar-accent: #f2f4f7;
+  --sidebar-accent-foreground: #101828;
+  --sidebar-border: #e4e7ec;
+  --sidebar-ring: #465fff;
 }
 
 .dark {
-  --chum-green: #2dd4bf;
-  --chum-green-deep: #ccfbf1;
-  --chum-green-soft: #134e4a;
-  --chum-ink: #f8fafc;
-  --chum-muted: #94a3b8;
-  --chum-amber: #fb923c;
-  --background: #0b0f14;
-  --foreground: #f8fafc;
-  --card: #141a22;
-  --card-foreground: #f8fafc;
-  --popover: #141a22;
-  --popover-foreground: #f8fafc;
-  --primary: #2dd4bf;
-  --primary-foreground: #042f2e;
-  --secondary: #1c2430;
-  --secondary-foreground: #f8fafc;
-  --muted: #1c2430;
-  --muted-foreground: #94a3b8;
-  --accent: #134e4a;
-  --accent-foreground: #ccfbf1;
-  --destructive: oklch(0.7 0.16 25);
-  --border: #243041;
-  --input: #243041;
-  --ring: #2dd4bf;
-  --chart-1: #2dd4bf;
-  --chart-2: #fbbf24;
-  --chart-3: #60a5fa;
-  --chart-4: #a78bfa;
-  --chart-5: #f472b6;
-  --chart-6: #34d399;
-  --sidebar: #10161d;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #042f2e;
-  --sidebar-accent: #134e4a;
-  --sidebar-accent-foreground: #ccfbf1;
-  --sidebar-border: #243041;
-  --sidebar-ring: #2dd4bf;
+  --chum-green: #7592ff;
+  --chum-green-deep: #c2d6ff;
+  --chum-green-soft: #1d2939;
+  --chum-ink: #f9fafb;
+  --chum-muted: #98a2b3;
+  --chum-amber: #9cb9ff;
+  --background: #101828;
+  --foreground: #f9fafb;
+  --card: #1a2231;
+  --card-foreground: #f9fafb;
+  --popover: #1a2231;
+  --popover-foreground: #f9fafb;
+  --primary: #465fff;
+  --primary-foreground: #ffffff;
+  --secondary: #1d2939;
+  --secondary-foreground: #f9fafb;
+  --muted: #1d2939;
+  --muted-foreground: #98a2b3;
+  --accent: #1d2939;
+  --accent-foreground: #c2d6ff;
+  --destructive: #f97066;
+  --border: #344054;
+  --input: #344054;
+  --ring: #465fff;
+  --chart-1: #7592ff;
+  --chart-2: #fdb022;
+  --chart-3: #32d583;
+  --chart-4: #9b8afb;
+  --chart-5: #f670c7;
+  --chart-6: #36bffa;
+  --sidebar: #101828;
+  --sidebar-foreground: #d0d5dd;
+  --sidebar-primary: #465fff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1d2939;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #1d2939;
+  --sidebar-ring: #465fff;
 }
 
 @layer base {
@@ -140,10 +140,6 @@
   body {
     @apply bg-background font-sans text-foreground;
     font-family: var(--font-chum-sans), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-    background-image:
-      radial-gradient(900px 420px at 0% -8%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 62%),
-      radial-gradient(720px 360px at 100% 0%, color-mix(in srgb, var(--chum-amber) 8%, transparent), transparent 58%);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -369,12 +365,10 @@
 }
 
 .student-chum [data-slot="card"] {
-  border-radius: 1.15rem;
+  border-radius: 1rem;
   background: var(--card);
-  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
-  box-shadow:
-    0 1px 1px rgb(16 24 40 / 3%),
-    0 10px 28px rgb(16 24 40 / 4%);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 5%);
   --tw-ring-shadow: 0 0 #0000;
   --tw-ring-offset-shadow: 0 0 #0000;
   outline: none;
@@ -382,9 +376,8 @@
 
 .student-chum [data-slot="button"],
 .student-chum a[class*="bg-primary"] {
-  border-radius: 999px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  border-radius: 0.5rem;
+  font-weight: 500;
   box-shadow: none;
 }
 
@@ -400,8 +393,8 @@
 .student-chum [data-slot="select-trigger"],
 .student-chum textarea,
 .student-chum select {
-  border-radius: 0.85rem;
-  background: color-mix(in srgb, var(--card) 80%, transparent);
+  border-radius: 0.5rem;
+  background: var(--background);
 }
 
 .student-chum [data-slot="table-header"] {
@@ -480,13 +473,13 @@
 }
 
 .student-chum [data-slot="page-heading-icon"] {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.9rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
   border-color: transparent;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--chum-green-deep);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent);
+  background: var(--accent);
+  color: var(--primary);
+  box-shadow: none;
 }
 
 .student-chum h1 {
@@ -494,29 +487,17 @@
 }
 
 .student-chum [data-slot="tabs-list"] {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--muted) 80%, transparent);
+  border-radius: 0.5rem;
+  background: var(--muted);
   padding: 0.2rem;
 }
 
 .student-chum [data-slot="tabs-trigger"][data-active] {
-  border-radius: 999px;
+  border-radius: 0.375rem;
   background: var(--card);
-  color: var(--chum-green-deep);
-  font-weight: 600;
+  color: var(--primary);
+  font-weight: 500;
   box-shadow: 0 1px 2px rgb(16 24 40 / 8%);
-}
-
-.chum-app,
-.student-chum {
-  --sidebar: color-mix(in srgb, var(--card) 88%, transparent);
-  --sidebar-foreground: var(--chum-ink);
-  --sidebar-primary: var(--chum-green);
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: var(--chum-green-soft);
-  --sidebar-accent-foreground: var(--chum-green-deep);
-  --sidebar-border: color-mix(in srgb, var(--border) 80%, transparent);
-  --sidebar-ring: var(--chum-green);
 }
 
 .chum-app [data-slot="app-topbar"],
@@ -538,11 +519,27 @@ html:has([data-slot="sidebar-wrapper"]) {
   scrollbar-gutter: auto;
 }
 
+.chum-app [data-sidebar="group-label"],
+.student-chum [data-sidebar="group-label"] {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.chum-app [data-sidebar="menu"],
+.student-chum [data-sidebar="menu"] {
+  gap: 0.125rem;
+}
+
 .chum-app [data-sidebar="menu-button"],
-.student-chum [data-sidebar="menu-button"],
+.student-chum [data-sidebar="menu-button"] {
+  height: 2.5rem;
+  border-radius: 0.5rem;
+}
+
 .chum-app [data-sidebar="menu-sub-button"],
 .student-chum [data-sidebar="menu-sub-button"] {
-  border-radius: 0.8rem;
+  border-radius: 0.5rem;
 }
 
 .chum-app [data-sidebar="menu-button"][data-active],
@@ -553,17 +550,18 @@ html:has([data-slot="sidebar-wrapper"]) {
 .student-chum [data-sidebar="menu-sub-button"][data-active],
 .chum-app [data-slot="sidebar-menu-sub-button"][data-active],
 .student-chum [data-slot="sidebar-menu-sub-button"][data-active] {
-  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
-  color: var(--chum-green-deep) !important;
-  font-weight: 600;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent) !important;
+  color: var(--chum-green) !important;
+  font-weight: 500;
+  box-shadow: none;
 }
 
-.chum-app [data-sidebar="menu-button"]:hover,
-.student-chum [data-sidebar="menu-button"]:hover,
-.chum-app [data-sidebar="menu-sub-button"]:hover,
-.student-chum [data-sidebar="menu-sub-button"]:hover {
-  background: color-mix(in srgb, var(--chum-green) 10%, transparent);
+.chum-app [data-sidebar="menu-button"]:hover:not([data-active]),
+.student-chum [data-sidebar="menu-button"]:hover:not([data-active]),
+.chum-app [data-sidebar="menu-sub-button"]:hover:not([data-active]),
+.student-chum [data-sidebar="menu-sub-button"]:hover:not([data-active]) {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-accent-foreground);
 }
 
 .chum-app [data-slot="alert-dialog-content"],
@@ -585,29 +583,32 @@ html:has([data-slot="sidebar-wrapper"]) {
 
 .dark .student-chum,
 .dark .chum-app {
-  --chum-ink: #f8fafc;
-  --chum-muted: #94a3b8;
-  --chum-green-soft: #134e4a;
-  --foreground: var(--chum-ink);
-  --card: #141a22;
-  --card-foreground: var(--chum-ink);
-  --muted: #1c2430;
-  --muted-foreground: var(--chum-muted);
-  --border: #243041;
-  --input: #243041;
-  --secondary: #1c2430;
-  --secondary-foreground: var(--chum-ink);
-  --sidebar: #10161d;
-  --sidebar-foreground: var(--chum-ink);
-  --sidebar-accent: #134e4a;
-  --sidebar-accent-foreground: #ccfbf1;
-  --sidebar-border: #243041;
+  --chum-ink: #f9fafb;
+  --chum-muted: #98a2b3;
+  --chum-green: #7592ff;
+  --chum-green-deep: #c2d6ff;
+  --chum-green-soft: #1d2939;
+  --foreground: #f9fafb;
+  --card: #1a2231;
+  --card-foreground: #f9fafb;
+  --muted: #1d2939;
+  --muted-foreground: #98a2b3;
+  --border: #344054;
+  --input: #344054;
+  --secondary: #1d2939;
+  --secondary-foreground: #f9fafb;
+  --sidebar: #101828;
+  --sidebar-foreground: #d0d5dd;
+  --sidebar-accent: #1d2939;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #1d2939;
+  --sidebar-primary: #465fff;
 }
 
 .dark .student-chum [data-slot="card"] {
   background: var(--card);
-  border-color: rgb(255 255 255 / 8%);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);
+  border-color: #1d2939;
+  box-shadow: none;
 }
 
 .dark .chum-app [data-slot="app-topbar"],
@@ -616,13 +617,14 @@ html:has([data-slot="sidebar-wrapper"]) {
 }
 
 .dark .student-chum .student-chum-choice {
-  background: #141a22;
-  border-color: #243041;
+  background: #1a2231;
+  border-color: #344054;
 }
 
 .dark .student-chum .student-chum-choice:hover,
 .dark .student-chum .student-chum-choice:has(:checked) {
-  background: #134e4a;
+  background: #1d2939;
+  border-color: #465fff;
 }
 
 .dark .student-chum .student-chum-tip {

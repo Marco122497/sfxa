@@ -23,7 +23,7 @@ export function PageHeading({
               <Icon className="size-4" aria-hidden />
             </span>
           ) : null}
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             <span className="student-chum-marker">{title}</span>
           </h1>
         </div>

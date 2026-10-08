@@ -461,7 +461,7 @@ function CollapsibleNavItem({
         <CollapsibleTrigger
           render={
             <SidebarMenuButton
-              isActive={parentActive}
+              isActive={isItemActive(activePath, item.url, home)}
               className={isLoading ? "opacity-80" : undefined}
               onMouseEnter={() => {
                 item.children?.forEach((child) =>
@@ -534,7 +534,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" onClick={() => onNavigate(home)}>
-              <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-primary/15">
+              <div className="flex aspect-square size-10 items-center justify-center overflow-hidden rounded-lg bg-primary/10">
                 <img
                   src="/SFXA.png"
                   alt="SXFP Finance"

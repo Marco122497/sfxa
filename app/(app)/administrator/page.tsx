@@ -90,28 +90,15 @@ export default async function AdministratorDashboardPage() {
         icon={LayoutDashboardIcon}
       />
 
-      <div className="space-y-3">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {primaryCards.map((card) => (
-            <SummaryStatCard
-              key={card.title}
-              title={card.title}
-              value={card.value}
-              icon={card.icon}
-            />
-          ))}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {secondaryCards.map((card) => (
-            <SummaryStatCard
-              key={card.title}
-              title={card.title}
-              value={card.value}
-              icon={card.icon}
-              variant="secondary"
-            />
-          ))}
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {[...primaryCards, ...secondaryCards].map((card) => (
+          <SummaryStatCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            icon={card.icon}
+          />
+        ))}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">

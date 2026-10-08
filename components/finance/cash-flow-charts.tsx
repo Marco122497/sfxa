@@ -6,8 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   XAxis,
@@ -310,13 +308,13 @@ export function CashFlowLineChart({
         <CardTitle>{title}</CardTitle>
         <CardDescription>{RANGE_DESCRIPTION[range]}</CardDescription>
         <CardAction>
-          <div className="flex rounded-lg border border-border p-0.5">
+          <div className="flex items-center gap-0.5 rounded-lg bg-muted p-1">
             {RANGE_OPTIONS.map((option) => (
               <Button
                 key={option.id}
                 type="button"
                 size="xs"
-                variant={range === option.id ? "secondary" : "ghost"}
+                variant={range === option.id ? "default" : "ghost"}
                 aria-pressed={range === option.id}
                 onClick={() => setRange(option.id)}
               >
@@ -334,23 +332,29 @@ export function CashFlowLineChart({
         ) : (
           <ChartContainer
             config={lineChartConfig}
-            className="aspect-auto h-[250px] w-full"
-            initialDimension={{ width: 640, height: 250 }}
+            className="aspect-auto h-[320px] w-full"
+            initialDimension={{ width: 640, height: 320 }}
           >
-            <LineChart
+            <BarChart
               key={range}
               accessibilityLayer
               data={chartData}
               margin={{
-                left: 12,
-                right: 12,
+                left: 0,
+                right: 8,
                 top: 12,
               }}
             >
-              <CartesianGrid vertical={false} />
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <YAxis
-                hide
-                domain={[0, (dataMax: number) => dataMax * 1.25]}
+                width={44}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={4}
+                domain={[0, (dataMax: number) => dataMax * 1.15]}
+                tickFormatter={(value: number) =>
+                  value >= 1000 ? `${Math.round(value / 1000)}k` : String(value)
+                }
               />
               <XAxis
                 dataKey="date"
@@ -386,21 +390,19 @@ export function CashFlowLineChart({
                 }
               />
               <ChartLegend content={<ChartLegendContent />} />
-              <Line
+              <Bar
                 dataKey="inflow"
-                type="monotone"
-                stroke="var(--color-inflow)"
-                strokeWidth={2}
-                dot={range !== "daily"}
+                fill="var(--color-inflow)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={16}
               />
-              <Line
+              <Bar
                 dataKey="outflow"
-                type="monotone"
-                stroke="var(--color-outflow)"
-                strokeWidth={2}
-                dot={range !== "daily"}
+                fill="var(--color-outflow)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={16}
               />
-            </LineChart>
+            </BarChart>
           </ChartContainer>
         )}
       </CardContent>
@@ -456,7 +458,7 @@ export function IncomeSourcesPieChart({ data }: { data: IncomeSourceSlice[] }) {
             innerRadius={48}
             outerRadius={88}
             strokeWidth={2}
-            stroke="#ffffff"
+            stroke="var(--card)"
           >
             {data.map((item) => (
               <Cell key={item.category} fill={item.fill} />
