@@ -4,10 +4,14 @@ export const ROLES = [
   "Parish Officer",
 ] as const;
 
-export const PROTECTED_ADMIN_EMAIL = "admin@sfxa.com";
+export const BACKUP_ADMIN_EMAIL = "superadmin@sfxa.com";
 
 export function isProtectedAdminAccount(email: string | null | undefined) {
-  return email?.trim().toLowerCase() === PROTECTED_ADMIN_EMAIL;
+  return email?.trim().toLowerCase() === BACKUP_ADMIN_EMAIL;
+}
+
+export function isBackupAdminAccount(email: string | null | undefined) {
+  return isProtectedAdminAccount(email);
 }
 
 export type UserRole = (typeof ROLES)[number];

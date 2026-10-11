@@ -15,7 +15,7 @@ import {
 
 export default async function AdminUsersPage() {
   const { user } = await requireAdmin();
-  const { users, error } = await loadAdminUsers();
+  const { users, error } = await loadAdminUsers(user.email);
 
   return (
     <div className="space-y-6">

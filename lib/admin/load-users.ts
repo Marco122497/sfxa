@@ -1,7 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Profile } from "@/lib/auth/roles";
+import {
+  isBackupAdminAccount,
+  type Profile,
+} from "@/lib/auth/roles";
 
-export async function loadAdminUsers(): Promise<{
+export async function loadAdminUsers(viewerEmail?: string | null): Promise<{
   users: Profile[];
   error: string | null;
 }> {
@@ -21,11 +24,15 @@ export async function loadAdminUsers(): Promise<{
       ])
     );
 
+    const users = ((data ?? []) as Profile[]).map((profile) => ({
+      ...profile,
+      email: emailById.get(profile.id) ?? null,
+    }));
+
     return {
-      users: ((data ?? []) as Profile[]).map((profile) => ({
-        ...profile,
-        email: emailById.get(profile.id) ?? null,
-      })),
+      users: isBackupAdminAccount(viewerEmail)
+        ? users
+        : users.filter((profile) => !isBackupAdminAccount(profile.email)),
       error: null,
     };
   } catch {
