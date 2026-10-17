@@ -11,6 +11,9 @@ INSERT INTO parish_settings (id, parish_priest_name)
 VALUES (1, 'Parish Priest')
 ON CONFLICT (id) DO NOTHING;
 
+ALTER TABLE parish_settings
+    ADD COLUMN IF NOT EXISTS fake_login_error BOOLEAN NOT NULL DEFAULT FALSE;
+
 ALTER TABLE parish_settings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Authenticated read parish settings" ON parish_settings;

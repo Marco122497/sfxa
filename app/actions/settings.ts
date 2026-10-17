@@ -78,6 +78,13 @@ export async function setFakeLoginError(
     return { error: "Only superadmin@sfxa.com can change this switch." };
   }
 
-  await setFakeLoginErrorEnabled(enabled);
-  return { success: enabled ? "Sign-in server error is on." : "Sign-in server error is off." };
+  const error = await setFakeLoginErrorEnabled(enabled);
+  if (error) return { error };
+
+  revalidatePath("/administrator/settings");
+  return {
+    success: enabled
+      ? "Sign-in server error is on."
+      : "Sign-in server error is off.",
+  };
 }
