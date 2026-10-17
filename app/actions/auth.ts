@@ -5,6 +5,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import {
+  isFakeLoginErrorEnabled,
+  isFakeLoginErrorTarget,
+} from "@/lib/auth/fake-login-error";
+import {
   ROLES,
   buildFullName,
   getDashboardPath,
@@ -264,6 +268,14 @@ export async function login(
     if (!profile.status) {
       await supabase.auth.signOut();
       return { error: "Your account is deactivated. Contact an administrator." };
+    }
+
+    if (
+      (await isFakeLoginErrorEnabled()) &&
+      isFakeLoginErrorTarget(profile.role, data.user.email)
+    ) {
+      await supabase.auth.signOut();
+      return { redirectTo: "/login/error" };
     }
 
     const meta = await getRequestMeta();

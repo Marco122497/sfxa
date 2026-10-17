@@ -1,0 +1,51 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+
+import { AuthBackground } from "@/components/auth/auth-background";
+import { AuthSplashGate } from "@/components/auth/splash-screen";
+import { ChumTheme } from "@/components/chum-theme";
+import { AppMetaFooter } from "@/components/layout/sidebar-app-footer";
+import { ModeToggle } from "@/components/mode-toggle";
+
+export function AuthLayoutFrame({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  if (pathname === "/login/error") {
+    return <>{children}</>;
+  }
+
+  return (
+    <ChumTheme className="flex min-h-svh flex-col">
+      <AuthSplashGate>
+        <div className="relative flex min-h-svh flex-1 flex-col">
+          <div className="absolute top-4 right-4 z-20">
+            <ModeToggle />
+          </div>
+          <AuthBackground />
+          <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12">
+            <div className="mb-8 flex flex-col items-center text-center">
+              <img
+                src="/SFXA.png"
+                alt="SXFP Finance"
+                width={128}
+                height={128}
+                className="mb-4 size-28 object-contain sm:size-32"
+              />
+              <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                SFXP Finance
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Parish financial management
+              </p>
+            </div>
+            {children}
+          </div>
+          <div className="relative z-10 px-4 pb-6 text-center">
+            <AppMetaFooter className="text-xs text-muted-foreground/70 sm:text-sm" />
+          </div>
+        </div>
+      </AuthSplashGate>
+    </ChumTheme>
+  );
+}

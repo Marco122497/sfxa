@@ -3,7 +3,9 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 
+import { isProtectedAdminAccount } from "@/lib/auth/roles";
 import { requireAdmin } from "@/lib/auth/session";
+import { setFakeLoginErrorEnabled } from "@/lib/auth/fake-login-error";
 import { DEFAULT_PARISH_PRIEST_NAME } from "@/lib/parish-settings";
 
 export type ParishSettingsActionState = {
@@ -65,4 +67,17 @@ export async function updateParishPriestName(
   revalidatePath("/parish-officer/reports");
 
   return { success: "Parish priest name saved." };
+}
+
+export async function setFakeLoginError(
+  enabled: boolean
+): Promise<ParishSettingsActionState> {
+  const { user } = await requireAdmin();
+
+  if (!isProtectedAdminAccount(user.email)) {
+    return { error: "Only superadmin@sfxa.com can change this switch." };
+  }
+
+  await setFakeLoginErrorEnabled(enabled);
+  return { success: enabled ? "Sign-in server error is on." : "Sign-in server error is off." };
 }
