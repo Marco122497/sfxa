@@ -58,8 +58,8 @@ export function FormalReportDocument({
       id="report-print-area"
       className="formal-report mx-auto bg-white text-[#111111]"
     >
-      <header>
-        <div className="mx-auto flex items-center justify-center gap-3">
+      <header className="formal-report-header text-center">
+        <div className="formal-report-letterhead">
           <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden">
             <Image
               src="/SFXA.png"
@@ -98,7 +98,7 @@ export function FormalReportDocument({
           SXFP Finance – {data.title}
         </p>
 
-        <p className="mt-4 text-[12px] italic text-[#4b5563]">
+        <p className="mt-4 text-center text-[12px] italic text-[#4b5563]">
           Printed: {formatDate(generatedAt.toISOString().slice(0, 10))}
         </p>
 
