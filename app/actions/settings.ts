@@ -7,6 +7,7 @@ import { isProtectedAdminAccount } from "@/lib/auth/roles";
 import { requireAdmin } from "@/lib/auth/session";
 import { setFakeLoginErrorEnabled } from "@/lib/auth/fake-login-error";
 import { DEFAULT_PARISH_PRIEST_NAME } from "@/lib/parish-settings";
+import { formatMoney } from "@/lib/format";
 
 export type ParishSettingsActionState = {
   error?: string;
@@ -67,6 +68,64 @@ export async function updateParishPriestName(
   revalidatePath("/parish-officer/reports");
 
   return { success: "Parish priest name saved." };
+}
+
+export async function updateTransactionLimit(
+  _prev: ParishSettingsActionState,
+  formData: FormData
+): Promise<ParishSettingsActionState> {
+  const { supabase, user } = await requireAdmin();
+  const raw = String(formData.get("transaction_limit") || "").trim();
+  const transaction_limit = Number(raw);
+
+  if (!Number.isFinite(transaction_limit) || transaction_limit < 0) {
+    return { error: "Enter a transaction limit of 0 or more." };
+  }
+
+  const { error } = await supabase
+    .from("parish_settings")
+    .update({
+      transaction_limit,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1);
+
+  if (error) {
+    if (/transaction_limit|column|schema/i.test(error.message)) {
+      return {
+        error:
+          "Transaction limit is not set up yet. Run sql/phase8-panel.sql in the Supabase SQL editor, then try again.",
+      };
+    }
+    return { error: missingTableMessage(error.message) };
+  }
+
+  const headerStore = await headers();
+  const ip =
+    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    headerStore.get("x-real-ip") ||
+    null;
+
+  await supabase.from("audit_logs").insert({
+    user_id: user.id,
+    action: "UPDATE_TRANSACTION_LIMIT",
+    table_name: "parish_settings",
+    record_id: 1,
+    description: `Set transaction limit to ${transaction_limit}`,
+    ip_address: ip,
+  });
+
+  revalidatePath("/administrator/settings");
+  revalidatePath("/administrator/finance", "layout");
+  revalidatePath("/treasurer/receive", "layout");
+  revalidatePath("/treasurer/expenses");
+  revalidatePath("/parish-officer/donate");
+
+  const label =
+    transaction_limit <= 0
+      ? "Transaction limit removed."
+      : `Transaction limit set to ${formatMoney(transaction_limit)}.`;
+  return { success: label };
 }
 
 export async function setFakeLoginError(

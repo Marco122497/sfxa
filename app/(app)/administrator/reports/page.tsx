@@ -33,7 +33,7 @@ export default async function AdminReportsPage({
       <div className="print:hidden">
         <PageHeading
           title="Financial Reports"
-          description="Generate and view financial reports for church services, collections, donations, other income, expenses, and budget utilization, then print the document."
+          description="Each walk-in payment with its official receipt number, plus expenses, budget lines, and the user accountability report."
           icon={FileTextIcon}
           actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />

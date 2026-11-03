@@ -3,13 +3,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { incomeCategoryLabel } from "@/lib/income";
 import { incomeServiceReportLabel } from "@/lib/income-access";
 import { loadIncomeKindFor } from "@/lib/income-kind";
+import { isPostedPayment } from "@/lib/payments";
 import { toNumber } from "@/lib/format";
 import {
   getAdminReportTypeMeta,
   getIncomeReportTypeMeta,
+  getReportTypeMeta,
+  isIncomeReportType,
   type AdminReportType,
+  type ReportType,
 } from "@/lib/reports";
 import {
+  getAccountabilityReport,
+  getBudgetReport,
+  getExpenseReport as getDetailedExpenseReport,
   getIncomeKindFormalReport,
   type FormalReportData,
   type ReportBreakdownItem,
@@ -94,10 +101,30 @@ export async function getAdminFormalReportData(
         type
       );
     case "expenses":
-      return getExpenseReport(supabase, from, to, meta.title);
+      return getDetailedExpenseReport(supabase, from, to, meta.title);
     case "budget":
-      return getBudgetUtilizationReport(supabase, from, to, meta.title);
+      return getBudgetReport(supabase, from, to, meta.title);
+    case "accountability":
+      return getAccountabilityReport(supabase, from, to, meta.title);
   }
+}
+
+/** Totals only. Used by the treasurer and parish member reports. */
+export async function getLimitedFormalReportData(
+  supabase: SupabaseClient,
+  type: ReportType,
+  from: string,
+  to: string
+): Promise<FormalReportData> {
+  const meta = getReportTypeMeta(type);
+
+  if (isIncomeReportType(type)) {
+    return getAdminIncomeOversight(supabase, type, from, to, meta.title);
+  }
+  if (type === "expenses") {
+    return getExpenseReport(supabase, from, to, meta.title);
+  }
+  return getBudgetUtilizationReport(supabase, from, to, meta.title);
 }
 
 async function getFinancialSummaryReport(
@@ -116,7 +143,7 @@ async function getFinancialSummaryReport(
     supabase
       .from("donations")
       .select(
-        "amount, category_id, donation_date, donation_categories(category_name)"
+        "amount, category_id, donation_date, status, donation_categories(category_name)"
       )
       .gte("donation_date", from)
       .lte("donation_date", to),
@@ -157,6 +184,7 @@ async function getFinancialSummaryReport(
   const otherIncomeBreakdown = new Map<string, number>();
 
   for (const row of donations ?? []) {
+    if ("status" in row && row.status === "pending") continue;
     const amount = toNumber(row.amount);
     const category =
       relationName(
@@ -361,6 +389,139 @@ async function getFinancialSummaryReport(
   };
 }
 
+async function getAdminIncomeOversight(
+  supabase: SupabaseClient,
+  type: AdminReportType,
+  from: string,
+  to: string,
+  title: string
+): Promise<FormalReportData> {
+  const kind = getIncomeReportTypeMeta(
+    type as "church_services" | "collections" | "donations" | "other_income"
+  ).kind;
+  const [kindFor, detailed] = await Promise.all([
+    loadIncomeKindFor(supabase),
+    supabase
+      .from("donations")
+      .select(
+        "donation_id, category_id, amount, or_number, status, donation_categories(category_name)"
+      )
+      .gte("donation_date", from)
+      .lte("donation_date", to),
+  ]);
+
+  const donations = detailed.error
+    ? (
+        await supabase
+          .from("donations")
+          .select(
+            "donation_id, category_id, amount, donation_categories(category_name)"
+          )
+          .gte("donation_date", from)
+          .lte("donation_date", to)
+      ).data
+    : detailed.data;
+
+  const totals = new Map<string, { count: number; withOr: number; amount: number }>();
+  let postedCount = 0;
+  let withOr = 0;
+  let total = 0;
+
+  for (const row of donations ?? []) {
+    const typeName =
+      relationName(
+        row.donation_categories as
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null
+      ) || "Uncategorized";
+    if (kindFor(typeName, row.category_id) !== kind) continue;
+
+    const status = "status" in row ? (row.status as string | null) : null;
+    if (!isPostedPayment(status)) continue;
+
+    const label = incomeServiceReportLabel(typeName);
+    const amount = toNumber(row.amount);
+    const hasOr = "or_number" in row && Boolean(String(row.or_number || "").trim());
+    const bucket = totals.get(label) ?? { count: 0, withOr: 0, amount: 0 };
+    bucket.count += 1;
+    bucket.amount += amount;
+    if (hasOr) bucket.withOr += 1;
+    totals.set(label, bucket);
+    postedCount += 1;
+    total += amount;
+    if (hasOr) withOr += 1;
+  }
+
+  const columns: ReportColumn[] = [
+    { key: "type", label: "Type" },
+    { key: "count", label: "Payments", align: "right" },
+    { key: "withOr", label: "With OR number", align: "right" },
+    { key: "amount", label: "Amount", align: "right" },
+  ];
+
+  const rows: ReportRow[] = [...totals.entries()]
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([label, bucket]) => ({
+      id: label,
+      amount: bucket.amount,
+      cells: {
+        type: label,
+        count: String(bucket.count),
+        withOr: String(bucket.withOr),
+        amount: formatMoneyPlain(bucket.amount),
+      },
+    }));
+
+  return {
+    type,
+    title,
+    from,
+    to,
+    metrics: [
+      {
+        id: "total",
+        label: incomeCategoryLabel(kind),
+        value: formatMoneyPlain(total),
+        tone: "green",
+      },
+      {
+        id: "count",
+        label: "Payments received",
+        value: String(postedCount),
+        tone: "navy",
+      },
+      {
+        id: "or",
+        label: "With OR number",
+        value: String(withOr),
+        tone: "gold",
+      },
+      {
+        id: "types",
+        label: "Types",
+        value: String(totals.size),
+        tone: "purple",
+      },
+    ],
+    columns,
+    rows,
+    summaryLines: [
+      { label: incomeCategoryLabel(kind), amount: total, emphasis: true },
+    ],
+    breakdown: buildBreakdown(
+      new Map([...totals.entries()].map(([label, bucket]) => [label, bucket.amount]))
+    ),
+    tableTitle: "Totals by Type",
+    notes:
+      "Totals by type. The administrator report lists each walk-in payment, such as a wedding, with its official receipt number.",
+    exportRows: [
+      columns.map((col) => col.label),
+      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
+    ],
+  };
+}
+
 async function getExpenseReport(
   supabase: SupabaseClient,
   from: string,
@@ -402,65 +563,46 @@ async function getExpenseReport(
     data = fallback.data as typeof data;
   }
 
-  const creatorIds = [
-    ...new Set(
-      (data ?? [])
-        .map((row) => row.created_by)
-        .filter((id): id is string => Boolean(id))
-    ),
-  ];
-
-  const creatorNameById = new Map<string, string>();
-  if (creatorIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, role")
-      .in("id", creatorIds);
-    for (const profile of profiles ?? []) {
-      creatorNameById.set(
-        profile.id,
-        profile.full_name || profile.role || "—"
-      );
-    }
-  }
-
-  const amountsByCategory = new Map<string, number>();
+  const amountsByCategory = new Map<string, { count: number; amount: number }>();
   let total = 0;
 
-  const columns: ReportColumn[] = [
-    { key: "date", label: "Date" },
-    { key: "category", label: "Expense Category" },
-    { key: "description", label: "Description" },
-    { key: "amount", label: "Amount", align: "right" },
-    { key: "approved", label: "Approved By" },
-  ];
-
-  const rows: ReportRow[] = (data ?? []).map((row) => {
+  for (const row of data ?? []) {
     const category =
       relationName(row.expense_categories ?? null) || "Uncategorized";
     const amount = toNumber(row.amount);
+    const bucket = amountsByCategory.get(category) ?? { count: 0, amount: 0 };
+    bucket.count += 1;
+    bucket.amount += amount;
+    amountsByCategory.set(category, bucket);
     total += amount;
-    amountsByCategory.set(
-      category,
-      (amountsByCategory.get(category) ?? 0) + amount
-    );
+  }
 
-    return {
-      id: String(row.expense_id),
-      amount,
+  const columns: ReportColumn[] = [
+    { key: "category", label: "Expense Category" },
+    { key: "count", label: "Expenses", align: "right" },
+    { key: "amount", label: "Amount", align: "right" },
+  ];
+
+  const rows: ReportRow[] = [...amountsByCategory.entries()]
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([category, bucket]) => ({
+      id: category,
+      amount: bucket.amount,
       cells: {
-        date: row.expense_date,
         category,
-        description: row.description?.trim() || "—",
-        amount: formatMoneyPlain(amount),
-        approved: row.created_by
-          ? creatorNameById.get(row.created_by) || "—"
-          : "—",
+        count: String(bucket.count),
+        amount: formatMoneyPlain(bucket.amount),
       },
-    };
-  });
+    }));
 
-  const breakdown = buildBreakdown(amountsByCategory);
+  const breakdown = buildBreakdown(
+    new Map(
+      [...amountsByCategory.entries()].map(([label, bucket]) => [
+        label,
+        bucket.amount,
+      ])
+    )
+  );
   const metrics: ReportMetric[] = [
     {
       id: "total",
@@ -471,7 +613,9 @@ async function getExpenseReport(
     {
       id: "count",
       label: "Number of Expenses",
-      value: String(rows.length),
+      value: String(
+        [...amountsByCategory.values()].reduce((sum, bucket) => sum + bucket.count, 0)
+      ),
       tone: "navy",
     },
     {
@@ -482,7 +626,7 @@ async function getExpenseReport(
     },
     {
       id: "average",
-      label: "Average Expense",
+      label: "Average per category",
       value: formatMoneyPlain(rows.length ? total / rows.length : 0),
       tone: "purple",
     },
@@ -504,13 +648,13 @@ async function getExpenseReport(
       })),
     ],
     breakdown,
-    tableTitle: "Expense Transactions",
+    tableTitle: "Totals by Category",
     notes:
-      "Approved By shows the staff member who recorded the expense when available.",
+      "Totals by expense category. The administrator expense report lists each expense on its own line.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "Total Expenses", formatMoneyPlain(total), ""],
+      ["Total", String(rows.reduce((sum, row) => sum + Number(row.cells.count), 0)), formatMoneyPlain(total)],
     ],
   };
 }

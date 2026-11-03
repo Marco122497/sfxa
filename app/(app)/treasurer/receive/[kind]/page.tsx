@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 
 import { requireTreasurer } from "@/lib/auth/session";
+import { nextOfficialReceiptNumber } from "@/lib/payments";
+import { getTransactionLimit } from "@/lib/parish-settings";
 import { loadReceiveIncome } from "@/lib/treasurer/receive-income";
 import {
   isDonationLike,
@@ -10,7 +12,6 @@ import { loadIncomeCategories } from "@/lib/income-categories-server";
 import { getIncomeCategoryIcon } from "@/components/income-category-icon";
 import { TreasurerPageHeader } from "@/components/treasurer/treasurer-page-header";
 import { DonationManager } from "@/components/treasurer/donation-manager";
-import { ReceivePendingDonations } from "@/components/treasurer/receive-pending-donations";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default async function TreasurerReceiveKindPage({
@@ -18,7 +19,11 @@ export default async function TreasurerReceiveKindPage({
 }: {
   params: Promise<{ kind: string }>;
 }) {
-  await requireTreasurer();
+  const { supabase } = await requireTreasurer();
+  const [transactionLimit, suggestedOrNumber] = await Promise.all([
+    getTransactionLimit(supabase),
+    nextOfficialReceiptNumber(supabase),
+  ]);
   const { kind } = await params;
   const incomeCategories = await loadIncomeCategories();
   const meta = resolveIncomeCategory(incomeCategories, kind);
@@ -31,9 +36,6 @@ export default async function TreasurerReceiveKindPage({
   const { categories, rows: mapped } = await loadReceiveIncome(meta.code, {
     withStatus: withPending,
   });
-  const pending = withPending
-    ? mapped.filter((row) => row.status === "pending")
-    : [];
   const rows = withPending
     ? mapped.filter((row) => row.status !== "pending")
     : mapped;
@@ -45,17 +47,10 @@ export default async function TreasurerReceiveKindPage({
         title={`Receive ${meta.name}`}
         description={
           meta.description ||
-          "Record cash inflow for this income category. Select the type created by the Administrator."
+          "Record a walk-in payment and its official receipt number."
         }
         icon={CategoryIcon}
       />
-      {pending.length > 0 ? (
-        <Card>
-          <CardContent className="pt-6">
-            <ReceivePendingDonations rows={pending} />
-          </CardContent>
-        </Card>
-      ) : null}
       <Card size="sm">
         <CardContent className="px-3 py-0">
           <DonationManager
@@ -65,6 +60,9 @@ export default async function TreasurerReceiveKindPage({
             categories={categories}
             defaultCategoryId={categories[0]?.category_id}
             title={meta.name}
+            suggestedOrNumber={suggestedOrNumber}
+            transactionLimit={transactionLimit}
+            enforceLimit
           />
         </CardContent>
       </Card>

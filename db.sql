@@ -151,6 +151,9 @@ CREATE TABLE IF NOT EXISTS donations (
     amount NUMERIC(12, 2) NOT NULL,
     donation_date DATE NOT NULL,
     remarks TEXT,
+    or_number VARCHAR(40),
+    payment_method VARCHAR(40),
+    status VARCHAR(20) DEFAULT 'received',
     created_by UUID REFERENCES profiles(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

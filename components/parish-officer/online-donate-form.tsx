@@ -39,6 +39,11 @@ export function OnlineDonateForm({
           <AlertDescription>{state.success}</AlertDescription>
         </Alert>
       ) : null}
+      <p className="text-sm text-muted-foreground">
+        A parish payment such as a wedding receives an official receipt number
+        at the counter. This online payment receives its OR number when the
+        treasurer processes it.
+      </p>
       <div className="space-y-2">
         <Label htmlFor="category_id">Donation type</Label>
         <select id="category_id" name="category_id" required className={selectClassName}>
@@ -53,16 +58,6 @@ export function OnlineDonateForm({
       <div className="space-y-2">
         <Label htmlFor="amount">Amount (₱)</Label>
         <Input id="amount" name="amount" type="number" min="1" step="0.01" required />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="payment_method">Payment method</Label>
-        <select id="payment_method" name="payment_method" required className={selectClassName}>
-          <option value="">Select method</option>
-          <option value="GCash">GCash</option>
-          <option value="Bank Transfer">Bank Transfer</option>
-          <option value="Maya">Maya</option>
-          <option value="Cash Pickup">Cash Pickup</option>
-        </select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="remarks">Notes (optional)</Label>

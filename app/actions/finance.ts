@@ -15,6 +15,15 @@ import {
 } from "@/lib/expense-budget";
 import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { getActualCashAmount } from "@/lib/cash-flow";
+import {
+  exceedsTransactionLimit,
+  nextOfficialReceiptNumber,
+  normalizeOrNumber,
+  orNumberSchemaMessage,
+  transactionLimitMessage,
+} from "@/lib/payments";
+import { getTransactionLimit } from "@/lib/parish-settings";
+import { recordFinanceHistory } from "@/lib/finance-history";
 
 export type FinanceActionState = {
   error?: string;
@@ -54,6 +63,9 @@ function revalidateFinance() {
   revalidatePath("/administrator/finance", "layout");
   revalidatePath("/administrator");
   revalidatePath("/administrator/reports");
+  revalidatePath("/treasurer/reports");
+  revalidatePath("/parish-officer/reports");
+  revalidatePath("/treasurer/history");
   revalidatePath("/parish-officer/budget");
   revalidatePath("/");
 }
@@ -197,6 +209,51 @@ async function ensureExpenseWithinBudget(
   return null;
 }
 
+async function ensureWithinTransactionLimit(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  role: string,
+  amount: number
+) {
+  const limit = await getTransactionLimit(supabase);
+  if (!exceedsTransactionLimit(amount, limit, role)) return null;
+  return transactionLimitMessage(limit);
+}
+
+async function resolveOrNumber(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  raw: string,
+  exceptId?: number
+) {
+  const orNumber = normalizeOrNumber(raw) || (await nextOfficialReceiptNumber(supabase));
+  if (!orNumber) {
+    return {
+      orNumber: "",
+      error:
+        "Official receipt numbers are not set up yet. Run sql/phase8-panel.sql in the Supabase SQL editor, then try again.",
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("donations")
+    .select("donation_id")
+    .eq("or_number", orNumber)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      orNumber: "",
+      error: orNumberSchemaMessage(error.message) ?? error.message,
+    };
+  }
+  if (data && data.donation_id !== exceptId) {
+    return {
+      orNumber: "",
+      error: "This OR number is already used on another payment.",
+    };
+  }
+  return { orNumber, error: null };
+}
+
 async function ensureExpenseWithinCash(amount: number, credit = 0) {
   const cash = await getActualCashAmount();
   const available = Math.max(0, cash + credit);
@@ -218,17 +275,31 @@ export async function createDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user, profile } = await requireTreasurerOrAdmin();
 
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
   const category_id = Number(formData.get("category_id"));
   const amount = parseAmount(formData.get("amount"));
   const donation_date = String(formData.get("donation_date") || "").trim();
   const remarks = String(formData.get("remarks") || "").trim() || null;
+  const payment_method = "Cash";
 
   if (!category_id || !amount || !donation_date) {
     return { error: "Category, amount, and date are required." };
   }
+
+  const limitError = await ensureWithinTransactionLimit(
+    supabase,
+    profile.role,
+    amount
+  );
+  if (limitError) return { error: limitError };
+
+  const or = await resolveOrNumber(
+    supabase,
+    String(formData.get("or_number") || "")
+  );
+  if (or.error) return { error: or.error };
 
   const { data, error } = await supabase
     .from("donations")
@@ -238,13 +309,16 @@ export async function createDonation(
       amount,
       donation_date,
       remarks,
+      or_number: or.orNumber,
+      payment_method,
+      status: "received",
       created_by: user.id,
     })
     .select("donation_id")
     .single();
 
   if (error) {
-    return { error: error.message };
+    return { error: orNumberSchemaMessage(error.message) ?? error.message };
   }
 
   await supabase.from("audit_logs").insert({
@@ -252,19 +326,35 @@ export async function createDonation(
     action: "CREATE_DONATION",
     table_name: "donations",
     record_id: data.donation_id,
-    description: `Created donation of ${amount}`,
+    description: `Created donation of ${amount} (${or.orNumber})`,
     ip_address: await getIp(),
   });
 
+  const copy = recordCopyFromForm(formData);
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "RECORDED_PAYMENT",
+    source: "counter",
+    orNumber: or.orNumber,
+    amount,
+    recordTable: "donations",
+    recordId: data.donation_id,
+    summary: `Recorded ${copy.singular.toLowerCase()} ${formatMoney(amount)} with OR ${or.orNumber}.`,
+  });
+
   revalidateFinance();
-  return { success: recordCopyFromForm(formData).recordedMessage };
+  return {
+    success: `${copy.recordedMessage} OR ${or.orNumber}.`,
+  };
 }
 
 export async function updateDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user, profile } = await requireAdmin();
 
   const donation_id = Number(formData.get("donation_id"));
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
@@ -272,10 +362,18 @@ export async function updateDonation(
   const amount = parseAmount(formData.get("amount"));
   const donation_date = String(formData.get("donation_date") || "").trim();
   const remarks = String(formData.get("remarks") || "").trim() || null;
+  const payment_method = "Cash";
 
   if (!donation_id || !category_id || !amount || !donation_date) {
     return { error: "Category, amount, and date are required." };
   }
+
+  const or = await resolveOrNumber(
+    supabase,
+    String(formData.get("or_number") || ""),
+    donation_id
+  );
+  if (or.error) return { error: or.error };
 
   const { error } = await supabase
     .from("donations")
@@ -285,11 +383,13 @@ export async function updateDonation(
       amount,
       donation_date,
       remarks,
+      or_number: or.orNumber,
+      payment_method,
     })
     .eq("donation_id", donation_id);
 
   if (error) {
-    return { error: error.message };
+    return { error: orNumberSchemaMessage(error.message) ?? error.message };
   }
 
   await supabase.from("audit_logs").insert({
@@ -301,6 +401,19 @@ export async function updateDonation(
     ip_address: await getIp(),
   });
 
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "UPDATED_PAYMENT",
+    source: "counter",
+    orNumber: or.orNumber,
+    amount,
+    recordTable: "donations",
+    recordId: donation_id,
+    summary: `Updated payment #${donation_id} to ${formatMoney(amount)} with OR ${or.orNumber}.`,
+  });
+
   revalidateFinance();
   return { success: recordCopyFromForm(formData).updatedMessage };
 }
@@ -309,12 +422,18 @@ export async function deleteDonation(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user, profile } = await requireAdmin();
   const donation_id = Number(formData.get("donation_id"));
 
   if (!donation_id) {
     return { error: "Invalid donation." };
   }
+
+  const { data: existing } = await supabase
+    .from("donations")
+    .select("amount, or_number")
+    .eq("donation_id", donation_id)
+    .maybeSingle();
 
   const { error } = await supabase
     .from("donations")
@@ -334,6 +453,19 @@ export async function deleteDonation(
     ip_address: await getIp(),
   });
 
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "DELETED_PAYMENT",
+    source: "counter",
+    orNumber: existing?.or_number,
+    amount: existing ? toNumber(existing.amount) : null,
+    recordTable: "donations",
+    recordId: donation_id,
+    summary: `Deleted payment #${donation_id}${existing?.or_number ? ` (OR ${existing.or_number})` : ""}. The history entry remains.`,
+  });
+
   revalidateFinance();
   return { success: recordCopyFromForm(formData).deletedMessage };
 }
@@ -342,7 +474,7 @@ export async function createExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireTreasurerOrAdmin();
+  const { supabase, user, profile } = await requireTreasurerOrAdmin();
 
   const expense_category_id = Number(formData.get("expense_category_id"));
   const expense_subcategory_id = Number(
@@ -428,6 +560,18 @@ export async function createExpense(
     ip_address: await getIp(),
   });
 
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "RECORDED_EXPENSE",
+    source: "expense",
+    amount,
+    recordTable: "expenses",
+    recordId: data.expense_id,
+    summary: `Recorded expense ${sub.subcategory_name} of ${formatMoney(amount)}.`,
+  });
+
   revalidateFinance();
   return { success: "Expense recorded." };
 }
@@ -436,7 +580,7 @@ export async function updateExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user, profile } = await requireAdmin();
 
   const expense_id = Number(formData.get("expense_id"));
   const expense_category_id = Number(formData.get("expense_category_id"));
@@ -533,6 +677,18 @@ export async function updateExpense(
     ip_address: await getIp(),
   });
 
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "UPDATED_EXPENSE",
+    source: "expense",
+    amount,
+    recordTable: "expenses",
+    recordId: expense_id,
+    summary: `Updated expense #${expense_id} to ${formatMoney(amount)}.`,
+  });
+
   revalidateFinance();
   return { success: "Expense updated." };
 }
@@ -541,12 +697,18 @@ export async function deleteExpense(
   _prev: FinanceActionState,
   formData: FormData
 ): Promise<FinanceActionState> {
-  const { supabase, user } = await requireAdmin();
+  const { supabase, user, profile } = await requireAdmin();
   const expense_id = Number(formData.get("expense_id"));
 
   if (!expense_id) {
     return { error: "Invalid expense." };
   }
+
+  const { data: existing } = await supabase
+    .from("expenses")
+    .select("amount, description")
+    .eq("expense_id", expense_id)
+    .maybeSingle();
 
   const { error } = await supabase
     .from("expenses")
@@ -564,6 +726,18 @@ export async function deleteExpense(
     record_id: expense_id,
     description: `Deleted expense #${expense_id}`,
     ip_address: await getIp(),
+  });
+
+  await recordFinanceHistory(supabase, {
+    userId: user.id,
+    actorName: profile.full_name,
+    actorRole: profile.role,
+    action: "DELETED_EXPENSE",
+    source: "expense",
+    amount: existing ? toNumber(existing.amount) : null,
+    recordTable: "expenses",
+    recordId: expense_id,
+    summary: `Deleted expense #${expense_id}${existing?.description ? ` (${existing.description})` : ""}. The history entry remains.`,
   });
 
   revalidateFinance();

@@ -168,6 +168,11 @@ function getNavItems(
         icon: ClipboardListIcon,
       },
       {
+        title: "Transaction History",
+        url: "/administrator/history",
+        icon: HistoryIcon,
+      },
+      {
         title: "Audit Logs",
         url: "/administrator/audit",
         icon: ShieldIcon,
@@ -229,6 +234,11 @@ function getNavItems(
         title: "Reports",
         url: "/treasurer/reports",
         icon: ClipboardListIcon,
+      },
+      {
+        title: "Transaction History",
+        url: "/treasurer/history",
+        icon: HistoryIcon,
       },
       {
         title: "Parish Information",

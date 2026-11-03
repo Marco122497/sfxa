@@ -6,6 +6,7 @@ import { getBudgetModuleData } from "@/lib/treasurer/budget-data";
 import { getActualCashAmount } from "@/lib/cash-flow";
 import { toExpenseBudgetCaps } from "@/lib/expense-budget";
 import { formatMoney } from "@/lib/format";
+import { getTransactionLimit } from "@/lib/parish-settings";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
 import { ExpenseManager } from "@/components/treasurer/expense-manager";
 import {
@@ -19,6 +20,7 @@ import {
 export default async function AdminExpensesPage() {
   await requireAdmin();
   const supabase = await createClient();
+  const transactionLimit = await getTransactionLimit(supabase);
 
   const [
     { data: categories },
@@ -136,6 +138,7 @@ export default async function AdminExpensesPage() {
             subcategories={subcategoriesResult.data ?? []}
             budgetCaps={budgetCaps}
             actualCash={cashOnHand}
+            transactionLimit={transactionLimit}
             canEdit
             canDelete
           />

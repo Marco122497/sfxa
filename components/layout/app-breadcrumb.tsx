@@ -42,7 +42,7 @@ const pageLabels: Record<string, string> = {
   services: "Church Services",
   other: "Other Income",
   "cash-flow": "Cash Flow",
-  donate: "Donate Online",
+  donate: "Parish Payments",
   "my-donations": "My Donations",
   history: "Donation History",
   "parish-info": "Parish Information",
@@ -106,6 +106,13 @@ export function AppBreadcrumb({
   }
   if (leaf === "history" && segments.includes("budgets")) {
     pageLabel = "Budget History";
+  }
+  if (
+    leaf === "history" &&
+    (segments[0] === "treasurer" || segments[0] === "administrator") &&
+    !segments.includes("budgets")
+  ) {
+    pageLabel = "Transaction History";
   }
 
   return (

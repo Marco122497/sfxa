@@ -6,7 +6,7 @@ import {
   resolveReportDateRange,
   type ParishReportType,
 } from "@/lib/reports";
-import { getAdminFormalReportData } from "@/lib/admin/reports-data";
+import { getLimitedFormalReportData } from "@/lib/admin/reports-data";
 import { getParishPriestName } from "@/lib/parish-settings";
 import { FormalReportDocument } from "@/components/reports/formal-report-document";
 import { ReportExportButtons } from "@/components/reports/report-export-buttons";
@@ -24,7 +24,7 @@ export default async function ParishOfficerReportsPage({
     ? params.type
     : "church_services";
   const { from, to } = resolveReportDateRange(params);
-  const data = await getAdminFormalReportData(supabase, type, from, to);
+  const data = await getLimitedFormalReportData(supabase, type, from, to);
   const parishPriestName = await getParishPriestName(supabase);
   const generatedAt = new Date();
 
@@ -33,7 +33,7 @@ export default async function ParishOfficerReportsPage({
       <div className="print:hidden">
         <PageHeading
           title="Financial Reports"
-          description="View church services, collections, donations, other income, and expense reports, then print the document."
+          description="Totals for church services, collections, donations, other income, and expenses."
           icon={FileTextIcon}
           actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />

@@ -1,6 +1,9 @@
 import { HeartHandshakeIcon } from "lucide-react";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { isDonationLike } from "@/lib/income-categories";
+import { nextOfficialReceiptNumber } from "@/lib/payments";
+import { getTransactionLimit } from "@/lib/parish-settings";
 import { loadReceiveIncome } from "@/lib/treasurer/receive-income";
 import { formatMoney, toNumber } from "@/lib/format";
 import { loadIncomeCategories } from "@/lib/income-categories-server";
@@ -10,16 +13,23 @@ import { DonationManager } from "@/components/treasurer/donation-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function AdminIncomeMonitoringPage() {
-  await requireAdmin();
+  const { supabase } = await requireAdmin();
+  const [transactionLimit, suggestedOrNumber] = await Promise.all([
+    getTransactionLimit(supabase),
+    nextOfficialReceiptNumber(supabase),
+  ]);
   const incomeCategories = await loadIncomeCategories();
   const datasets = await Promise.all(
     incomeCategories.map(async (category) => {
-      const data = await loadReceiveIncome(category.code);
-      const total = data.rows.reduce(
-        (sum, row) => sum + toNumber(row.amount),
-        0
-      );
-      return { ...category, ...data, total };
+      const withPending = isDonationLike(category.code, category.name);
+      const data = await loadReceiveIncome(category.code, {
+        withStatus: withPending,
+      });
+      const rows = withPending
+        ? data.rows.filter((row) => row.status !== "pending")
+        : data.rows;
+      const total = rows.reduce((sum, row) => sum + toNumber(row.amount), 0);
+      return { ...category, ...data, rows, total };
     })
   );
   const incomeTotal = datasets.reduce((sum, item) => sum + item.total, 0);
@@ -74,6 +84,8 @@ export default async function AdminIncomeMonitoringPage() {
                 title={item.name}
                 canEdit
                 canDelete
+                suggestedOrNumber={suggestedOrNumber}
+                transactionLimit={transactionLimit}
               />
             </CardContent>
           </Card>

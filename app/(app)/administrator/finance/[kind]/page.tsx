@@ -1,8 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { isDonationLike, resolveIncomeCategory } from "@/lib/income-categories";
+import { nextOfficialReceiptNumber } from "@/lib/payments";
+import { getTransactionLimit } from "@/lib/parish-settings";
 import { loadReceiveIncome } from "@/lib/treasurer/receive-income";
-import { resolveIncomeCategory } from "@/lib/income-categories";
 import { loadIncomeCategories } from "@/lib/income-categories-server";
 import { getIncomeCategoryIcon } from "@/components/income-category-icon";
 import { FinancePageHeader } from "@/components/administrator/finance-page-header";
@@ -14,7 +16,11 @@ export default async function AdminFinanceKindPage({
 }: {
   params: Promise<{ kind: string }>;
 }) {
-  await requireAdmin();
+  const { supabase } = await requireAdmin();
+  const [transactionLimit, suggestedOrNumber] = await Promise.all([
+    getTransactionLimit(supabase),
+    nextOfficialReceiptNumber(supabase),
+  ]);
   const { kind } = await params;
 
   const incomeCategories = await loadIncomeCategories();
@@ -24,7 +30,13 @@ export default async function AdminFinanceKindPage({
     redirect(`/administrator/finance/${meta.code}`);
   }
 
-  const { categories, rows } = await loadReceiveIncome(meta.code);
+  const withPending = isDonationLike(meta.code, meta.name);
+  const { categories, rows: mapped } = await loadReceiveIncome(meta.code, {
+    withStatus: withPending,
+  });
+  const rows = withPending
+    ? mapped.filter((row) => row.status !== "pending")
+    : mapped;
   const CategoryIcon = getIncomeCategoryIcon(meta.code, meta.name);
 
   return (
@@ -48,6 +60,8 @@ export default async function AdminFinanceKindPage({
             title={meta.name}
             canEdit
             canDelete
+            suggestedOrNumber={suggestedOrNumber}
+            transactionLimit={transactionLimit}
           />
         </CardContent>
       </Card>

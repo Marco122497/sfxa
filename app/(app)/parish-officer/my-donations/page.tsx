@@ -25,7 +25,7 @@ export default async function MyDonationsPage() {
     <div className="space-y-6">
       <ParishViewPageHeader
         title="My Donations"
-        description="Donations you submitted online, with treasurer receive status."
+        description="Donations recorded at the parish under your name."
         icon={WalletIcon}
       />
       <Card>

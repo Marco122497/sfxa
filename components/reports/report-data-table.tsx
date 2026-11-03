@@ -52,9 +52,10 @@ export function ReportDataTable({
                   {columns.map((col) => {
                     const raw = row.cells[col.key] ?? "—";
                     const display =
-                      col.key === "date" && /^\d{4}-\d{2}-\d{2}/.test(raw)
+                      col.key === "date" && /^\d{4}-\d{2}-\d{2}/.test(raw.split("\n")[0] ?? "")
                         ? formatReportShortDate(raw.slice(0, 10))
                         : raw;
+                    const [top, bottom] = display.split("\n");
 
                     return (
                       <td
@@ -64,7 +65,14 @@ export function ReportDataTable({
                           col.align === "right" && "text-right tabular-nums"
                         )}
                       >
-                        {display}
+                        {col.stacked && bottom ? (
+                          <div>
+                            <div>{top}</div>
+                            <div className="text-[11px] text-[#6b7280]">{bottom}</div>
+                          </div>
+                        ) : (
+                          display
+                        )}
                       </td>
                     );
                   })}

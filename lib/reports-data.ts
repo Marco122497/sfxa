@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { type IncomeCategoryId } from "@/lib/income";
+import { displayRoleName, incomeCategoryLabel, type IncomeCategoryId } from "@/lib/income";
 import {
   incomeAccessTypeLabel,
   incomeServiceReportLabel,
@@ -14,6 +14,7 @@ import {
   isIncomeReportType,
   type ReportType,
 } from "@/lib/reports";
+import { isPostedPayment } from "@/lib/payments";
 import { relationName } from "@/lib/treasurer/relations";
 
 export type ReportMetric = {
@@ -27,6 +28,8 @@ export type ReportColumn = {
   key: string;
   label: string;
   align?: "left" | "right";
+  /** Name on the first line, role on the second. */
+  stacked?: boolean;
 };
 
 export type ReportRowBreakdownItem = {
@@ -130,6 +133,30 @@ export async function getFormalReportData(
   return getBudgetReport(supabase, from, to, meta.title);
 }
 
+type Recorder = { name: string; role: string };
+
+export async function loadRecorders(
+  supabase: SupabaseClient,
+  ids: (string | null | undefined)[]
+) {
+  const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+  const map = new Map<string, Recorder>();
+  if (unique.length === 0) return map;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, role")
+    .in("id", unique);
+
+  for (const row of data ?? []) {
+    map.set(row.id, {
+      name: row.full_name?.trim() || "—",
+      role: displayRoleName(row.role),
+    });
+  }
+  return map;
+}
+
 const INCOME_KIND_REPORT: Record<
   IncomeCategoryId,
   {
@@ -180,7 +207,7 @@ const INCOME_KIND_REPORT: Record<
   church_service: {
     fallbackType: "Church Service",
     extraKey: "extra",
-    extraLabel: "Remarks",
+    extraLabel: "",
     typeColumn: "Service Type",
     countLabel: "Number of Services",
     totalLabel: "Total Church Services",
@@ -189,12 +216,12 @@ const INCOME_KIND_REPORT: Record<
     tableTitle: "Church Service Transactions",
     notes:
       "This report reflects church service income recorded within the specified period.",
-    extraValue: (row) => row.remarks?.trim() || "—",
+    extraValue: () => "",
   },
   other_income: {
     fallbackType: "Other Income",
     extraKey: "extra",
-    extraLabel: "Remarks",
+    extraLabel: "",
     typeColumn: "Income Type",
     countLabel: "Number of Receipts",
     totalLabel: "Total Other Income",
@@ -203,7 +230,7 @@ const INCOME_KIND_REPORT: Record<
     tableTitle: "Other Income Transactions",
     notes:
       "This report reflects other income recorded within the specified period.",
-    extraValue: (row) => row.remarks?.trim() || "—",
+    extraValue: () => "",
   },
 };
 
@@ -216,19 +243,43 @@ export async function getIncomeKindFormalReport(
   type: string
 ): Promise<FormalReportData> {
   const config = INCOME_KIND_REPORT[kind];
-  const [kindFor, donationsResult] = await Promise.all([
+  const detailedSelect =
+    "donation_id, donor_name, category_id, amount, donation_date, remarks, or_number, payment_method, created_by, status, donation_categories(category_name)";
+  const basicSelect =
+    "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)";
+
+  const [kindFor, detailedResult] = await Promise.all([
     loadIncomeKindFor(supabase),
     supabase
       .from("donations")
-      .select(
-        "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
-      )
+      .select(detailedSelect)
       .gte("donation_date", from)
       .lte("donation_date", to)
       .order("donation_date", { ascending: true }),
   ]);
 
-  const filtered = (donationsResult.data ?? []).filter((row) => {
+  const donationsResult = detailedResult.error
+    ? await supabase
+        .from("donations")
+        .select(basicSelect)
+        .gte("donation_date", from)
+        .lte("donation_date", to)
+        .order("donation_date", { ascending: true })
+    : detailedResult;
+
+  const posted = (donationsResult.data ?? []).filter((row) =>
+    isPostedPayment(
+      "status" in row ? (row.status as string | null) : undefined
+    )
+  );
+  const recorders = await loadRecorders(
+    supabase,
+    posted.map((row) =>
+      "created_by" in row ? (row.created_by as string | null) : null
+    )
+  );
+
+  const filtered = posted.filter((row) => {
     const categoryName = relationName(
       row.donation_categories as
         | { category_name?: string }
@@ -243,9 +294,13 @@ export async function getIncomeKindFormalReport(
 
   const columns: ReportColumn[] = [
     { key: "date", label: "Date" },
-    { key: config.extraKey, label: config.extraLabel },
+    { key: "or", label: "OR No." },
+    ...(config.extraLabel
+      ? [{ key: config.extraKey, label: config.extraLabel }]
+      : []),
     { key: "type", label: config.typeColumn },
     { key: "access", label: "Public / Private" },
+    { key: "recorded", label: "Recorded by" },
     { key: "amount", label: "Amount", align: "right" },
   ];
 
@@ -271,14 +326,25 @@ export async function getIncomeKindFormalReport(
       (amountsByType.get(breakdownName) ?? 0) + amount
     );
 
+    const extra = config.extraValue(row, typeName);
+    const createdBy =
+      "created_by" in row ? (row.created_by as string | null) : null;
+    const recorder = createdBy ? recorders.get(createdBy) : undefined;
+    const orNumber =
+      "or_number" in row && row.or_number
+        ? String(row.or_number)
+        : "—";
+
     return {
       id: String(row.donation_id),
       amount,
       cells: {
         date: row.donation_date,
-        [config.extraKey]: config.extraValue(row, typeName),
+        or: orNumber,
+        [config.extraKey]: extra,
         type: baseName || typeName,
         access: incomeAccessTypeLabel(accessType),
+        recorded: recorder?.name || "—",
         amount: formatMoneyPlain(amount),
       },
     };
@@ -332,8 +398,8 @@ export async function getIncomeKindFormalReport(
     tableTitle: config.tableTitle,
     notes:
       publicTotal > 0 || privateTotal > 0
-        ? `${config.notes} Public and private types, such as Wedding (Public) and Wedding (Private), are listed separately.`
-        : config.notes,
+        ? `${config.notes} Each walk-in cash payment is listed with its official receipt number and the user who recorded it. Public and private types, such as Wedding (Public) and Wedding (Private), are listed separately.`
+        : `${config.notes} Each walk-in cash payment is listed with its official receipt number and the user who recorded it.`,
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
@@ -346,7 +412,7 @@ export async function getIncomeKindFormalReport(
   };
 }
 
-async function getExpenseReport(
+export async function getExpenseReport(
   supabase: SupabaseClient,
   from: string,
   to: string,
@@ -355,7 +421,7 @@ async function getExpenseReport(
   const result = await supabase
     .from("expenses")
     .select(
-      "expense_id, expense_category_id, expense_subcategory_id, description, amount, expense_date, expense_categories(category_name), expense_subcategories(subcategory_name)"
+      "expense_id, expense_category_id, expense_subcategory_id, description, amount, expense_date, created_by, expense_categories(category_name), expense_subcategories(subcategory_name)"
     )
     .gte("expense_date", from)
     .lte("expense_date", to)
@@ -376,6 +442,12 @@ async function getExpenseReport(
 
   const amountsByCategory = new Map<string, number>();
   let total = 0;
+  const recorders = await loadRecorders(
+    supabase,
+    (data ?? []).map((row) =>
+      "created_by" in row ? (row.created_by as string | null) : null
+    )
+  );
 
   const rows: ReportRow[] = (data ?? []).map((row) => {
     const category =
@@ -400,6 +472,9 @@ async function getExpenseReport(
       (amountsByCategory.get(category) ?? 0) + amount
     );
 
+    const createdBy =
+      "created_by" in row ? (row.created_by as string | null) : null;
+
     return {
       id: String(row.expense_id),
       amount,
@@ -408,6 +483,7 @@ async function getExpenseReport(
         category,
         subcategory,
         description: row.description?.trim() || "—",
+        recorded: createdBy ? recorders.get(createdBy)?.name || "—" : "—",
         amount: formatMoneyPlain(amount),
       },
     };
@@ -419,6 +495,7 @@ async function getExpenseReport(
     { key: "category", label: "Category" },
     { key: "subcategory", label: "Subcategory" },
     { key: "description", label: "Description" },
+    { key: "recorded", label: "Recorded by" },
     { key: "amount", label: "Amount (₱)", align: "right" },
   ];
 
@@ -476,16 +553,16 @@ async function getExpenseReport(
     summaryLines,
     breakdown,
     notes:
-      "This report reflects all expenses recorded within the specified period.",
+      "This report lists each expense with the user who recorded it.",
     exportRows: [
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
-      ["", "", "", "Grand Total", formatMoneyPlain(total)],
+      ["", "", "", "", "Grand Total", formatMoneyPlain(total)],
     ],
   };
 }
 
-async function getBudgetReport(
+export async function getBudgetReport(
   supabase: SupabaseClient,
   from: string,
   to: string,
@@ -636,7 +713,6 @@ async function getBudgetReport(
           allocated: formatMoneyPlain(allocated),
           spent: formatMoneyPlain(spent),
           remaining: formatMoneyPlain(remaining),
-          remarks: row.remarks?.trim() || "—",
         },
       });
     }
@@ -711,6 +787,227 @@ async function getBudgetReport(
         formatMoneyPlain(spentTotal),
         formatMoneyPlain(remainingTotal),
       ],
+    ],
+  };
+}
+
+export async function getAccountabilityReport(
+  supabase: SupabaseClient,
+  from: string,
+  to: string,
+  title: string
+): Promise<FormalReportData> {
+  const detailedSelect =
+    "donation_id, donor_name, category_id, amount, donation_date, remarks, or_number, payment_method, created_by, status, donation_categories(category_name)";
+  const basicSelect =
+    "donation_id, donor_name, category_id, amount, donation_date, remarks, created_by, donation_categories(category_name)";
+
+  const [kindFor, donationAttempt, expenseResult] = await Promise.all([
+    loadIncomeKindFor(supabase),
+    supabase
+      .from("donations")
+      .select(detailedSelect)
+      .gte("donation_date", from)
+      .lte("donation_date", to),
+    supabase
+      .from("expenses")
+      .select(
+        "expense_id, description, amount, expense_date, created_by, expense_categories(category_name), expense_subcategories(subcategory_name)"
+      )
+      .gte("expense_date", from)
+      .lte("expense_date", to),
+  ]);
+
+  const donationsResult = donationAttempt.error
+    ? await supabase
+        .from("donations")
+        .select(basicSelect)
+        .gte("donation_date", from)
+        .lte("donation_date", to)
+    : donationAttempt;
+
+  let expenses = expenseResult.data;
+  if (expenseResult.error) {
+    const fallback = await supabase
+      .from("expenses")
+      .select(
+        "expense_id, description, amount, expense_date, created_by, expense_categories(category_name)"
+      )
+      .gte("expense_date", from)
+      .lte("expense_date", to);
+    expenses = fallback.data as typeof expenses;
+  }
+
+  const donationRows = (donationsResult.data ?? []).filter((row) =>
+    isPostedPayment("status" in row ? (row.status as string | null) : undefined)
+  );
+
+  const recorders = await loadRecorders(supabase, [
+    ...donationRows.map((row) =>
+      "created_by" in row ? (row.created_by as string | null) : null
+    ),
+    ...(expenses ?? []).map((row) => row.created_by),
+  ]);
+
+  type Line = {
+    id: string;
+    sortId: number;
+    date: string;
+    user: string;
+    role: string;
+    transaction: string;
+    details: string;
+    orNumber: string;
+    amount: number;
+  };
+
+  const lines: Line[] = [];
+  const byUser = new Map<string, number>();
+  let incomeTotal = 0;
+  let expenseTotal = 0;
+
+  for (const row of donationRows) {
+    const typeName =
+      relationName(
+        row.donation_categories as
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null
+      ) || "Income";
+    const kind = kindFor(typeName, row.category_id);
+    const createdBy =
+      "created_by" in row ? (row.created_by as string | null) : null;
+    const recorder = createdBy ? recorders.get(createdBy) : undefined;
+    const amount = toNumber(row.amount);
+    const user = recorder?.name || "—";
+    incomeTotal += amount;
+    byUser.set(user, (byUser.get(user) ?? 0) + amount);
+    lines.push({
+      id: `donation-${row.donation_id}`,
+      sortId: Number(row.donation_id) || 0,
+      date: row.donation_date,
+      user,
+      role: recorder?.role || "—",
+      transaction: incomeCategoryLabel(kind),
+      details: typeName,
+      orNumber:
+        "or_number" in row && row.or_number ? String(row.or_number) : "—",
+      amount,
+    });
+  }
+
+  for (const row of expenses ?? []) {
+    const category =
+      relationName(
+        row.expense_categories as
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null
+      ) || "Expense";
+    const subcategory = relationName(
+      (row as { expense_subcategories?: unknown }).expense_subcategories as
+        | { subcategory_name?: string }
+        | { subcategory_name?: string }[]
+        | null,
+      "subcategory_name"
+    );
+    const recorder = row.created_by
+      ? recorders.get(row.created_by)
+      : undefined;
+    const amount = toNumber(row.amount);
+    const user = recorder?.name || "—";
+    expenseTotal += amount;
+    byUser.set(user, (byUser.get(user) ?? 0) + amount);
+    lines.push({
+      id: `expense-${row.expense_id}`,
+      sortId: Number(row.expense_id) || 0,
+      date: row.expense_date,
+      user,
+      role: recorder?.role || "—",
+      transaction: "Expense",
+      details: [category, subcategory, row.description?.trim()]
+        .filter(Boolean)
+        .join(" · "),
+      orNumber: "—",
+      amount,
+    });
+  }
+
+  lines.sort((a, b) => b.date.localeCompare(a.date) || b.sortId - a.sortId);
+
+  const columns: ReportColumn[] = [
+    { key: "date", label: "Date" },
+    { key: "user", label: "User", stacked: true },
+    { key: "transaction", label: "Transaction" },
+    { key: "details", label: "Details" },
+    { key: "or", label: "OR No." },
+    { key: "amount", label: "Amount", align: "right" },
+  ];
+
+  const rows: ReportRow[] = lines.map((line) => ({
+    id: line.id,
+    amount: line.amount,
+    cells: {
+      date: line.date,
+      user: `${line.user}\n${line.role}`,
+      transaction: line.transaction,
+      details: line.details || "—",
+      or: line.orNumber,
+      amount: formatMoneyPlain(line.amount),
+    },
+  }));
+
+  const users = new Set(lines.map((line) => line.user).filter((name) => name !== "—"));
+
+  return {
+    type: "accountability",
+    title,
+    from,
+    to,
+    metrics: [
+      {
+        id: "count",
+        label: "Transactions",
+        value: String(lines.length),
+        tone: "navy",
+      },
+      {
+        id: "users",
+        label: "Users",
+        value: String(users.size),
+        tone: "gold",
+      },
+      {
+        id: "income",
+        label: "Income recorded",
+        value: formatMoneyPlain(incomeTotal),
+        tone: "green",
+      },
+      {
+        id: "expenses",
+        label: "Expenses recorded",
+        value: formatMoneyPlain(expenseTotal),
+        tone: "purple",
+      },
+    ],
+    columns,
+    rows,
+    summaryLines: [
+      { label: "Income recorded", amount: incomeTotal },
+      { label: "Expenses recorded", amount: expenseTotal },
+      {
+        label: "Net recorded",
+        amount: incomeTotal - expenseTotal,
+        emphasis: true,
+      },
+    ],
+    breakdown: buildBreakdown(byUser),
+    tableTitle: "Transactions by User",
+    notes:
+      "Each line names the user and role accountable for the transaction, with the official receipt number on payments that have been received.",
+    exportRows: [
+      columns.map((col) => col.label),
+      ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
     ],
   };
 }

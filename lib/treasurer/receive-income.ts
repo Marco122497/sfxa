@@ -16,6 +16,8 @@ export type ReceiveIncomeRow = {
   remarks: string | null;
   category_name: string | null;
   status?: string;
+  or_number?: string | null;
+  payment_method?: string | null;
 };
 
 type DonationCategoryRow = {
@@ -166,6 +168,8 @@ export async function loadReceiveIncome(
     donation_date: string;
     remarks: string | null;
     status?: string | null;
+    or_number?: string | null;
+    payment_method?: string | null;
     donation_categories:
       | { category_name?: string }
       | { category_name?: string }[]
@@ -179,7 +183,7 @@ export async function loadReceiveIncome(
       ? await supabase
           .from("donations")
           .select(
-            "donation_id, donor_name, category_id, amount, donation_date, remarks, status, donation_categories(category_name)"
+            "donation_id, donor_name, category_id, amount, donation_date, remarks, status, or_number, payment_method, donation_categories(category_name)"
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
@@ -187,13 +191,13 @@ export async function loadReceiveIncome(
       : await supabase
           .from("donations")
           .select(
-            "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)"
+            "donation_id, donor_name, category_id, amount, donation_date, remarks, or_number, payment_method, donation_categories(category_name)"
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
           .limit(200);
 
-    if (first.error && options?.withStatus) {
+    if (first.error) {
       const fallback = await supabase
         .from("donations")
         .select(
@@ -218,6 +222,8 @@ export async function loadReceiveIncome(
       amount: row.amount,
       donation_date: String(row.donation_date),
       remarks: row.remarks,
+      or_number: row.or_number ?? null,
+      payment_method: row.payment_method ?? null,
       category_name:
         (categoryId != null ? nameById.get(categoryId) : null) ??
         relationName(row.donation_categories),

@@ -85,6 +85,8 @@ function ExpenseFormFields({
   defaults,
   idPrefix,
   onBlockedChange,
+  transactionLimit = 0,
+  enforceLimit = false,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
@@ -93,6 +95,8 @@ function ExpenseFormFields({
   defaults?: Partial<ExpenseRow>;
   idPrefix: string;
   onBlockedChange?: (blocked: boolean) => void;
+  transactionLimit?: number;
+  enforceLimit?: boolean;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const selectableCategories = useMemo(() => {
@@ -192,9 +196,15 @@ function ExpenseFormFields({
   const overBudget =
     remainingCents != null && amount !== "" && enteredCents > remainingCents;
   const overCash = amount !== "" && enteredCents > cashCents;
+  const overLimit =
+    enforceLimit &&
+    transactionLimit > 0 &&
+    amount !== "" &&
+    enteredCents > Math.round(transactionLimit * 100);
   const blocked =
     overBudget ||
     overCash ||
+    overLimit ||
     remaining == null ||
     remaining <= 0 ||
     availableCash <= 0 ||
@@ -299,6 +309,12 @@ function ExpenseFormFields({
             Actual cash: {formatMoney(availableCash)}
           </p>
         )}
+        {overLimit ? (
+          <p className="text-xs text-destructive" role="alert">
+            Amount cannot exceed the transaction limit of{" "}
+            {formatMoney(transactionLimit)}. An administrator must record it.
+          </p>
+        ) : null}
         {remaining != null && !overCash && availableCash > 0 ? (
           overBudget || remaining <= 0 ? (
             <p className="text-xs text-destructive" role="alert">
@@ -342,11 +358,15 @@ function AddExpenseDialog({
   subcategories,
   budgetCaps,
   actualCash,
+  transactionLimit,
+  enforceLimit,
 }: {
   categories: ExpenseCategory[];
   subcategories: ExpenseSubcategory[];
   budgetCaps: ExpenseBudgetCap[];
   actualCash: number;
+  transactionLimit: number;
+  enforceLimit: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [blocked, setBlocked] = useState(false);
@@ -394,6 +414,8 @@ function AddExpenseDialog({
             budgetCaps={budgetCaps}
             actualCash={actualCash}
             idPrefix="add"
+            transactionLimit={transactionLimit}
+            enforceLimit={enforceLimit}
             onBlockedChange={setBlocked}
           />
         </form>
@@ -597,6 +619,8 @@ export function ExpenseManager({
   actualCash = 0,
   canEdit = false,
   canDelete = false,
+  transactionLimit = 0,
+  enforceLimit = false,
 }: {
   expenses: ExpenseRow[];
   categories: ExpenseCategory[];
@@ -605,6 +629,8 @@ export function ExpenseManager({
   actualCash?: number;
   canEdit?: boolean;
   canDelete?: boolean;
+  transactionLimit?: number;
+  enforceLimit?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const showActions = canEdit || canDelete;
@@ -647,6 +673,8 @@ export function ExpenseManager({
             subcategories={subcategories}
             budgetCaps={budgetCaps}
             actualCash={actualCash}
+            transactionLimit={transactionLimit}
+            enforceLimit={enforceLimit}
           />
         </div>
       </div>

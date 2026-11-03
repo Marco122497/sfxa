@@ -35,8 +35,10 @@ export function FormalReportDocument({
   const breakdownTitle =
     data.type === "budget"
       ? "Allocation Breakdown"
-      : data.type === "expenses"
-        ? "Expenses by Category"
+      :     data.type === "expenses"
+      ? "Expenses by Category"
+      : data.type === "accountability"
+        ? "By User"
         : "Type Breakdown";
   const preparedDate = formatDate(generatedAt.toISOString().slice(0, 10));
 

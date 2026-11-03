@@ -347,6 +347,7 @@
   .formal-report table {
     break-inside: auto;
     page-break-inside: auto;
+    font-size: 10px;
   }
 
   .formal-report thead {

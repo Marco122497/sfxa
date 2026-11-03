@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,6 +60,8 @@ export type DonationRow = {
   donation_date: string;
   remarks: string | null;
   category_name: string | null;
+  or_number?: string | null;
+  payment_method?: string | null;
 };
 
 export type DonationManagerMode = "donation" | "collection";
@@ -89,14 +91,32 @@ function DonationFormFields({
   defaults,
   idPrefix,
   copy,
+  suggestedOrNumber = "",
+  transactionLimit = 0,
+  enforceLimit = false,
+  onBlockedChange,
 }: {
   categories: DonationCategory[];
   defaults?: Partial<DonationRow>;
   idPrefix: string;
   copy: IncomeRecordCopy;
+  suggestedOrNumber?: string;
+  transactionLimit?: number;
+  enforceLimit?: boolean;
+  onBlockedChange?: (blocked: boolean) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const showDonor = copy.showDonor;
+  const [amount, setAmount] = useState(String(defaults?.amount ?? ""));
+  const overLimit =
+    enforceLimit &&
+    transactionLimit > 0 &&
+    amount !== "" &&
+    Math.round(Number(amount) * 100) > Math.round(transactionLimit * 100);
+
+  useEffect(() => {
+    onBlockedChange?.(overLimit);
+  }, [onBlockedChange, overLimit]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -142,8 +162,15 @@ function DonationFormFields({
           min="0.01"
           step="0.01"
           required
-          defaultValue={defaults?.amount ?? ""}
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
         />
+        {overLimit ? (
+          <p className="text-xs text-destructive" role="alert">
+            Amount cannot exceed the transaction limit of{" "}
+            {formatMoney(transactionLimit)}. An administrator must record it.
+          </p>
+        ) : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-date`}>Date</Label>
@@ -155,6 +182,18 @@ function DonationFormFields({
           defaultValue={defaults?.donation_date ?? today}
         />
       </div>
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-or`}>OR number</Label>
+        <Input
+          id={`${idPrefix}-or`}
+          name="or_number"
+          required
+          maxLength={40}
+          defaultValue={defaults?.or_number ?? suggestedOrNumber}
+          placeholder={suggestedOrNumber || "OR-2026-0001"}
+        />
+      </div>
+      <input type="hidden" name="payment_method" value="Cash" />
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor={`${idPrefix}-remarks`}>Remarks</Label>
         <Input
@@ -172,12 +211,19 @@ function AddDonationDialog({
   categories,
   defaultCategoryId,
   copy,
+  suggestedOrNumber,
+  transactionLimit,
+  enforceLimit,
 }: {
   categories: DonationCategory[];
   defaultCategoryId?: number;
   copy: IncomeRecordCopy;
+  suggestedOrNumber: string;
+  transactionLimit: number;
+  enforceLimit: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [state, formAction, pending] = useServerAction(createDonation, initialState, () => setOpen(false));
   const formId = `add-${copy.formKey}-form`;
 
@@ -192,7 +238,14 @@ function AddDonationDialog({
           <AlertDialogTitle>{copy.addLabel}</AlertDialogTitle>
           <AlertDialogDescription>{copy.addDescription}</AlertDialogDescription>
         </AlertDialogHeader>
-        <form action={formAction} id={formId} className="space-y-4">
+        <form
+          action={formAction}
+          id={formId}
+          className="space-y-4"
+          onSubmit={(event) => {
+            if (blocked) event.preventDefault();
+          }}
+        >
           {state.error && (
             <Alert variant="destructive">
               <AlertDescription>{state.error}</AlertDescription>
@@ -207,6 +260,10 @@ function AddDonationDialog({
               categories={categories}
               idPrefix={`add-${copy.formKey}`}
               copy={copy}
+              suggestedOrNumber={suggestedOrNumber}
+              transactionLimit={transactionLimit}
+              enforceLimit={enforceLimit}
+              onBlockedChange={setBlocked}
               defaults={{
                 category_id: defaultCategoryId ?? categories[0]?.category_id,
               }}
@@ -218,7 +275,7 @@ function AddDonationDialog({
           <Button
             type="submit"
             form={formId}
-            disabled={pending || categories.length === 0}
+            disabled={pending || blocked || categories.length === 0}
           >
             {pending ? (
               <>
@@ -239,10 +296,12 @@ function EditDonationDialog({
   row,
   categories,
   copy,
+  suggestedOrNumber,
 }: {
   row: DonationRow;
   categories: DonationCategory[];
   copy: IncomeRecordCopy;
+  suggestedOrNumber: string;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useServerAction(updateDonation, initialState, () => setOpen(false));
@@ -295,6 +354,7 @@ function EditDonationDialog({
             idPrefix={`edit-${row.donation_id}`}
             copy={copy}
             defaults={row}
+            suggestedOrNumber={suggestedOrNumber}
           />
         </form>
         <AlertDialogFooter>
@@ -414,6 +474,9 @@ export function DonationManager({
   categoryName,
   canEdit = false,
   canDelete = false,
+  suggestedOrNumber = "",
+  transactionLimit = 0,
+  enforceLimit = false,
 }: {
   donations: DonationRow[];
   categories: DonationCategory[];
@@ -425,6 +488,9 @@ export function DonationManager({
   categoryName?: string;
   canEdit?: boolean;
   canDelete?: boolean;
+  suggestedOrNumber?: string;
+  transactionLimit?: number;
+  enforceLimit?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const copy = copyFromProps(mode, categoryCode, categoryName);
@@ -443,6 +509,8 @@ export function DonationManager({
         showDonor ? row.donor_name : null,
         row.category_name,
         row.remarks,
+        row.or_number,
+        row.payment_method,
         String(row.amount),
       ]
         .filter(Boolean)
@@ -472,6 +540,9 @@ export function DonationManager({
             categories={categories}
             defaultCategoryId={defaultCategoryId}
             copy={copy}
+            suggestedOrNumber={suggestedOrNumber}
+            transactionLimit={transactionLimit}
+            enforceLimit={enforceLimit}
           />
         </div>
       </div>
@@ -485,6 +556,7 @@ export function DonationManager({
           <TableHeader>
             <TableRow>
               <TableHead className="h-8 px-2">Date</TableHead>
+              <TableHead className="h-8 px-2">OR No.</TableHead>
               {showDonor && (
                 <TableHead className="h-8 px-2">Donor</TableHead>
               )}
@@ -506,6 +578,7 @@ export function DonationManager({
                 <TableCell className="px-2 py-1.5">
                   {formatDate(row.donation_date)}
                 </TableCell>
+                <TableCell className="px-2 py-1.5">{row.or_number || "—"}</TableCell>
                 {showDonor && (
                   <TableCell className="px-2 py-1.5">
                     {row.donor_name || "—"}
@@ -530,6 +603,7 @@ export function DonationManager({
                           row={row}
                           categories={categories}
                           copy={copy}
+                          suggestedOrNumber={suggestedOrNumber}
                         />
                       ) : null}
                       {canDelete ? (

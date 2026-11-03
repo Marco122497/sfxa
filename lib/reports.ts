@@ -54,6 +54,13 @@ export function getIncomeReportTypeMeta(type: IncomeReportType) {
   return INCOME_REPORT_TYPES.find((item) => item.id === type)!;
 }
 
+export const ACCOUNTABILITY_REPORT = {
+  id: "accountability",
+  label: "User Accountability",
+  title: "USER ACCOUNTABILITY REPORT",
+  code: "UA",
+} as const;
+
 export const REPORT_TYPES = [
   ...INCOME_REPORT_TYPES,
   { id: "expenses", label: "Expenses", title: "EXPENSE REPORT", code: "ER" },
@@ -90,6 +97,7 @@ export const ADMIN_REPORT_TYPES = [
     title: "BUDGET UTILIZATION REPORT",
     code: "BU",
   },
+  ACCOUNTABILITY_REPORT,
 ] as const;
 
 export type AdminReportType = (typeof ADMIN_REPORT_TYPES)[number]["id"];

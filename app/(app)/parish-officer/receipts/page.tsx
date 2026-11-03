@@ -25,7 +25,7 @@ export default async function MyReceiptsPage() {
     <div className="space-y-6">
       <ParishViewPageHeader
         title="My Receipts"
-        description="View and print a confirmation for each online donation."
+        description="Receipts for donations recorded at the parish."
         icon={ReceiptIcon}
       />
       <Card>
