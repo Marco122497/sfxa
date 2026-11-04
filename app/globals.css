@@ -244,6 +244,13 @@
   gap: 0.75rem;
 }
 
+.official-receipt-preview.formal-report {
+  width: 100%;
+  min-height: 0;
+  padding: 1.75rem 1.5rem 2rem;
+  box-shadow: none;
+}
+
 @media print {
   @page {
     margin: 14mm 16mm 18mm;
@@ -366,6 +373,32 @@
 
   .report-doc-footer {
     display: none !important;
+  }
+
+  html.printing-official-receipt body > *:not(:has(.formal-report)) {
+    display: none !important;
+  }
+
+  html.printing-official-receipt [data-slot="alert-dialog-overlay"] {
+    display: none !important;
+  }
+
+  html.printing-official-receipt [data-slot="alert-dialog-viewport"],
+  html.printing-official-receipt [data-slot="alert-dialog-content"] {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    z-index: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 }
 

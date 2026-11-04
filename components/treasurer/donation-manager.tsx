@@ -12,6 +12,7 @@ import {
   updateDonation,
   type FinanceActionState,
 } from "@/app/actions/finance";
+import { PrintOfficialReceiptButton } from "@/components/finance/official-receipt-document";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   incomeRecordCopy,
@@ -565,6 +566,9 @@ export function DonationManager({
               </TableHead>
               <TableHead className="h-8 px-2">Remarks</TableHead>
               <TableHead className="h-8 px-2 text-right">Amount</TableHead>
+              <TableHead className="h-8 w-12 px-2">
+                <span className="sr-only">Official receipt</span>
+              </TableHead>
               {showActions ? (
                 <TableHead className="h-8 w-12 px-2">
                   <span className="sr-only">Actions</span>
@@ -592,6 +596,21 @@ export function DonationManager({
                 </TableCell>
                 <TableCell className="px-2 py-1.5 text-right tabular-nums">
                   {formatMoney(row.amount)}
+                </TableCell>
+                <TableCell className="px-2 py-1.5">
+                  <PrintOfficialReceiptButton
+                    receipt={
+                      row.or_number
+                        ? {
+                            orNumber: row.or_number,
+                            date: formatDate(row.donation_date),
+                            receivedFrom: row.donor_name?.trim() || "Parish",
+                            particulars: row.category_name || "Parish payment",
+                            amount: formatMoney(row.amount),
+                          }
+                        : null
+                    }
+                  />
                 </TableCell>
                 {showActions ? (
                   <TableCell className="px-2 py-1.5">
