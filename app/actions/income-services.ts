@@ -190,7 +190,9 @@ export async function createIncomeService(
   const feeError = await saveChurchFee(supabase, created.service_id, category, formData);
   if (feeError) return { error: feeError };
   revalidateIncomeConfig();
-  return { success: "Income service added." };
+  return {
+    success: category === "church_service" ? "Church service added." : "Income service added.",
+  };
 }
 
 export async function toggleIncomeService(
@@ -267,7 +269,9 @@ export async function updateIncomeService(
   if (feeError) return { error: feeError };
 
   revalidateIncomeConfig();
-  return { success: "Income service updated." };
+  return {
+    success: category === "church_service" ? "Church service updated." : "Income service updated.",
+  };
 }
 
 export async function deleteIncomeService(
@@ -281,7 +285,7 @@ export async function deleteIncomeService(
 
   const { data: existing } = await supabase
     .from("income_services")
-    .select("donation_category_id")
+    .select("donation_category_id, category")
     .eq("service_id", service_id)
     .maybeSingle();
 
@@ -314,5 +318,10 @@ export async function deleteIncomeService(
   }
 
   revalidateIncomeConfig();
-  return { success: "Income service deleted." };
+  return {
+    success:
+      existing?.category === "church_service"
+        ? "Church service deleted."
+        : "Income service deleted.",
+  };
 }

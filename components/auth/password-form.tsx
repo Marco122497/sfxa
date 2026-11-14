@@ -9,6 +9,7 @@ import {
   resetPassword,
   type AuthActionState,
 } from "@/app/actions/auth";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +76,7 @@ export function PasswordForm({ mode }: PasswordFormProps) {
   const action = mode === "change" ? changePassword : resetPassword;
   const router = useRouter();
   const [state, formAction, pending] = useActionState(action, initialState);
+  useActionToast(state);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

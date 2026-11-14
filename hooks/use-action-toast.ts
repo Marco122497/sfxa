@@ -8,19 +8,19 @@ type ActionMessageState = {
   success?: string;
 };
 
+export function toastActionResult<T extends ActionMessageState>(result: T): T {
+  if (result.error) toast.error(result.error);
+  if (result.success) toast.success(result.success);
+  return result;
+}
+
 export function useActionToast(state: ActionMessageState) {
-  const lastError = useRef<string | undefined>(undefined);
-  const lastSuccess = useRef<string | undefined>(undefined);
+  const seen = useRef(state);
 
   useEffect(() => {
-    if (state.error && state.error !== lastError.current) {
-      lastError.current = state.error;
-      toast.error(state.error);
-    }
-
-    if (state.success && state.success !== lastSuccess.current) {
-      lastSuccess.current = state.success;
-      toast.success(state.success);
-    }
-  }, [state.error, state.success]);
+    if (state === seen.current) return;
+    seen.current = state;
+    if (state.error) toast.error(state.error);
+    if (state.success) toast.success(state.success);
+  }, [state]);
 }

@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
-
 import {
   createCategory,
   createExpenseSubcategory,
@@ -193,10 +191,7 @@ function DeleteGeneralButton({
   const [, formAction, pending] = useServerAction(
     async (prev, formData) => {
       const result = await deleteCategory(prev, formData);
-      if (result.error) {
-        toast.error(result.error);
-        setOpen(false);
-      }
+      if (result.error) setOpen(false);
       return result;
     },
     initialState,
@@ -435,10 +430,7 @@ function DeleteSpecificButton({
   const [, formAction, pending] = useServerAction(
     async (prev, formData) => {
       const result = await deleteExpenseSubcategory(prev, formData);
-      if (result.error) {
-        toast.error(result.error);
-        setOpen(false);
-      }
+      if (result.error) setOpen(false);
       return result;
     },
     initialState,

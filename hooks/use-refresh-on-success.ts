@@ -3,6 +3,8 @@
 import { useActionState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
+import { toastActionResult } from "@/hooks/use-action-toast";
+
 type ActionState = {
   success?: string;
   error?: string;
@@ -23,7 +25,7 @@ export function useServerAction<T extends ActionState>(
 
   return useActionState(
     async (prevState: T, formData: FormData) => {
-      const result = await action(prevState, formData);
+      const result = toastActionResult(await action(prevState, formData));
       if (result.success) {
         onSuccessRef.current?.();
         router.refresh();

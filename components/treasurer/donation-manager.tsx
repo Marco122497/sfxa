@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
-
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import {
@@ -389,7 +387,11 @@ function AddDonationDialog({
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [blocked, setBlocked] = useState(false);
-  const [state, formAction, pending] = useServerAction(createDonation, initialState, () => setOpen(false));
+  const [state, formAction, pending] = useServerAction(
+    createDonation,
+    initialState,
+    () => setOpen(false)
+  );
   const formId = `add-${copy.formKey}-form`;
 
   return (
@@ -483,7 +485,11 @@ function EditDonationDialog({
   bookedSchedules?: { donationId: number; at: string }[];
 }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useServerAction(updateDonation, initialState, () => setOpen(false));
+  const [state, formAction, pending] = useServerAction(
+    updateDonation,
+    initialState,
+    () => setOpen(false)
+  );
 
 
   return (
@@ -573,10 +579,7 @@ function DeleteDonationButton({
   const [, formAction, pending] = useServerAction(
     async (prev, formData) => {
       const result = await deleteDonation(prev, formData);
-      if (result.error) {
-        toast.error(result.error);
-        setOpen(false);
-      }
+      if (result.error) setOpen(false);
       return result;
     },
     initialState,

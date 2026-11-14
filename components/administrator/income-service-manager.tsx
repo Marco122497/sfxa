@@ -9,8 +9,6 @@ import {
   PowerIcon,
   Trash2Icon,
 } from "lucide-react";
-import { toast } from "sonner";
-
 import {
   createIncomeService,
   deleteIncomeService,
@@ -517,7 +515,11 @@ function AddServiceDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState(defaultCategory);
-  const [state, formAction, pending] = useServerAction(createIncomeService, initialState, () => setOpen(false));
+  const [state, formAction, pending] = useServerAction(
+    createIncomeService,
+    initialState,
+    () => setOpen(false)
+  );
 
 
   return (
@@ -593,7 +595,11 @@ function EditServiceDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState(service.category);
-  const [state, formAction, pending] = useServerAction(updateIncomeService, initialState, () => setOpen(false));
+  const [state, formAction, pending] = useServerAction(
+    updateIncomeService,
+    initialState,
+    () => setOpen(false)
+  );
   const formId = `edit-income-service-${service.service_id}`;
   const { baseName, accessType } = parseIncomeAccessType(service.service_name);
 
@@ -786,10 +792,7 @@ function DeleteServiceDialog({ service }: { service: IncomeServiceRow }) {
   const [, formAction, pending] = useServerAction(
     async (prev, formData) => {
       const result = await deleteIncomeService(prev, formData);
-      if (result.error) {
-        toast.error(result.error);
-        setOpen(false);
-      }
+      if (result.error) setOpen(false);
       return result;
     },
     initialState,

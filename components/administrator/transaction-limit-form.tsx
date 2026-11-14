@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   updateTransactionLimit,
@@ -28,15 +27,7 @@ export function TransactionLimitForm({
   initialLimit: number;
 }) {
   const [limit, setLimit] = useState(String(initialLimit));
-  const [, formAction, pending] = useServerAction(
-    async (prev, formData) => {
-      const result = await updateTransactionLimit(prev, formData);
-      if (result.error) toast.error(result.error);
-      if (result.success) toast.success(result.success);
-      return result;
-    },
-    initialState
-  );
+  const [, formAction, pending] = useServerAction(updateTransactionLimit, initialState);
 
   useEffect(() => {
     setLimit(String(initialLimit));

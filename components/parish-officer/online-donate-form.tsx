@@ -7,6 +7,7 @@ import {
   submitOnlineDonation,
   type OnlineDonationState,
 } from "@/app/actions/online-donations";
+import { useActionToast } from "@/hooks/use-action-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ export function OnlineDonateForm({
     submitOnlineDonation,
     initialState
   );
+  useActionToast(state);
 
   return (
     <form action={formAction} className="space-y-4">

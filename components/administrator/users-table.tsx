@@ -13,7 +13,6 @@ import {
   UserRoundIcon,
 } from "lucide-react";
 
-import { useActionToast } from "@/hooks/use-action-toast";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
 import {
   deleteUser,
@@ -401,7 +400,6 @@ function ToggleUserStatusButton({
     initialState,
     () => setOpen(false)
   );
-  useActionToast(state);
   const formId = `toggle-user-status-${user.id}`;
   const activating = !user.status;
 
@@ -512,7 +510,6 @@ function ChangePasswordButton({
     initialState,
     () => setOpen(false)
   );
-  useActionToast(state);
   const formId = `change-user-password-${user.id}`;
 
   return (

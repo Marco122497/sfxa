@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 import {
   updateParishPriestName,
@@ -28,15 +27,7 @@ export function ParishPriestSettingsForm({
   initialName: string;
 }) {
   const [name, setName] = useState(initialName);
-  const [, formAction, pending] = useServerAction(
-    async (prev, formData) => {
-      const result = await updateParishPriestName(prev, formData);
-      if (result.error) toast.error(result.error);
-      if (result.success) toast.success(result.success);
-      return result;
-    },
-    initialState
-  );
+  const [, formAction, pending] = useServerAction(updateParishPriestName, initialState);
 
   useEffect(() => {
     setName(initialName);
