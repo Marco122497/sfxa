@@ -33,7 +33,7 @@ export default async function TreasurerReceiveKindPage({
   }
 
   const withPending = isDonationLike(meta.code, meta.name);
-  const { categories, rows: mapped } = await loadReceiveIncome(meta.code, {
+  const { categories, rows: mapped, serviceFees } = await loadReceiveIncome(meta.code, {
     withStatus: withPending,
   });
   const rows = withPending
@@ -63,6 +63,7 @@ export default async function TreasurerReceiveKindPage({
             suggestedOrNumber={suggestedOrNumber}
             transactionLimit={transactionLimit}
             enforceLimit
+            serviceFees={serviceFees}
           />
         </CardContent>
       </Card>

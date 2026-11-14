@@ -8,6 +8,7 @@ import {
   type ReceiveDonationState,
 } from "@/app/actions/receive-funds";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
+import { formatTypeLabel } from "@/lib/income-access";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
@@ -101,7 +102,7 @@ function PendingRow({
     <TableRow>
       <TableCell>{formatDate(row.donation_date)}</TableCell>
       <TableCell>{row.donor_name || "—"}</TableCell>
-      <TableCell>{row.category_name || "—"}</TableCell>
+      <TableCell>{formatTypeLabel(row.category_name) || "—"}</TableCell>
       <TableCell className="text-right tabular-nums">
         {formatMoney(row.amount)}
       </TableCell>

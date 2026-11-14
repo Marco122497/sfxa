@@ -1,5 +1,7 @@
+import { formatTypeLabel } from "@/lib/income-access";
 import { createClient } from "@/lib/supabase/server";
 import { classifyIncomeName } from "@/lib/income";
+import type { ChurchServiceFee } from "@/lib/service-fees";
 import { relationName } from "@/lib/treasurer/relations";
 
 export type ReceiveIncomeCategory = {
@@ -18,6 +20,9 @@ export type ReceiveIncomeRow = {
   status?: string;
   or_number?: string | null;
   payment_method?: string | null;
+  paid_time?: string | null;
+  service_at?: string | null;
+  priest_name?: string | null;
 };
 
 type DonationCategoryRow = {
@@ -132,7 +137,7 @@ export async function loadReceiveIncome(
       if (!categoryId) continue;
       resolved.push({
         category_id: categoryId,
-        category_name: service.service_name,
+        category_name: formatTypeLabel(service.service_name),
         is_active: service.is_active !== false,
       });
     }
@@ -141,7 +146,7 @@ export async function loadReceiveIncome(
       if (!kinds.includes(classifyIncomeName(row.category_name))) continue;
       resolved.push({
         category_id: row.category_id,
-        category_name: row.category_name,
+        category_name: formatTypeLabel(row.category_name),
         is_active: true,
       });
     }
@@ -170,6 +175,9 @@ export async function loadReceiveIncome(
     status?: string | null;
     or_number?: string | null;
     payment_method?: string | null;
+    paid_time?: string | null;
+    service_at?: string | null;
+    priest_name?: string | null;
     donation_categories:
       | { category_name?: string }
       | { category_name?: string }[]
@@ -183,7 +191,7 @@ export async function loadReceiveIncome(
       ? await supabase
           .from("donations")
           .select(
-            "donation_id, donor_name, category_id, amount, donation_date, remarks, status, or_number, payment_method, donation_categories(category_name)"
+            "donation_id, donor_name, category_id, amount, donation_date, paid_time, service_at, priest_name, remarks, status, or_number, payment_method, donation_categories(category_name)"
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
@@ -191,7 +199,7 @@ export async function loadReceiveIncome(
       : await supabase
           .from("donations")
           .select(
-            "donation_id, donor_name, category_id, amount, donation_date, remarks, or_number, payment_method, donation_categories(category_name)"
+            "donation_id, donor_name, category_id, amount, donation_date, paid_time, service_at, priest_name, remarks, or_number, payment_method, donation_categories(category_name)"
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
@@ -224,6 +232,9 @@ export async function loadReceiveIncome(
       remarks: row.remarks,
       or_number: row.or_number ?? null,
       payment_method: row.payment_method ?? null,
+      paid_time: row.paid_time ?? null,
+      service_at: row.service_at ?? null,
+      priest_name: row.priest_name ?? null,
       category_name:
         (categoryId != null ? nameById.get(categoryId) : null) ??
         relationName(row.donation_categories),
@@ -234,7 +245,53 @@ export async function loadReceiveIncome(
     };
   });
 
-  return { categories, rows };
+  const serviceFees = await loadChurchServiceFees(supabase, kindIds);
+
+  return { categories, rows, serviceFees };
+}
+
+async function loadChurchServiceFees(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  categoryIds: number[]
+): Promise<ChurchServiceFee[]> {
+  if (categoryIds.length === 0) return [];
+  const services = await supabase
+    .from("income_services")
+    .select("service_id, donation_category_id, standard_amount, category")
+    .eq("category", "church_service")
+    .in("donation_category_id", categoryIds);
+  if (services.error || !services.data) return [];
+
+  const serviceIds = services.data.map((row) => row.service_id);
+  const years = serviceIds.length
+    ? await supabase
+        .from("service_fee_years")
+        .select("service_id, fee_year, adjustment")
+        .in("service_id", serviceIds)
+    : { data: [], error: null };
+  const byService = new Map<number, ChurchServiceFee["adjustments"]>();
+  for (const row of years.data ?? []) {
+    const list = byService.get(row.service_id) ?? [];
+    list.push({
+      year: Number(row.fee_year),
+      adjustment: Number(row.adjustment),
+    });
+    byService.set(row.service_id, list);
+  }
+
+  return services.data.flatMap((row) => {
+    const standard = Number(row.standard_amount);
+    if (!row.donation_category_id || !Number.isFinite(standard) || standard <= 0) {
+      return [];
+    }
+    return [
+      {
+        categoryId: row.donation_category_id,
+        standardAmount: standard,
+        adjustments: byService.get(row.service_id) ?? [],
+      },
+    ];
+  });
 }
 
 export async function loadIncomeTypeOptions(

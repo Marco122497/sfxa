@@ -13,6 +13,8 @@ import {
   isIncomeCategoryId,
   type IncomeCategoryId,
 } from "@/lib/income";
+import { currentParishDateTime } from "@/lib/format";
+import { feeSchemaMessage, type FeeYearAdjustment } from "@/lib/service-fees";
 
 export type IncomeServiceActionState = {
   error?: string;
@@ -38,6 +40,90 @@ async function isKnownCategory(
     .maybeSingle();
   if (!error) return Boolean(data);
   return isLegacyCategory(value);
+}
+
+function parseFeeYears(raw: string): FeeYearAdjustment[] | { error: string } {
+  if (!raw.trim()) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { error: "Year fee adjustments could not be read." };
+  }
+  if (!Array.isArray(parsed)) return [];
+  const years = new Set<number>();
+  const rows: FeeYearAdjustment[] = [];
+  for (const item of parsed) {
+    if (!item || typeof item !== "object") continue;
+    const year = Number((item as { year?: unknown }).year);
+    const adjustment = Number((item as { adjustment?: unknown }).adjustment);
+    const currentYear = Number(currentParishDateTime().date.slice(0, 4));
+    if (!Number.isInteger(year) || year <= currentYear || year > 2100) {
+      return { error: `Each fee year must be after ${currentYear}.` };
+    }
+    if (!Number.isFinite(adjustment)) {
+      return { error: "Each year adjustment must be a number. Use a minus for a lower fee." };
+    }
+    if (years.has(year)) return { error: `The year ${year} is listed more than once.` };
+    years.add(year);
+    rows.push({ year, adjustment: Math.round(adjustment * 100) / 100 });
+  }
+  return rows;
+}
+
+async function saveChurchFee(
+  supabase: ReturnType<typeof createAdminClient>,
+  serviceId: number,
+  category: string,
+  formData: FormData
+) {
+  if (category !== "church_service") {
+    const cleared = await supabase
+      .from("income_services")
+      .update({ standard_amount: null })
+      .eq("service_id", serviceId);
+    if (cleared.error && !feeSchemaMessage(cleared.error.message)) {
+      return cleared.error.message;
+    }
+    await supabase.from("service_fee_years").delete().eq("service_id", serviceId);
+    return null;
+  }
+
+  const standard = Number(String(formData.get("standard_amount") || "").trim());
+  if (!Number.isFinite(standard) || standard <= 0) {
+    return "Enter the standard fee for this church service. Payments use it automatically.";
+  }
+  const years = parseFeeYears(String(formData.get("fee_years") || "[]"));
+  if ("error" in years) return years.error;
+
+  const saved = await supabase
+    .from("income_services")
+    .update({ standard_amount: standard })
+    .eq("service_id", serviceId);
+  if (saved.error) {
+    return feeSchemaMessage(saved.error.message) ?? saved.error.message;
+  }
+
+  const removed = await supabase
+    .from("service_fee_years")
+    .delete()
+    .eq("service_id", serviceId);
+  if (removed.error) {
+    return feeSchemaMessage(removed.error.message) ?? removed.error.message;
+  }
+  if (years.length === 0) return null;
+
+  const inserted = await supabase.from("service_fee_years").insert(
+    years.map((row) => ({
+      service_id: serviceId,
+      fee_year: row.year,
+      adjustment: row.adjustment,
+    }))
+  );
+  if (inserted.error) {
+    return feeSchemaMessage(inserted.error.message) ?? inserted.error.message;
+  }
+  return null;
 }
 
 function revalidateIncomeConfig() {
@@ -82,21 +168,27 @@ export async function createIncomeService(
     donation_category_id = inserted.data?.category_id ?? null;
   }
 
-  const { error } = await supabase.from("income_services").insert({
-    service_name,
-    category,
-    is_active: true,
-    donation_category_id,
-  });
-  if (error) {
+  const { data: created, error } = await supabase
+    .from("income_services")
+    .insert({
+      service_name,
+      category,
+      is_active: true,
+      donation_category_id,
+    })
+    .select("service_id")
+    .single();
+  if (error || !created) {
     return {
-      error: error.code === "23505"
+      error: error?.code === "23505"
         ? "That income service already exists."
-        : error.message.includes("does not exist")
+        : error?.message.includes("does not exist")
           ? "Run sql/phase3-categories.sql in Supabase first."
-        : error.message,
+        : error?.message || "Could not add the income service.",
     };
   }
+  const feeError = await saveChurchFee(supabase, created.service_id, category, formData);
+  if (feeError) return { error: feeError };
   revalidateIncomeConfig();
   return { success: "Income service added." };
 }
@@ -170,6 +262,9 @@ export async function updateIncomeService(
       return { error: renamed.error.message };
     }
   }
+
+  const feeError = await saveChurchFee(supabase, service_id, category, formData);
+  if (feeError) return { error: feeError };
 
   revalidateIncomeConfig();
   return { success: "Income service updated." };

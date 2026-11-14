@@ -5,6 +5,7 @@ import {
   isIncomeCategoryId,
   type IncomeCategoryId,
 } from "@/lib/income";
+import { formatTypeLabel } from "@/lib/income-access";
 
 export type IncomeKindFor = (
   name?: string | null,
@@ -34,6 +35,7 @@ export async function loadIncomeKindFor(
     }
     if (row.service_name) {
       byName.set(row.service_name.trim().toLowerCase(), kind);
+      byName.set(formatTypeLabel(row.service_name).toLowerCase(), kind);
     }
   }
 

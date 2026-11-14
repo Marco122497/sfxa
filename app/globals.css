@@ -245,10 +245,10 @@
 }
 
 .official-receipt-preview.formal-report {
-  width: 100%;
-  min-height: 0;
-  padding: 1.75rem 1.5rem 2rem;
-  box-shadow: none;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 14mm 16mm 20mm;
+  box-shadow: 0 1px 8px rgb(15 23 42 / 12%);
 }
 
 @media print {
@@ -320,6 +320,38 @@
     margin: 0 auto !important;
     padding: 0 !important;
     box-shadow: none !important;
+  }
+
+  html.printing-official-receipt .official-receipt-preview.formal-report {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  html.printing-official-receipt .official-receipt-preview dl {
+    display: grid !important;
+    grid-template-columns: 9.5rem minmax(0, 1fr) !important;
+    column-gap: 1.5rem !important;
+    text-align: left !important;
+  }
+
+  html.printing-official-receipt .official-receipt-preview table {
+    width: 100% !important;
+    font-size: 13px !important;
+    border-collapse: collapse !important;
+  }
+
+  html.printing-official-receipt .official-receipt-preview th,
+  html.printing-official-receipt .official-receipt-preview td {
+    text-align: left;
+  }
+
+  html.printing-official-receipt .official-receipt-preview th.text-right,
+  html.printing-official-receipt .official-receipt-preview td.text-right {
+    text-align: right !important;
   }
 
   .formal-report-header,

@@ -44,6 +44,19 @@ export function ReportDataTable({
           </tr>
         ) : (
           rows.map((row) => {
+            if (row.section) {
+              return (
+                <tr key={row.id} className="border-b border-[#111111] bg-[#f3f4f6]">
+                  <td
+                    colSpan={columns.length}
+                    className="py-2 text-[12px] font-semibold tracking-[0.08em] text-[#111111] uppercase"
+                  >
+                    {row.section}
+                  </td>
+                </tr>
+              );
+            }
+
             const children = row.children ?? [];
 
             return (

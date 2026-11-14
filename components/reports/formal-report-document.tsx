@@ -1,15 +1,14 @@
 import Image from "next/image";
 
 import { formatAppFooterLabel } from "@/lib/app-meta";
-import { formatMoney, formatDate } from "@/lib/format";
-import {
-  buildReportNumber,
-  formatReportPeriodLabel,
-  getAnyReportTypeMeta,
-} from "@/lib/reports";
+import { formatDate } from "@/lib/format";
+import { buildReportNumber, formatReportPeriodLabel } from "@/lib/reports";
 import type { FormalReportData } from "@/lib/reports-data";
-import { ReportDataTable } from "@/components/reports/report-data-table";
-import { ReportPieChart } from "@/components/reports/report-pie-chart";
+import {
+  BudgetStatement,
+  CategoryStatement,
+  FinancialStatement,
+} from "@/components/reports/financial-statement";
 
 export function FormalReportDocument({
   data,
@@ -24,22 +23,7 @@ export function FormalReportDocument({
   generatedAt: Date;
   notedByName?: string;
 }) {
-  const meta = getAnyReportTypeMeta(data.type);
   const reportNo = buildReportNumber(data.type, data.from, data.to);
-  const showBreakdown = data.showBreakdown !== false;
-  const tableTitle = data.tableTitle ?? `${meta.label} Transactions`;
-  const summaryTitle =
-    data.type === "budget" || data.type === "summary"
-      ? "Summary"
-      : `${meta.label} Summary`;
-  const breakdownTitle =
-    data.type === "budget"
-      ? "Allocation Breakdown"
-      :     data.type === "expenses"
-      ? "Expenses by Category"
-      : data.type === "accountability"
-        ? "By User"
-        : "Type Breakdown";
   const preparedDate = formatDate(generatedAt.toISOString().slice(0, 10));
 
   const totalMetric =
@@ -120,52 +104,12 @@ export function FormalReportDocument({
         <div className="mt-5 border-b border-[#111111]" />
       </header>
 
-      <section className="mt-6">
-        <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
-          {tableTitle}
-        </h3>
-        <ReportDataTable columns={data.columns} rows={data.rows} />
-      </section>
-
-      {(data.summaryLines.length > 0 ||
-        (showBreakdown && data.breakdown.length > 0)) && (
-        <section className="mt-8 grid grid-cols-2 gap-8">
-          {data.summaryLines.length > 0 ? (
-            <div className="report-keep">
-              <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
-                {summaryTitle}
-              </h3>
-              <table className="w-full border-collapse text-[13px]">
-                <tbody>
-                  {data.summaryLines.map((line) => (
-                    <tr
-                      key={line.label}
-                      className={
-                        line.emphasis
-                          ? "border-t border-[#111111] font-semibold"
-                          : "border-t border-[#e5e7eb]"
-                      }
-                    >
-                      <td className="py-2 pr-3 align-top">{line.label}</td>
-                      <td className="py-2 text-right tabular-nums">
-                        {line.display ?? formatMoney(line.amount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          {showBreakdown && data.breakdown.length > 0 ? (
-            <div className="report-keep">
-              <h3 className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-[#6b7280] uppercase">
-                {breakdownTitle}
-              </h3>
-              <ReportPieChart breakdown={data.breakdown} />
-            </div>
-          ) : null}
-        </section>
+      {data.type === "summary" ? (
+        <FinancialStatement data={data} />
+      ) : data.type === "budget" ? (
+        <BudgetStatement data={data} />
+      ) : (
+        <CategoryStatement data={data} />
       )}
 
       <section className="report-keep mt-10 grid grid-cols-2 gap-10">
@@ -192,13 +136,6 @@ export function FormalReportDocument({
           <p className="mt-1 text-[12px] text-[#4b5563]">Date: __________</p>
         </div>
       </section>
-
-      {data.notes ? (
-        <p className="report-keep mt-8 text-[12px] leading-relaxed text-[#4b5563]">
-          <span className="font-semibold text-[#111111]">Notes. </span>
-          {data.notes}
-        </p>
-      ) : null}
 
       <footer className="report-doc-footer mt-12 flex items-end justify-between gap-4 border-t border-[#d1d5db] pt-2 text-[11px] text-[#6b7280]">
         <span>{formatAppFooterLabel()}</span>

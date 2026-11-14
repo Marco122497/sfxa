@@ -19,6 +19,7 @@ import {
   type FinanceActionState,
 } from "@/app/actions/finance";
 import { formatDate, formatMoney, toNumber } from "@/lib/format";
+import { formatTypeLabel } from "@/lib/income-access";
 import {
   hasExpenseBudgetCap,
   resolveExpenseBudgetCap,
@@ -238,7 +239,7 @@ function ExpenseFormFields({
                 key={category.expense_category_id}
                 value={category.expense_category_id}
               >
-                {category.category_name}
+                {formatTypeLabel(category.category_name)}
               </option>
             ))
           )}
@@ -277,7 +278,7 @@ function ExpenseFormFields({
                   value={sub.subcategory_id}
                   disabled={!budgeted}
                 >
-                  {sub.subcategory_name}
+                  {formatTypeLabel(sub.subcategory_name)}
                   {budgeted ? "" : " — needs budget allocation"}
                 </option>
               );
@@ -703,10 +704,10 @@ export function ExpenseManager({
                   {formatDate(row.expense_date)}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
-                  {row.category_name || "—"}
+                  {formatTypeLabel(row.category_name) || "—"}
                 </TableCell>
                 <TableCell className="max-w-[200px] truncate px-2 py-1.5 font-medium">
-                  {row.subcategory_name || row.description || "—"}
+                  {formatTypeLabel(row.subcategory_name) || row.description || "—"}
                 </TableCell>
                 <TableCell className="px-2 py-1.5 text-right tabular-nums">
                   {formatMoney(row.amount)}
@@ -714,7 +715,7 @@ export function ExpenseManager({
                 {showActions ? (
                   <TableCell className="px-2 py-1.5">
                     <RowActionsDialog
-                      label={`${row.subcategory_name || row.category_name || "Expense"} · ${formatMoney(row.amount)}`}
+                      label={`${formatTypeLabel(row.subcategory_name || row.category_name) || "Expense"} · ${formatMoney(row.amount)}`}
                     >
                       {canEdit ? (
                         <EditExpenseDialog
@@ -728,7 +729,7 @@ export function ExpenseManager({
                       {canDelete ? (
                         <DeleteExpenseButton
                           expenseId={row.expense_id}
-                          label={`${formatMoney(row.amount)} · ${row.subcategory_name || row.category_name || row.description || "expense"} · ${formatDate(row.expense_date)}`}
+                          label={`${formatMoney(row.amount)} · ${formatTypeLabel(row.subcategory_name || row.category_name) || row.description || "expense"} · ${formatDate(row.expense_date)}`}
                         />
                       ) : null}
                     </RowActionsDialog>

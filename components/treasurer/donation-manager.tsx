@@ -13,7 +13,17 @@ import {
   type FinanceActionState,
 } from "@/app/actions/finance";
 import { PrintOfficialReceiptButton } from "@/components/finance/official-receipt-document";
-import { formatDate, formatMoney } from "@/lib/format";
+import {
+  formatDate,
+  formatMoney,
+  formatTime,
+  HOURLY_TIMES,
+  parishTomorrow,
+  scheduleHourKey,
+  toDateTimeLocal,
+} from "@/lib/format";
+import { feeForYear, type ChurchServiceFee } from "@/lib/service-fees";
+import { formatTypeLabel } from "@/lib/income-access";
 import {
   incomeRecordCopy,
   type IncomeRecordCopy,
@@ -63,6 +73,9 @@ export type DonationRow = {
   category_name: string | null;
   or_number?: string | null;
   payment_method?: string | null;
+  paid_time?: string | null;
+  service_at?: string | null;
+  priest_name?: string | null;
 };
 
 export type DonationManagerMode = "donation" | "collection";
@@ -95,7 +108,10 @@ function DonationFormFields({
   suggestedOrNumber = "",
   transactionLimit = 0,
   enforceLimit = false,
+  serviceFees = [],
   onBlockedChange,
+  recordNow = false,
+  bookedSchedules = [],
 }: {
   categories: DonationCategory[];
   defaults?: Partial<DonationRow>;
@@ -104,20 +120,69 @@ function DonationFormFields({
   suggestedOrNumber?: string;
   transactionLimit?: number;
   enforceLimit?: boolean;
+  serviceFees?: ChurchServiceFee[];
   onBlockedChange?: (blocked: boolean) => void;
+  recordNow?: boolean;
+  bookedSchedules?: { donationId: number; at: string }[];
 }) {
-  const today = new Date().toISOString().slice(0, 10);
   const showDonor = copy.showDonor;
+  const church = copy.kind === "church_service";
+  const [categoryId, setCategoryId] = useState(
+    Number(defaults?.category_id ?? categories[0]?.category_id ?? 0)
+  );
+  const initialSchedule = toDateTimeLocal(defaults?.service_at);
+  const [scheduleDate, setScheduleDate] = useState(initialSchedule.slice(0, 10));
+  const [scheduleTime, setScheduleTime] = useState(initialSchedule.slice(11, 16));
+  const schedule =
+    scheduleDate && scheduleTime ? `${scheduleDate}T${scheduleTime}` : "";
+  const earliestSchedule = parishTomorrow();
+  const savedScheduleDate = initialSchedule.slice(0, 10);
+  const savedScheduleTime = initialSchedule.slice(11, 16);
+  const takenHours = new Set(
+    bookedSchedules
+      .filter((item) => item.donationId !== defaults?.donation_id)
+      .map((item) => scheduleHourKey(item.at))
+      .filter((key) => scheduleDate && key.startsWith(`${scheduleDate}T`))
+  );
+  const hourlyOptions = HOURLY_TIMES.map((slot) => ({
+    ...slot,
+    taken: takenHours.has(scheduleHourKey(`${scheduleDate}T${slot.value}`)),
+  }));
+  const timeOptions =
+    savedScheduleTime && !HOURLY_TIMES.some((slot) => slot.value === savedScheduleTime)
+      ? [
+          { value: savedScheduleTime, label: savedScheduleTime, taken: false },
+          ...hourlyOptions,
+        ]
+      : hourlyOptions;
   const [amount, setAmount] = useState(String(defaults?.amount ?? ""));
+  const [donorName, setDonorName] = useState(defaults?.donor_name ?? "");
+  const [priestName, setPriestName] = useState(defaults?.priest_name ?? "");
+  const [paidDate, setPaidDate] = useState(
+    () => defaults?.donation_date?.slice(0, 10) || new Date().toISOString().slice(0, 10)
+  );
+  const [orNumber, setOrNumber] = useState(() => defaults?.or_number || suggestedOrNumber);
+  const [remarks, setRemarks] = useState(defaults?.remarks ?? "");
+  const scheduleYear = schedule
+    ? new Date(schedule).getFullYear()
+    : new Date().getFullYear();
+  const fee = church
+    ? serviceFees.find((item) => item.categoryId === categoryId)
+    : undefined;
+  const automatic =
+    fee != null ? feeForYear(fee.standardAmount, fee.adjustments, scheduleYear) : null;
+  const amountValue =
+    church && automatic != null && automatic > 0 ? String(automatic) : amount;
+  const missingFee = church && (automatic == null || automatic <= 0);
   const overLimit =
     enforceLimit &&
     transactionLimit > 0 &&
-    amount !== "" &&
-    Math.round(Number(amount) * 100) > Math.round(transactionLimit * 100);
+    amountValue !== "" &&
+    Math.round(Number(amountValue) * 100) > Math.round(transactionLimit * 100);
 
   useEffect(() => {
-    onBlockedChange?.(overLimit);
-  }, [onBlockedChange, overLimit]);
+    onBlockedChange?.(overLimit || missingFee);
+  }, [missingFee, onBlockedChange, overLimit]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -128,7 +193,8 @@ function DonationFormFields({
           <Input
             id={`${idPrefix}-donor`}
             name="donor_name"
-            defaultValue={defaults?.donor_name ?? ""}
+            value={donorName}
+            onChange={(event) => setDonorName(event.target.value)}
           />
         </div>
       ) : (
@@ -136,11 +202,12 @@ function DonationFormFields({
       )}
       <div className={`space-y-2${showDonor ? "" : " sm:col-span-2"}`}>
         <Label htmlFor={`${idPrefix}-category`}>{copy.typeLabel}</Label>
-        <select
+          <select
           id={`${idPrefix}-category`}
           name="category_id"
           required
-          defaultValue={defaults?.category_id ?? categories[0]?.category_id ?? ""}
+          value={categoryId || ""}
+          onChange={(event) => setCategoryId(Number(event.target.value))}
           className={selectClassName}
           disabled={categories.length === 0}
         >
@@ -149,11 +216,78 @@ function DonationFormFields({
           ) : null}
           {categories.map((category) => (
             <option key={category.category_id} value={category.category_id}>
-              {category.category_name}
+              {formatTypeLabel(category.category_name)}
             </option>
           ))}
         </select>
       </div>
+      {church ? (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-schedule-date`}>Schedule date</Label>
+            <Input
+              id={`${idPrefix}-schedule-date`}
+              type="date"
+              required
+              min={
+                savedScheduleDate && savedScheduleDate < earliestSchedule
+                  ? savedScheduleDate
+                  : earliestSchedule
+              }
+              value={scheduleDate}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (
+                  next &&
+                  next < earliestSchedule &&
+                  next !== savedScheduleDate
+                ) {
+                  return;
+                }
+                setScheduleDate(next);
+                setScheduleTime((current) => {
+                  const key = scheduleHourKey(`${next}T${current}`);
+                  const taken = bookedSchedules.some(
+                    (item) =>
+                      item.donationId !== defaults?.donation_id &&
+                      scheduleHourKey(item.at) === key
+                  );
+                  return taken ? "" : current;
+                });
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-schedule-time`}>Schedule time</Label>
+            <select
+              id={`${idPrefix}-schedule-time`}
+              required
+              value={scheduleTime}
+              onChange={(event) => setScheduleTime(event.target.value)}
+              className={selectClassName}
+            >
+              <option value="">Select time</option>
+              {timeOptions.map((slot) => (
+                <option key={slot.value} value={slot.value} disabled={slot.taken}>
+                  {slot.taken ? `${slot.label} — booked` : slot.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <input type="hidden" name="service_at" value={schedule} />
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-priest`}>Priest</Label>
+            <Input
+              id={`${idPrefix}-priest`}
+              name="priest_name"
+              required
+              value={priestName}
+              onChange={(event) => setPriestName(event.target.value)}
+              placeholder="Priest assigned to this service"
+            />
+          </div>
+        </>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-amount`}>Amount</Label>
         <Input
@@ -163,9 +297,22 @@ function DonationFormFields({
           min="0.01"
           step="0.01"
           required
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
+          readOnly={church}
+          value={church ? amountValue : amount}
+          onChange={(event) => {
+            if (!church) setAmount(event.target.value);
+          }}
         />
+        {church && automatic != null && automatic > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {scheduleYear} fee {formatMoney(automatic)} is applied automatically.
+          </p>
+        ) : null}
+        {missingFee ? (
+          <p className="text-xs text-destructive" role="alert">
+            Set the fee for this church service in Income Services before recording a payment.
+          </p>
+        ) : null}
         {overLimit ? (
           <p className="text-xs text-destructive" role="alert">
             Amount cannot exceed the transaction limit of{" "}
@@ -173,16 +320,26 @@ function DonationFormFields({
           </p>
         ) : null}
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-date`}>Date</Label>
-        <Input
-          id={`${idPrefix}-date`}
-          name="donation_date"
-          type="date"
-          required
-          defaultValue={defaults?.donation_date ?? today}
-        />
-      </div>
+      {recordNow ? null : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor={`${idPrefix}-date`}>Date</Label>
+            <Input
+              id={`${idPrefix}-date`}
+              name="donation_date"
+              type="date"
+              required
+              value={paidDate}
+              onChange={(event) => setPaidDate(event.target.value)}
+            />
+          </div>
+          <input
+            type="hidden"
+            name="paid_time"
+            value={defaults?.paid_time?.slice(0, 5) ?? ""}
+          />
+        </>
+      )}
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}-or`}>OR number</Label>
         <Input
@@ -190,7 +347,8 @@ function DonationFormFields({
           name="or_number"
           required
           maxLength={40}
-          defaultValue={defaults?.or_number ?? suggestedOrNumber}
+          value={orNumber}
+          onChange={(event) => setOrNumber(event.target.value)}
           placeholder={suggestedOrNumber || "OR-2026-0001"}
         />
       </div>
@@ -200,7 +358,8 @@ function DonationFormFields({
         <Input
           id={`${idPrefix}-remarks`}
           name="remarks"
-          defaultValue={defaults?.remarks ?? ""}
+          value={remarks}
+          onChange={(event) => setRemarks(event.target.value)}
           placeholder={copy.remarksPlaceholder}
         />
       </div>
@@ -215,6 +374,8 @@ function AddDonationDialog({
   suggestedOrNumber,
   transactionLimit,
   enforceLimit,
+  serviceFees = [],
+  bookedSchedules = [],
 }: {
   categories: DonationCategory[];
   defaultCategoryId?: number;
@@ -222,14 +383,23 @@ function AddDonationDialog({
   suggestedOrNumber: string;
   transactionLimit: number;
   enforceLimit: boolean;
+  serviceFees?: ChurchServiceFee[];
+  bookedSchedules?: { donationId: number; at: string }[];
 }) {
   const [open, setOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [blocked, setBlocked] = useState(false);
   const [state, formAction, pending] = useServerAction(createDonation, initialState, () => setOpen(false));
   const formId = `add-${copy.formKey}-form`;
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setFormKey((current) => current + 1);
+      }}
+    >
       <AlertDialogTrigger render={<Button type="button" />}>
         <PlusIcon />
         {copy.addLabel}
@@ -258,13 +428,17 @@ function AddDonationDialog({
             </Alert>
           ) : (
             <DonationFormFields
+              key={formKey}
               categories={categories}
               idPrefix={`add-${copy.formKey}`}
               copy={copy}
               suggestedOrNumber={suggestedOrNumber}
               transactionLimit={transactionLimit}
               enforceLimit={enforceLimit}
+              serviceFees={serviceFees}
               onBlockedChange={setBlocked}
+              recordNow
+              bookedSchedules={bookedSchedules}
               defaults={{
                 category_id: defaultCategoryId ?? categories[0]?.category_id,
               }}
@@ -298,11 +472,15 @@ function EditDonationDialog({
   categories,
   copy,
   suggestedOrNumber,
+  serviceFees = [],
+  bookedSchedules = [],
 }: {
   row: DonationRow;
   categories: DonationCategory[];
   copy: IncomeRecordCopy;
   suggestedOrNumber: string;
+  serviceFees?: ChurchServiceFee[];
+  bookedSchedules?: { donationId: number; at: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useServerAction(updateDonation, initialState, () => setOpen(false));
@@ -356,6 +534,8 @@ function EditDonationDialog({
             copy={copy}
             defaults={row}
             suggestedOrNumber={suggestedOrNumber}
+            serviceFees={serviceFees}
+            bookedSchedules={bookedSchedules}
           />
         </form>
         <AlertDialogFooter>
@@ -478,6 +658,7 @@ export function DonationManager({
   suggestedOrNumber = "",
   transactionLimit = 0,
   enforceLimit = false,
+  serviceFees = [],
 }: {
   donations: DonationRow[];
   categories: DonationCategory[];
@@ -492,10 +673,19 @@ export function DonationManager({
   suggestedOrNumber?: string;
   transactionLimit?: number;
   enforceLimit?: boolean;
+  serviceFees?: ChurchServiceFee[];
 }) {
   const [query, setQuery] = useState("");
   const copy = copyFromProps(mode, categoryCode, categoryName);
   const showDonor = copy.showDonor;
+  const bookedSchedules = donations
+    .filter((row) => row.service_at)
+    .map((row) => ({
+      donationId: row.donation_id,
+      at: toDateTimeLocal(row.service_at),
+    }))
+    .filter((row) => row.at);
+  const church = copy.kind === "church_service";
   const showActions = canEdit || canDelete;
   const heading = title ?? copy.plural.replace(/\b\w/g, (letter) => letter.toUpperCase());
   const rows = showDonor
@@ -509,6 +699,7 @@ export function DonationManager({
       const haystack = [
         showDonor ? row.donor_name : null,
         row.category_name,
+        formatTypeLabel(row.category_name),
         row.remarks,
         row.or_number,
         row.payment_method,
@@ -544,6 +735,8 @@ export function DonationManager({
             suggestedOrNumber={suggestedOrNumber}
             transactionLimit={transactionLimit}
             enforceLimit={enforceLimit}
+            serviceFees={serviceFees}
+            bookedSchedules={bookedSchedules}
           />
         </div>
       </div>
@@ -557,6 +750,8 @@ export function DonationManager({
           <TableHeader>
             <TableRow>
               <TableHead className="h-8 px-2">Date</TableHead>
+              {church ? <TableHead className="h-8 px-2">Schedule</TableHead> : null}
+              {church ? <TableHead className="h-8 px-2">Priest</TableHead> : null}
               <TableHead className="h-8 px-2">OR No.</TableHead>
               {showDonor && (
                 <TableHead className="h-8 px-2">Donor</TableHead>
@@ -579,9 +774,24 @@ export function DonationManager({
           <TableBody>
             {filtered.map((row) => (
               <TableRow key={row.donation_id}>
-                <TableCell className="px-2 py-1.5">
+                <TableCell className="px-2 py-1.5 whitespace-nowrap">
                   {formatDate(row.donation_date)}
+                  {formatTime(row.paid_time)
+                    ? ` ${formatTime(row.paid_time)}`
+                    : ""}
                 </TableCell>
+                {church ? (
+                  <TableCell className="px-2 py-1.5">
+                    {row.service_at
+                      ? `${formatDate(row.service_at)} ${formatTime(row.service_at)}`
+                      : "—"}
+                  </TableCell>
+                ) : null}
+                {church ? (
+                  <TableCell className="px-2 py-1.5">
+                    {row.priest_name || "—"}
+                  </TableCell>
+                ) : null}
                 <TableCell className="px-2 py-1.5">{row.or_number || "—"}</TableCell>
                 {showDonor && (
                   <TableCell className="px-2 py-1.5">
@@ -589,7 +799,7 @@ export function DonationManager({
                   </TableCell>
                 )}
                 <TableCell className="px-2 py-1.5">
-                  {row.category_name || "—"}
+                  {formatTypeLabel(row.category_name) || "—"}
                 </TableCell>
                 <TableCell className="max-w-[200px] truncate px-2 py-1.5">
                   {row.remarks || "—"}
@@ -603,10 +813,16 @@ export function DonationManager({
                       row.or_number
                         ? {
                             orNumber: row.or_number,
-                            date: formatDate(row.donation_date),
+                            date: formatTime(row.paid_time)
+                              ? `${formatDate(row.donation_date)} ${formatTime(row.paid_time)}`
+                              : formatDate(row.donation_date),
                             receivedFrom: row.donor_name?.trim() || "Parish",
-                            particulars: row.category_name || "Parish payment",
+                            particulars: formatTypeLabel(row.category_name) || "Parish payment",
                             amount: formatMoney(row.amount),
+                            schedule: row.service_at
+                              ? `${formatDate(row.service_at)} ${formatTime(row.service_at)}`.trim()
+                              : null,
+                            priest: row.priest_name?.trim() || null,
                           }
                         : null
                     }
@@ -615,7 +831,7 @@ export function DonationManager({
                 {showActions ? (
                   <TableCell className="px-2 py-1.5">
                     <RowActionsDialog
-                      label={`${row.category_name || "Record"} · ${formatMoney(row.amount)}`}
+                      label={`${formatTypeLabel(row.category_name) || "Record"} · ${formatMoney(row.amount)}`}
                     >
                       {canEdit ? (
                         <EditDonationDialog
@@ -623,13 +839,15 @@ export function DonationManager({
                           categories={categories}
                           copy={copy}
                           suggestedOrNumber={suggestedOrNumber}
+                          serviceFees={serviceFees}
+                          bookedSchedules={bookedSchedules}
                         />
                       ) : null}
                       {canDelete ? (
                         <DeleteDonationButton
                           donationId={row.donation_id}
                           copy={copy}
-                          label={`${formatMoney(row.amount)} · ${row.category_name || "Uncategorized"} · ${formatDate(row.donation_date)}`}
+                          label={`${formatMoney(row.amount)} · ${formatTypeLabel(row.category_name) || "Uncategorized"} · ${formatDate(row.donation_date)}`}
                         />
                       ) : null}
                     </RowActionsDialog>

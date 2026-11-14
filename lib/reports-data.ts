@@ -7,7 +7,7 @@ import {
   parseIncomeAccessType,
 } from "@/lib/income-access";
 import { loadIncomeKindFor } from "@/lib/income-kind";
-import { toNumber } from "@/lib/format";
+import { formatDate, formatTime, toNumber } from "@/lib/format";
 import {
   getIncomeReportTypeMeta,
   getReportTypeMeta,
@@ -44,6 +44,10 @@ export type ReportRow = {
   amount: number;
   /** Optional expandable line-item breakdown (e.g. donation types). */
   children?: ReportRowBreakdownItem[];
+  /** Category heading placed above the payments in that category. */
+  section?: string;
+  sortKey?: string;
+  group?: string;
 };
 
 export type ReportBreakdownItem = {
@@ -193,7 +197,7 @@ const INCOME_KIND_REPORT: Record<
   collection: {
     fallbackType: "Collection",
     extraKey: "extra",
-    extraLabel: "Mass/Event",
+    extraLabel: "",
     typeColumn: "Collection Type",
     countLabel: "Number of Collections",
     totalLabel: "Total Collections / Offerings",
@@ -202,7 +206,7 @@ const INCOME_KIND_REPORT: Record<
     tableTitle: "Collection / Offering Transactions",
     notes:
       "This report reflects parish collections and offerings recorded within the specified period.",
-    extraValue: (row, typeName) => row.remarks?.trim() || typeName,
+    extraValue: () => "",
   },
   church_service: {
     fallbackType: "Church Service",
@@ -215,7 +219,7 @@ const INCOME_KIND_REPORT: Record<
     averageLabel: "Average Amount",
     tableTitle: "Church Service Transactions",
     notes:
-      "This report reflects church service income recorded within the specified period.",
+      "This report lists each church service under its type, with the schedule, assigned priest, and amount.",
     extraValue: () => "",
   },
   other_income: {
@@ -234,6 +238,30 @@ const INCOME_KIND_REPORT: Record<
   },
 };
 
+function groupUnderCategories(rows: ReportRow[]) {
+  const groups = new Map<string, ReportRow[]>();
+  for (const row of rows) {
+    const name = row.group?.trim() || "Other";
+    const list = groups.get(name) ?? [];
+    list.push(row);
+    groups.set(name, list);
+  }
+
+  const result: ReportRow[] = [];
+  for (const name of [...groups.keys()].sort((a, b) => a.localeCompare(b))) {
+    const items = groups.get(name) ?? [];
+    items.sort((a, b) => (b.sortKey || "").localeCompare(a.sortKey || ""));
+    result.push({
+      id: `section:${name}`,
+      amount: 0,
+      section: name,
+      cells: {},
+    });
+    result.push(...items);
+  }
+  return result;
+}
+
 export async function getIncomeKindFormalReport(
   supabase: SupabaseClient,
   kind: IncomeCategoryId,
@@ -244,7 +272,7 @@ export async function getIncomeKindFormalReport(
 ): Promise<FormalReportData> {
   const config = INCOME_KIND_REPORT[kind];
   const detailedSelect =
-    "donation_id, donor_name, category_id, amount, donation_date, remarks, or_number, payment_method, created_by, status, donation_categories(category_name)";
+    "donation_id, donor_name, category_id, amount, donation_date, paid_time, service_at, priest_name, remarks, or_number, payment_method, created_by, status, donation_categories(category_name)";
   const basicSelect =
     "donation_id, donor_name, category_id, amount, donation_date, remarks, donation_categories(category_name)";
 
@@ -293,15 +321,15 @@ export async function getIncomeKindFormalReport(
   let total = 0;
 
   const columns: ReportColumn[] = [
-    { key: "date", label: "Date" },
+    { key: "date", label: kind === "church_service" ? "Date / Time" : "Date", stacked: kind === "church_service" },
+    ...(kind === "church_service" ? [{ key: "priest", label: "Priest" }] : []),
     { key: "or", label: "OR No." },
     ...(config.extraLabel
       ? [{ key: config.extraKey, label: config.extraLabel }]
       : []),
-    { key: "type", label: config.typeColumn },
     { key: "access", label: "Public / Private" },
     { key: "recorded", label: "Recorded by" },
-    { key: "amount", label: "Amount", align: "right" },
+    { key: "amount", label: "Amount", align: "right" as const },
   ];
 
   let publicTotal = 0;
@@ -334,12 +362,24 @@ export async function getIncomeKindFormalReport(
       "or_number" in row && row.or_number
         ? String(row.or_number)
         : "—";
+    const serviceAt =
+      "service_at" in row && row.service_at ? String(row.service_at) : "";
+    const paidTime =
+      "paid_time" in row && row.paid_time ? String(row.paid_time) : "";
+    const priest =
+      "priest_name" in row && row.priest_name ? String(row.priest_name) : "—";
 
     return {
       id: String(row.donation_id),
       amount,
+      sortKey: serviceAt || `${row.donation_date}T${paidTime || "00:00"}`,
+      group: breakdownName,
       cells: {
-        date: row.donation_date,
+        date:
+          kind === "church_service" && serviceAt
+            ? `${formatDate(serviceAt)}\n${formatTime(serviceAt) || "—"}`
+            : formatDate(row.donation_date),
+        priest,
         or: orNumber,
         [config.extraKey]: extra,
         type: baseName || typeName,
@@ -349,6 +389,8 @@ export async function getIncomeKindFormalReport(
       },
     };
   });
+
+  const groupedRows = groupUnderCategories(rows);
 
   const metrics: ReportMetric[] = [
     {
@@ -384,7 +426,7 @@ export async function getIncomeKindFormalReport(
     to,
     metrics,
     columns,
-    rows,
+    rows: groupedRows,
     summaryLines: [
       ...(publicTotal > 0
         ? [{ label: "Public", amount: publicTotal }]
@@ -925,9 +967,7 @@ export async function getAccountabilityReport(
       user,
       role: recorder?.role || "—",
       transaction: "Expense",
-      details: [category, subcategory, row.description?.trim()]
-        .filter(Boolean)
-        .join(" · "),
+      details: [category, subcategory].filter(Boolean).join(" · "),
       orNumber: "—",
       amount,
     });

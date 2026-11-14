@@ -7,7 +7,14 @@ import {
   requireAdmin,
   requireTreasurerOrAdmin,
 } from "@/lib/auth/session";
-import { formatMoney, toNumber } from "@/lib/format";
+import {
+  currentParishDateTime,
+  formatMoney,
+  parishTomorrow,
+  scheduleHourKey,
+  toDateTimeLocal,
+  toNumber,
+} from "@/lib/format";
 import { incomeRecordCopy } from "@/lib/income-categories";
 import {
   resolveExpenseBudgetCap,
@@ -24,6 +31,7 @@ import {
 } from "@/lib/payments";
 import { getTransactionLimit } from "@/lib/parish-settings";
 import { recordFinanceHistory } from "@/lib/finance-history";
+import { feeForYear, feeSchemaMessage } from "@/lib/service-fees";
 
 export type FinanceActionState = {
   error?: string;
@@ -271,6 +279,188 @@ function parseAmount(value: FormDataEntryValue | null) {
   return amount;
 }
 
+function parseClock(value: FormDataEntryValue | null) {
+  const time = String(value || "").trim();
+  if (!/^\d{2}:\d{2}(:\d{2})?$/.test(time)) return null;
+  return time.length === 5 ? `${time}:00` : time;
+}
+
+async function resolvePaymentAmount(
+  supabase: Awaited<ReturnType<typeof requireTreasurerOrAdmin>>["supabase"],
+  categoryId: number,
+  submitted: number | null,
+  formData: FormData
+) {
+  const paidTime = parseClock(formData.get("paid_time"));
+  const serviceRaw = String(formData.get("service_at") || "").trim();
+  const priest = String(formData.get("priest_name") || "").trim() || null;
+  const service = await supabase
+    .from("income_services")
+    .select("service_id, category, standard_amount")
+    .eq("donation_category_id", categoryId)
+    .maybeSingle();
+
+  if (service.error) {
+    const schema = feeSchemaMessage(service.error.message);
+    if (schema && /standard_amount/i.test(service.error.message)) {
+      return { amount: 0, serviceAt: null as string | null, priest: null, paidTime, error: schema };
+    }
+    if (!submitted) {
+      return {
+        amount: 0,
+        serviceAt: null as string | null,
+        priest: null,
+        paidTime,
+        error: "Category, amount, and date are required.",
+      };
+    }
+    return { amount: submitted, serviceAt: null as string | null, priest: null, paidTime };
+  }
+
+  if (!service.data || service.data.category !== "church_service") {
+    if (!submitted) {
+      return {
+        amount: 0,
+        serviceAt: null as string | null,
+        priest: null,
+        paidTime,
+        error: "Category, amount, and date are required.",
+      };
+    }
+    return { amount: submitted, serviceAt: null as string | null, priest: null, paidTime };
+  }
+
+  if (!serviceRaw || !priest) {
+    return {
+      amount: 0,
+      serviceAt: null as string | null,
+      priest,
+      paidTime,
+      error: "Enter the service schedule and the priest assigned to it.",
+    };
+  }
+  const serviceMatch = serviceRaw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+  const serviceDate = new Date(serviceRaw);
+  if (!serviceMatch || Number.isNaN(serviceDate.getTime())) {
+    return {
+      amount: 0,
+      serviceAt: null as string | null,
+      priest,
+      paidTime,
+      error: "Enter a complete date and time for the service.",
+    };
+  }
+  const [, scheduleDate, scheduleTime] = serviceMatch;
+  const donationId = Number(formData.get("donation_id"));
+  let keptSchedule = false;
+  if (donationId) {
+    const existing = await supabase
+      .from("donations")
+      .select("service_at")
+      .eq("donation_id", donationId)
+      .maybeSingle();
+    keptSchedule =
+      toDateTimeLocal(existing.data?.service_at) === `${scheduleDate}T${scheduleTime}`;
+  }
+  if (!keptSchedule) {
+    if (scheduleDate < parishTomorrow()) {
+      return {
+        amount: 0,
+        serviceAt: null as string | null,
+        priest,
+        paidTime,
+        error: "Choose a schedule date starting tomorrow.",
+      };
+    }
+    if (!/^(?:0[7-9]|1[0-6]):00$/.test(scheduleTime)) {
+      return {
+        amount: 0,
+        serviceAt: null as string | null,
+        priest,
+        paidTime,
+        error: "Choose a time from 7:00 AM to 4:00 PM.",
+      };
+    }
+  }
+
+  const slot = `${scheduleDate}T${scheduleTime.slice(0, 2)}`;
+  const booked = await supabase
+    .from("donations")
+    .select("donation_id, service_at")
+    .not("service_at", "is", null);
+  if (booked.error) {
+    const schema = feeSchemaMessage(booked.error.message);
+    if (schema) {
+      return { amount: 0, serviceAt: null, priest, paidTime, error: schema };
+    }
+  } else {
+    const conflict = (booked.data ?? []).some((row) => {
+      if (donationId && Number(row.donation_id) === donationId) return false;
+      return scheduleHourKey(String(row.service_at ?? "")) === slot;
+    });
+    if (conflict) {
+      return {
+        amount: 0,
+        serviceAt: null,
+        priest,
+        paidTime,
+        error: "That hour already has a church service. Choose another time at least one hour apart.",
+      };
+    }
+  }
+
+  const standard = Number(service.data.standard_amount);
+  if (!Number.isFinite(standard) || standard <= 0) {
+    return {
+      amount: 0,
+      serviceAt: null,
+      priest,
+      paidTime,
+      error: "Set the fee for this church service in Income Services before recording a payment.",
+    };
+  }
+
+  const year = serviceDate.getFullYear();
+  const adjustment = await supabase
+    .from("service_fee_years")
+    .select("adjustment")
+    .eq("service_id", service.data.service_id)
+    .eq("fee_year", year)
+    .maybeSingle();
+  if (adjustment.error) {
+    return {
+      amount: 0,
+      serviceAt: null,
+      priest,
+      paidTime,
+      error: feeSchemaMessage(adjustment.error.message) ?? adjustment.error.message,
+    };
+  }
+  const amount = feeForYear(
+    standard,
+    adjustment.data
+      ? [{ year, adjustment: Number(adjustment.data.adjustment) }]
+      : [],
+    year
+  );
+  if (amount <= 0) {
+    return {
+      amount: 0,
+      serviceAt: null,
+      priest,
+      paidTime,
+      error: `The ${year} fee for this service is not a positive amount.`,
+    };
+  }
+
+  return {
+    amount,
+    serviceAt: serviceDate.toISOString(),
+    priest,
+    paidTime,
+  };
+}
+
 export async function createDonation(
   _prev: FinanceActionState,
   formData: FormData
@@ -279,14 +469,25 @@ export async function createDonation(
 
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
   const category_id = Number(formData.get("category_id"));
-  const amount = parseAmount(formData.get("amount"));
-  const donation_date = String(formData.get("donation_date") || "").trim();
+  const recorded = currentParishDateTime();
+  const donation_date = recorded.date;
   const remarks = String(formData.get("remarks") || "").trim() || null;
   const payment_method = "Cash";
 
-  if (!category_id || !amount || !donation_date) {
-    return { error: "Category, amount, and date are required." };
+  if (!category_id) {
+    return { error: "Category is required." };
   }
+
+  const resolved = await resolvePaymentAmount(
+    supabase,
+    category_id,
+    parseAmount(formData.get("amount")),
+    formData
+  );
+  if (resolved.error || !resolved.amount) {
+    return { error: resolved.error || "Category, amount, and date are required." };
+  }
+  const amount = resolved.amount;
 
   const limitError = await ensureWithinTransactionLimit(
     supabase,
@@ -311,6 +512,9 @@ export async function createDonation(
       remarks,
       or_number: or.orNumber,
       payment_method,
+      paid_time: recorded.time,
+      service_at: resolved.serviceAt,
+      priest_name: resolved.priest,
       status: "received",
       created_by: user.id,
     })
@@ -318,7 +522,7 @@ export async function createDonation(
     .single();
 
   if (error) {
-    return { error: orNumberSchemaMessage(error.message) ?? error.message };
+    return { error: feeSchemaMessage(error.message) ?? orNumberSchemaMessage(error.message) ?? error.message };
   }
 
   await supabase.from("audit_logs").insert({
@@ -359,14 +563,24 @@ export async function updateDonation(
   const donation_id = Number(formData.get("donation_id"));
   const donor_name = String(formData.get("donor_name") || "").trim() || null;
   const category_id = Number(formData.get("category_id"));
-  const amount = parseAmount(formData.get("amount"));
   const donation_date = String(formData.get("donation_date") || "").trim();
   const remarks = String(formData.get("remarks") || "").trim() || null;
   const payment_method = "Cash";
 
-  if (!donation_id || !category_id || !amount || !donation_date) {
-    return { error: "Category, amount, and date are required." };
+  if (!donation_id || !category_id || !donation_date) {
+    return { error: "Category and date are required." };
   }
+
+  const resolved = await resolvePaymentAmount(
+    supabase,
+    category_id,
+    parseAmount(formData.get("amount")),
+    formData
+  );
+  if (resolved.error || !resolved.amount) {
+    return { error: resolved.error || "Category, amount, and date are required." };
+  }
+  const amount = resolved.amount;
 
   const or = await resolveOrNumber(
     supabase,
@@ -385,11 +599,14 @@ export async function updateDonation(
       remarks,
       or_number: or.orNumber,
       payment_method,
+      paid_time: resolved.paidTime,
+      service_at: resolved.serviceAt,
+      priest_name: resolved.priest,
     })
     .eq("donation_id", donation_id);
 
   if (error) {
-    return { error: orNumberSchemaMessage(error.message) ?? error.message };
+    return { error: feeSchemaMessage(error.message) ?? orNumberSchemaMessage(error.message) ?? error.message };
   }
 
   await supabase.from("audit_logs").insert({

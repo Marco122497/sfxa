@@ -5,13 +5,9 @@ import { formatDateTime } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import { PageHeading } from "@/components/layout/page-heading";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  TransactionHistoryTable,
+  type HistoryViewRow,
+} from "@/components/finance/transaction-history-table";
 
 type HistoryRow = {
   history_id: number;
@@ -36,20 +32,46 @@ const actionLabel: Record<string, string> = {
   DELETED_EXPENSE: "Expense deleted",
 };
 
+const FETCH_SIZE = 1000;
+
 export async function TransactionHistory() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("finance_history")
-    .select(
-      "history_id, created_at, actor_name, actor_role, action, source, or_number, amount, summary"
-    )
-    .order("created_at", { ascending: false })
-    .limit(300);
+  const rows: HistoryRow[] = [];
+  let errorMessage: string | null = null;
 
-  const rows = (data ?? []) as HistoryRow[];
+  for (let from = 0; ; from += FETCH_SIZE) {
+    const { data, error } = await supabase
+      .from("finance_history")
+      .select(
+        "history_id, created_at, actor_name, actor_role, action, source, or_number, amount, summary"
+      )
+      .order("created_at", { ascending: false })
+      .range(from, from + FETCH_SIZE - 1);
+
+    if (error) {
+      errorMessage = error.message;
+      break;
+    }
+
+    const batch = (data ?? []) as HistoryRow[];
+    rows.push(...batch);
+    if (batch.length < FETCH_SIZE) break;
+  }
+
   const missingTable = Boolean(
-    error && /finance_history|relation|does not exist|schema cache/i.test(error.message)
+    errorMessage &&
+      /finance_history|relation|does not exist|schema cache/i.test(errorMessage)
   );
+  const viewRows: HistoryViewRow[] = rows.map((row) => ({
+    id: row.history_id,
+    when: formatDateTime(row.created_at),
+    actorName: row.actor_name,
+    actorRole: row.actor_role,
+    action: actionLabel[row.action] || row.action,
+    orNumber: row.or_number || "—",
+    amount: row.amount == null ? "—" : formatMoney(row.amount),
+    summary: row.summary,
+  }));
 
   return (
     <div className="space-y-4">
@@ -65,49 +87,15 @@ export async function TransactionHistory() {
           Supabase, then refresh.
         </p>
       ) : null}
-      {error && !missingTable ? (
-        <p className="text-sm text-destructive">{error.message}</p>
+      {errorMessage && !missingTable ? (
+        <p className="text-sm text-destructive">{errorMessage}</p>
       ) : null}
-      {!error && rows.length === 0 ? (
+      {!errorMessage && viewRows.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No transactions have been recorded yet.
         </p>
       ) : null}
-      {rows.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>When</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>OR No.</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Record</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.history_id}>
-                <TableCell className="whitespace-nowrap">
-                  {formatDateTime(row.created_at)}
-                </TableCell>
-                <TableCell>
-                  <div>{row.actor_name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {row.actor_role}
-                  </div>
-                </TableCell>
-                <TableCell>{actionLabel[row.action] || row.action}</TableCell>
-                <TableCell>{row.or_number || "—"}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.amount == null ? "—" : formatMoney(row.amount)}
-                </TableCell>
-                <TableCell className="max-w-[360px]">{row.summary}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : null}
+      {viewRows.length > 0 ? <TransactionHistoryTable rows={viewRows} /> : null}
     </div>
   );
 }

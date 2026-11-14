@@ -34,19 +34,36 @@ export function incomeAccessTypeLabel(accessType: string) {
   return "—";
 }
 
+/** "Sunday Collection - Second Mass" → "Sunday Collection (Second Mass)". */
+export function formatServiceDetail(name: string | null | undefined) {
+  const trimmed = String(name ?? "").trim();
+  const match = trimmed.match(/^(.*?)\s+-\s+(.+)$/);
+  if (!match) return trimmed;
+  const base = match[1].trim();
+  const detail = match[2].trim();
+  if (!base || !detail) return trimmed;
+  return `${base} (${detail})`;
+}
+
+export function formatTypeLabel(name: string | null | undefined) {
+  const raw = String(name ?? "").trim();
+  if (!raw) return "";
+  const { baseName, accessType } = parseIncomeAccessType(raw);
+  const formatted = formatServiceDetail(baseName);
+  if (accessType === "public") return `${formatted} (Public)`;
+  if (accessType === "private") return `${formatted} (Private)`;
+  return formatted;
+}
+
 export function generalIncomeServiceName(
   serviceName: string | null | undefined
 ) {
   const { baseName } = parseIncomeAccessType(serviceName ?? "");
-  return baseName || serviceName?.trim() || "Unspecified";
+  return formatServiceDetail(baseName) || serviceName?.trim() || "Unspecified";
 }
 
 export function incomeServiceReportLabel(serviceName: string) {
-  const { baseName, accessType } = parseIncomeAccessType(serviceName);
-  if (!baseName) return serviceName || "Uncategorized";
-  const access = incomeAccessTypeLabel(accessType);
-  if (access === "—") return baseName;
-  return `${baseName} (${access})`;
+  return formatTypeLabel(serviceName) || "Uncategorized";
 }
 
 /** Combine a service name with an optional public/private type. */

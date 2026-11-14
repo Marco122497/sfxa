@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isReservedFinanceKind } from "@/lib/income-categories";
+import { isIncomeCategoryId } from "@/lib/income";
 
 export type IncomeCategoryActionState = {
   error?: string;
@@ -126,9 +127,20 @@ export async function updateIncomeCategory(
     return { error: "Category name is required." };
   }
 
+  const { data: existing } = await supabase
+    .from("income_categories")
+    .select("category_code, category_name")
+    .eq("income_category_id", income_category_id)
+    .maybeSingle();
+
+  if (!existing) return { error: "Category not found." };
+
+  const lockedName = isIncomeCategoryId(existing.category_code);
+  const nextName = lockedName ? existing.category_name : category_name;
+
   const { error } = await supabase
     .from("income_categories")
-    .update({ category_name, description })
+    .update({ category_name: nextName, description })
     .eq("income_category_id", income_category_id);
 
   if (error) {
@@ -143,7 +155,7 @@ export async function updateIncomeCategory(
     action: "UPDATE_INCOME_CATEGORY",
     table_name: "income_categories",
     record_id: income_category_id,
-    description: `Updated income category ${category_name}`,
+    description: `Updated income category ${nextName}`,
     ip_address: await getIp(),
   });
 
@@ -167,6 +179,9 @@ export async function deleteIncomeCategory(
     .maybeSingle();
 
   if (!existing) return { error: "Category not found." };
+  if (isIncomeCategoryId(existing.category_code)) {
+    return { error: "Donations, Collections / Offerings, Church Services, and Other Income cannot be deleted." };
+  }
 
   const { count } = await supabase
     .from("income_services")

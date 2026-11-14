@@ -22,6 +22,8 @@ export default async function AdminIncomeServicesPage({
     service_name: string;
     category: string;
     is_active: boolean;
+    standard_amount?: number | null;
+    fee_years?: { year: number; adjustment: number }[];
   }[] = [];
   let incomeCategories = INCOME_CATEGORIES.map((item) => ({
     code: item.id,
@@ -41,7 +43,7 @@ export default async function AdminIncomeServicesPage({
     const [{ data, error }, categoriesResult] = await Promise.all([
       admin
         .from("income_services")
-        .select("service_id, service_name, category, is_active")
+        .select("service_id, service_name, category, is_active, standard_amount")
         .order("service_name"),
       admin
         .from("income_categories")
@@ -58,6 +60,30 @@ export default async function AdminIncomeServicesPage({
 
     if (!error) {
       services = data ?? [];
+      const years = await admin
+        .from("service_fee_years")
+        .select("service_id, fee_year, adjustment");
+      if (!years.error) {
+        const byService = new Map<number, { year: number; adjustment: number }[]>();
+        for (const row of years.data ?? []) {
+          const list = byService.get(row.service_id) ?? [];
+          list.push({
+            year: Number(row.fee_year),
+            adjustment: Number(row.adjustment),
+          });
+          byService.set(row.service_id, list);
+        }
+        services = services.map((service) => ({
+          ...service,
+          fee_years: byService.get(service.service_id) ?? [],
+        }));
+      }
+    } else if (/standard_amount/i.test(error.message)) {
+      const plain = await admin
+        .from("income_services")
+        .select("service_id, service_name, category, is_active")
+        .order("service_name");
+      services = plain.data ?? [];
     } else {
       const fallback = await admin
         .from("donation_categories")

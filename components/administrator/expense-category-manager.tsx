@@ -14,6 +14,7 @@ import {
   type CategoryActionState,
 } from "@/app/actions/categories";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { formatTypeLabel } from "@/lib/income-access";
 import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -309,7 +310,7 @@ function AddSpecificDialog({
             >
               {generals.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.name}
+                  {formatTypeLabel(g.name)}
                 </option>
               ))}
             </select>
@@ -625,7 +626,7 @@ export function ExpenseCategoryManager({
             <option value="">All general categories</option>
             {generals.map((g) => (
               <option key={g.id} value={g.id}>
-                {g.name}
+                {formatTypeLabel(g.name)}
               </option>
             ))}
           </select>
@@ -653,13 +654,13 @@ export function ExpenseCategoryManager({
                 {filteredSpecifics.map((row) => (
                   <TableRow key={row.subcategory_id}>
                     <TableCell className="px-2 py-1.5">
-                      {generalById.get(row.expense_category_id) || "—"}
+                      {formatTypeLabel(generalById.get(row.expense_category_id)) || "—"}
                     </TableCell>
                     <TableCell className="px-2 py-1.5 font-medium">
-                      {row.subcategory_name}
+                      {formatTypeLabel(row.subcategory_name)}
                     </TableCell>
                     <TableCell className="px-2 py-1.5">
-                      <RowActionsDialog label={row.subcategory_name}>
+                      <RowActionsDialog label={formatTypeLabel(row.subcategory_name)}>
                         <EditSpecificDialog row={row} generals={generals} />
                         <DeleteSpecificButton
                           subcategoryId={row.subcategory_id}

@@ -1,3 +1,5 @@
+import { formatTypeLabel } from "@/lib/income-access";
+
 function relationName(
   value:
     | { category_name?: string; subcategory_name?: string }
@@ -5,8 +7,9 @@ function relationName(
     | null,
   field: "category_name" | "subcategory_name" = "category_name"
 ) {
-  if (Array.isArray(value)) return value[0]?.[field] ?? null;
-  return value?.[field] ?? null;
+  const raw = Array.isArray(value) ? value[0]?.[field] : value?.[field];
+  if (!raw) return null;
+  return formatTypeLabel(raw);
 }
 
 export { relationName };

@@ -20,6 +20,8 @@ export type OfficialReceipt = {
   receivedFrom: string;
   particulars: string;
   amount: string;
+  schedule?: string | null;
+  priest?: string | null;
 };
 
 function OfficialReceiptSheet({ receipt }: { receipt: OfficialReceipt }) {
@@ -54,73 +56,71 @@ function OfficialReceiptSheet({ receipt }: { receipt: OfficialReceipt }) {
         Receipt
       </p>
 
-      <div className="mt-8 flex items-start justify-between gap-8">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
-            Received from
-          </p>
-          <p className="mt-2 text-[15px] font-medium text-[#111111]">
-            {receipt.receivedFrom}
-          </p>
-          <p className="mt-1 text-[12px] text-[#4b5563]">Walk-in cash payment</p>
-        </div>
-        <dl className="grid shrink-0 grid-cols-[auto_auto] gap-x-8 gap-y-2 text-[13px]">
-          <dt className="font-semibold text-[#111111]">OR No.</dt>
-          <dd className="text-right tabular-nums">{receipt.orNumber}</dd>
-          <dt className="font-semibold text-[#111111]">Receipt date</dt>
-          <dd className="text-right">{receipt.date}</dd>
-        </dl>
-      </div>
+      <dl className="mt-6 grid grid-cols-[9.5rem_minmax(0,1fr)] gap-x-6 gap-y-2 border-y border-[#111111] py-4 text-[13px]">
+        <dt className="font-semibold text-[#111111]">Received from</dt>
+        <dd className="min-w-0">{receipt.receivedFrom}</dd>
+        <dt className="font-semibold text-[#111111]">Payment</dt>
+        <dd>Walk-in cash</dd>
+        <dt className="font-semibold text-[#111111]">OR No.</dt>
+        <dd className="tabular-nums">{receipt.orNumber}</dd>
+        <dt className="font-semibold text-[#111111]">Receipt date</dt>
+        <dd>{receipt.date}</dd>
+        {receipt.schedule ? (
+          <>
+            <dt className="font-semibold text-[#111111]">Schedule</dt>
+            <dd>{receipt.schedule}</dd>
+          </>
+        ) : null}
+        {receipt.priest ? (
+          <>
+            <dt className="font-semibold text-[#111111]">Priest</dt>
+            <dd>{receipt.priest}</dd>
+          </>
+        ) : null}
+      </dl>
 
-      <table className="mt-8 w-full border-collapse text-[13px]">
+      <table className="mt-6 w-full border-collapse text-[13px]">
         <thead>
-          <tr className="border-y border-[#111111]">
-            <th className="w-16 py-2 pr-3 text-left text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
+          <tr className="border-b border-[#111111]">
+            <th className="w-16 py-2 pr-4 text-left text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
               Qty
             </th>
-            <th className="py-2 pr-3 text-left text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
+            <th className="py-2 pr-4 text-left text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
               Description
             </th>
-            <th className="w-32 py-2 pr-3 text-right text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
+            <th className="w-36 py-2 pr-4 text-right text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
               Unit Price
             </th>
-            <th className="w-32 py-2 text-right text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
+            <th className="w-36 py-2 text-right text-[10px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
               Amount
             </th>
           </tr>
         </thead>
         <tbody>
           <tr className="border-b border-[#e5e7eb]">
-            <td className="py-3 pr-3 align-top">1</td>
-            <td className="py-3 pr-3 align-top">{receipt.particulars}</td>
-            <td className="py-3 pr-3 text-right align-top tabular-nums">
+            <td className="py-3 pr-4 align-top">1</td>
+            <td className="py-3 pr-4 align-top">{receipt.particulars}</td>
+            <td className="py-3 pr-4 text-right align-top tabular-nums">
               {receipt.amount}
             </td>
             <td className="py-3 text-right align-top tabular-nums">
               {receipt.amount}
             </td>
           </tr>
+          <tr className="border-b border-[#111111] bg-[#f3f4f6] font-semibold">
+            <td className="py-2" />
+            <td className="py-2" />
+            <td className="py-2 pr-4 text-right">Amount received</td>
+            <td className="py-2 text-right tabular-nums">{receipt.amount}</td>
+          </tr>
         </tbody>
       </table>
 
-      <div className="mt-2 flex justify-end">
-        <table className="w-full max-w-xs border-collapse text-[13px]">
-          <tbody>
-            <tr className="border-b border-[#111111] bg-[#f3f4f6] font-semibold">
-              <td className="px-3 py-2">Amount received</td>
-              <td className="px-3 py-2 text-right tabular-nums">
-                {receipt.amount}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <section className="report-keep mt-12">
+      <section className="report-keep mt-10">
         <p className="text-[11px] font-semibold tracking-[0.14em] text-[#111111] uppercase">
           Notes
         </p>
-        <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-[#374151]">
+        <p className="mt-2 text-[13px] leading-relaxed text-[#374151]">
           Walk-in cash payment recorded under official receipt {receipt.orNumber}.
           Please keep this receipt for parish records.
         </p>
@@ -129,12 +129,12 @@ function OfficialReceiptSheet({ receipt }: { receipt: OfficialReceipt }) {
         </p>
       </section>
 
-      <section className="report-keep mt-10 grid grid-cols-2 gap-10">
+      <section className="report-keep mt-10 grid grid-cols-2 gap-16">
         <div className="text-sm">
           <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
             Prepared by
           </p>
-          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <div className="mt-10 border-b border-[#111111]" />
           <p className="mt-2 font-medium uppercase">Treasurer</p>
           <p className="text-[12px] uppercase text-[#4b5563]">Walk-in cash</p>
           <p className="mt-1 text-[12px] text-[#4b5563]">Date: {printed}</p>
@@ -143,7 +143,7 @@ function OfficialReceiptSheet({ receipt }: { receipt: OfficialReceipt }) {
           <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
             Noted by
           </p>
-          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <div className="mt-10 border-b border-[#111111]" />
           <p className="mt-2 font-medium uppercase">Parish Priest</p>
           <p className="text-[12px] uppercase text-[#4b5563]">Parish Priest</p>
           <p className="mt-1 text-[12px] text-[#4b5563]">Date: __________</p>

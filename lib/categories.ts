@@ -1,6 +1,6 @@
 export const COLLECTION_CATEGORY_NAMES = [
-  "Sunday Collection - 1st Mass",
-  "Sunday Collection - 2nd Mass",
+  "Sunday Collection (1st Mass)",
+  "Sunday Collection (2nd Mass)",
   "Special Collection",
   "Fiesta Collection",
   "Other Collection",

@@ -30,12 +30,6 @@ function slugify(label: string, index: number) {
   return base || `item-${index}`;
 }
 
-function shortAmount(value: number) {
-  if (value >= 1_000_000) return `₱${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `₱${Math.round(value / 1_000)}k`;
-  return `₱${Math.round(value)}`;
-}
-
 export function ReportPieChart({
   breakdown,
   title,
@@ -117,25 +111,7 @@ export function ReportPieChart({
             stroke="#ffffff"
             strokeWidth={1}
             isAnimationActive={false}
-            labelLine={false}
-            label={({ payload, ...props }) => {
-              const amount = Number(payload?.amount ?? 0);
-              if (!amount) return null;
-              return (
-                <text
-                  cx={props.cx}
-                  cy={props.cy}
-                  x={props.x}
-                  y={props.y}
-                  textAnchor={props.textAnchor}
-                  dominantBaseline={props.dominantBaseline}
-                  fill="#334155"
-                  className="text-[11px] font-medium"
-                >
-                  {shortAmount(amount)}
-                </text>
-              );
-            }}
+            label={false}
           >
             {chartData.map((item) => (
               <Cell key={item.key} fill={item.fill} />

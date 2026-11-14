@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatTypeLabel } from "@/lib/income-access";
 
 const initialState: OnlineDonationState = {};
 
@@ -50,7 +51,7 @@ export function OnlineDonateForm({
           <option value="">Select type</option>
           {categories.map((item) => (
             <option key={item.category_id} value={item.category_id}>
-              {item.category_name}
+              {formatTypeLabel(item.category_name)}
             </option>
           ))}
         </select>

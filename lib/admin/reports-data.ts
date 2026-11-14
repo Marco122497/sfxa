@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { incomeCategoryLabel } from "@/lib/income";
-import { incomeServiceReportLabel } from "@/lib/income-access";
+import { formatTypeLabel, incomeServiceReportLabel } from "@/lib/income-access";
 import { loadIncomeKindFor } from "@/lib/income-kind";
 import { isPostedPayment } from "@/lib/payments";
 import { toNumber } from "@/lib/format";
@@ -15,7 +15,6 @@ import {
 } from "@/lib/reports";
 import {
   getAccountabilityReport,
-  getBudgetReport,
   getExpenseReport as getDetailedExpenseReport,
   getIncomeKindFormalReport,
   type FormalReportData,
@@ -103,7 +102,7 @@ export async function getAdminFormalReportData(
     case "expenses":
       return getDetailedExpenseReport(supabase, from, to, meta.title);
     case "budget":
-      return getBudgetReport(supabase, from, to, meta.title);
+      return getBudgetUtilizationReport(supabase, from, to, meta.title);
     case "accountability":
       return getAccountabilityReport(supabase, from, to, meta.title);
   }
@@ -135,7 +134,7 @@ async function getFinancialSummaryReport(
 ): Promise<FormalReportData> {
   const categories = await loadDonationCategories(supabase);
   const categoryNameById = new Map(
-    categories.map((row) => [row.category_id, row.category_name])
+    categories.map((row) => [row.category_id, formatTypeLabel(row.category_name)])
   );
 
   const [kindFor, { data: donations }, expensesResult] = await Promise.all([
@@ -737,11 +736,10 @@ async function getBudgetUtilizationReport(
   let usedTotal = 0;
 
   const columns: ReportColumn[] = [
-    { key: "category", label: "Budget Category" },
-    { key: "allocated", label: "Allocated", align: "right" },
-    { key: "used", label: "Used", align: "right" },
-    { key: "remaining", label: "Remaining", align: "right" },
-    { key: "status", label: "Status" },
+    { key: "category", label: "Category" },
+    { key: "used", label: "Actual", align: "right" },
+    { key: "allocated", label: "Budget", align: "right" },
+    { key: "percent", label: "Budget %", align: "right" },
   ];
 
   const rows: ReportRow[] = [...allocatedByCategory.entries()]
@@ -749,6 +747,7 @@ async function getBudgetUtilizationReport(
     .map(([category, allocated], index) => {
       const used = spendByCategory.get(category) ?? 0;
       const remaining = allocated - used;
+      const percent = allocated > 0 ? Math.round((used / allocated) * 1000) / 10 : 0;
       allocatedTotal += allocated;
       usedTotal += used;
 
@@ -760,6 +759,7 @@ async function getBudgetUtilizationReport(
           allocated: formatMoneyPlain(allocated),
           used: formatMoneyPlain(used),
           remaining: formatMoneyPlain(remaining),
+          percent: `${percent}%`,
           status: budgetStatus(allocated, used),
         },
       };
@@ -814,11 +814,12 @@ async function getBudgetUtilizationReport(
       columns.map((col) => col.label),
       ...rows.map((row) => columns.map((col) => row.cells[col.key] ?? "")),
       [
-        "Totals",
-        formatMoneyPlain(allocatedTotal),
+        "Total",
         formatMoneyPlain(usedTotal),
-        formatMoneyPlain(remainingTotal),
-        "",
+        formatMoneyPlain(allocatedTotal),
+        allocatedTotal > 0
+          ? `${Math.round((usedTotal / allocatedTotal) * 1000) / 10}%`
+          : "0%",
       ],
     ],
   };

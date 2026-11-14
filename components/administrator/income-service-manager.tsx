@@ -23,6 +23,8 @@ import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import {
   INCOME_ACCESS_TYPES,
   incomeAccessTypeLabel,
+  formatServiceDetail,
+  formatTypeLabel,
   parseIncomeAccessType,
 } from "@/lib/income-access";
 import {
@@ -53,6 +55,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { currentParishDateTime, formatMoney } from "@/lib/format";
+import { feeForYear } from "@/lib/service-fees";
 import { cn } from "@/lib/utils";
 
 const initialState: IncomeServiceActionState = {};
@@ -65,6 +69,8 @@ export type IncomeServiceRow = {
   service_name: string;
   category: string;
   is_active: boolean;
+  standard_amount?: number | null;
+  fee_years?: { year: number; adjustment: number }[];
 };
 
 export type IncomeCategoryOption = {
@@ -123,6 +129,15 @@ export function IncomeServiceManager({
     });
   }, [filter, options, query, services]);
 
+  const churchServices = filtered.filter(
+    (service) => service.category === "church_service"
+  );
+  const otherServices = filtered.filter(
+    (service) => service.category !== "church_service"
+  );
+  const showChurch = !filter || filter === "church_service";
+  const showOther = !filter || filter !== "church_service";
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -160,14 +175,66 @@ export function IncomeServiceManager({
           />
         </div>
       </div>
-      {filtered.length === 0 ? (
-        <p className="py-2 text-sm text-muted-foreground">No income services yet.</p>
+      {showChurch ? (
+        <ServiceTable
+          title="Church services"
+          description="These services use a standard fee."
+          services={churchServices}
+          options={options}
+          showFee
+          emptyMessage="No church services yet."
+        />
+      ) : null}
+      {showOther ? (
+        <ServiceTable
+          title="Income services"
+          services={otherServices}
+          options={options}
+          emptyMessage="No income services yet."
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ServiceTable({
+  title,
+  description,
+  services,
+  options,
+  showFee = false,
+  emptyMessage,
+}: {
+  title: string;
+  description?: string;
+  services: IncomeServiceRow[];
+  options: IncomeCategoryOption[];
+  showFee?: boolean;
+  emptyMessage: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div>
+        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
+        <p className="text-xs text-muted-foreground">
+          {description
+            ? `${services.length} service${services.length === 1 ? "" : "s"} · ${description}`
+            : `${services.length} service${services.length === 1 ? "" : "s"}`}
+        </p>
+      </div>
+      {services.length === 0 ? (
+        <p className="py-2 text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="h-8 px-2">Income Service</TableHead>
-              <TableHead className="h-8 px-2">Income Category</TableHead>
+              {showFee ? null : (
+                <TableHead className="h-8 px-2">Income Category</TableHead>
+              )}
+              {showFee ? (
+                <TableHead className="h-8 px-2">Fee</TableHead>
+              ) : null}
               <TableHead className="h-8 px-2">Status</TableHead>
               <TableHead className="h-8 w-12 px-2">
                 <span className="sr-only">Actions</span>
@@ -175,35 +242,45 @@ export function IncomeServiceManager({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((service) => {
+            {services.map((service) => {
               const { baseName, accessType } = parseIncomeAccessType(
                 service.service_name
               );
+              const displayName = formatServiceDetail(baseName);
               return (
-              <TableRow key={service.service_id}>
-                <TableCell className="px-2 py-1.5 font-medium">
-                  <IncomeServiceName
-                    baseName={baseName}
-                    accessType={accessType}
-                  />
-                </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  {categoryLabel(service.category, options)}
-                </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  {service.is_active ? "Active" : "Inactive"}
-                </TableCell>
-                <TableCell className="px-2 py-1.5">
-                  <RowActionsDialog label={service.service_name}>
-                    <EditServiceDialog
-                      service={service}
-                      incomeCategories={options}
+                <TableRow key={service.service_id}>
+                  <TableCell className="px-2 py-1.5 font-medium">
+                    <IncomeServiceName
+                      baseName={displayName}
+                      accessType={accessType}
                     />
-                    <ToggleServiceDialog service={service} />
-                    <DeleteServiceDialog service={service} />
-                  </RowActionsDialog>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                  {showFee ? null : (
+                    <TableCell className="px-2 py-1.5">
+                      {categoryLabel(service.category, options)}
+                    </TableCell>
+                  )}
+                  {showFee ? (
+                    <TableCell className="px-2 py-1.5 tabular-nums">
+                      {service.standard_amount != null
+                        ? formatMoney(service.standard_amount)
+                        : "—"}
+                    </TableCell>
+                  ) : null}
+                  <TableCell className="px-2 py-1.5">
+                    {service.is_active ? "Active" : "Inactive"}
+                  </TableCell>
+                  <TableCell className="px-2 py-1.5">
+                    <RowActionsDialog label={formatTypeLabel(service.service_name)}>
+                      <EditServiceDialog
+                        service={service}
+                        incomeCategories={options}
+                      />
+                      <ToggleServiceDialog service={service} />
+                      <DeleteServiceDialog service={service} />
+                    </RowActionsDialog>
+                  </TableCell>
+                </TableRow>
               );
             })}
           </TableBody>
@@ -272,6 +349,165 @@ function AccessTypeField({
   );
 }
 
+function ChurchFeeFields({
+  idPrefix,
+  standardAmount,
+  years,
+}: {
+  idPrefix: string;
+  standardAmount?: number | null;
+  years?: { year: number; adjustment: number }[];
+}) {
+  const [rows, setRows] = useState(() =>
+    years?.map((row) => ({
+      year: String(row.year),
+      adjustment: row.adjustment === 0 ? "" : String(row.adjustment),
+    })) ?? []
+  );
+  const standard = Number(standardAmount ?? 0);
+  const currentYear = Number(currentParishDateTime().date.slice(0, 4));
+  const nextYear = currentYear + 1;
+
+  function nextOpenYear(list: { year: string }[]) {
+    const taken = new Set(list.map((row) => Number(row.year)));
+    let year = nextYear;
+    while (taken.has(year) && year < 2100) year += 1;
+    return year;
+  }
+
+  const savedYears = rows.map((row) => ({
+    year: Number(row.year),
+    adjustment:
+      row.adjustment === "" || row.adjustment === "-" || row.adjustment === "."
+        ? 0
+        : Number(row.adjustment),
+  }));
+
+  return (
+    <div className="space-y-3 rounded-lg border border-input p-3">
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-fee`}>Standard fee</Label>
+        <Input
+          id={`${idPrefix}-fee`}
+          name="standard_amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          required
+          defaultValue={standardAmount ?? ""}
+          placeholder="0.00"
+        />
+        <p className="text-xs text-muted-foreground">
+          Every payment for this service uses this fee. A year below can add to
+          it or subtract from it. Leave a year out to keep the standard fee.
+        </p>
+      </div>
+      <input type="hidden" name="fee_years" value={JSON.stringify(savedYears)} />
+      {rows.map((row, index) => (
+        <div key={`${row.year}-${index}`} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-year-${index}`}>Year</Label>
+            <Input
+              id={`${idPrefix}-year-${index}`}
+              type="number"
+              min={nextYear}
+              max="2100"
+              value={row.year}
+              onChange={(event) => {
+                const raw = event.target.value;
+                if (raw !== "" && !/^\d+$/.test(raw)) return;
+                if (raw.length >= 4) {
+                  const year = Number(raw);
+                  if (!Number.isInteger(year) || year <= currentYear || year > 2100) return;
+                }
+                setRows((current) =>
+                  current.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, year: raw } : item
+                  )
+                );
+              }}
+              onBlur={() => {
+                setRows((current) =>
+                  current.map((item, itemIndex) => {
+                    if (itemIndex !== index) return item;
+                    const year = Number(item.year);
+                    if (Number.isInteger(year) && year > currentYear && year <= 2100) {
+                      return item;
+                    }
+                    return {
+                      ...item,
+                      year: String(nextOpenYear(current.filter((_, i) => i !== index))),
+                    };
+                  })
+                );
+              }}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={`${idPrefix}-adjust-${index}`}>
+              {row.adjustment.trim().startsWith("-") ? "Minus" : "Add"}
+            </Label>
+            <Input
+              id={`${idPrefix}-adjust-${index}`}
+              type="text"
+              inputMode="decimal"
+              placeholder="0"
+              value={row.adjustment}
+              onChange={(event) => {
+                const raw = event.target.value.replace(/[^\d.-]/g, "");
+                if (raw !== "" && !/^-?\d*\.?\d*$/.test(raw)) return;
+                setRows((current) =>
+                  current.map((item, itemIndex) =>
+                    itemIndex === index ? { ...item, adjustment: raw } : item
+                  )
+                );
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              {row.adjustment.trim().startsWith("-")
+                ? "This amount is subtracted from the standard fee."
+                : "Type the amount to add. Start with a minus, such as -500, to subtract."}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-6"
+            onClick={() =>
+              setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))
+            }
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() =>
+          setRows((current) => [
+            ...current,
+            { year: String(nextOpenYear(current)), adjustment: "" },
+          ])
+        }
+      >
+        Add year
+      </Button>
+      {standard > 0 && savedYears.some((row) => Number.isFinite(row.year)) ? (
+        <p className="text-xs text-muted-foreground">
+          {savedYears
+            .filter((row) => Number.isFinite(row.year) && Number.isFinite(row.adjustment))
+            .map(
+              (row) =>
+                `${row.year}: ${formatMoney(feeForYear(standard, [row], row.year))}`
+            )
+            .join(" · ")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function AddServiceDialog({
   defaultCategory,
   incomeCategories,
@@ -280,6 +516,7 @@ function AddServiceDialog({
   incomeCategories: IncomeCategoryOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState(defaultCategory);
   const [state, formAction, pending] = useServerAction(createIncomeService, initialState, () => setOpen(false));
 
 
@@ -320,7 +557,8 @@ function AddServiceDialog({
               id="category"
               name="category"
               required
-              defaultValue={defaultCategory}
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
               className={selectClassName}
             >
               {incomeCategories.map((item) => (
@@ -330,6 +568,9 @@ function AddServiceDialog({
               ))}
             </select>
           </div>
+          {category === "church_service" ? (
+            <ChurchFeeFields idPrefix="add-service" />
+          ) : null}
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -351,6 +592,7 @@ function EditServiceDialog({
   incomeCategories: IncomeCategoryOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState(service.category);
   const [state, formAction, pending] = useServerAction(updateIncomeService, initialState, () => setOpen(false));
   const formId = `edit-income-service-${service.service_id}`;
   const { baseName, accessType } = parseIncomeAccessType(service.service_name);
@@ -408,15 +650,11 @@ function EditServiceDialog({
               Income category
             </Label>
             <select
-              key={service.category}
               id={`edit-service-category-${service.service_id}`}
               name="category"
               required
-              defaultValue={
-                incomeCategories.some((item) => item.code === service.category)
-                  ? service.category
-                  : (incomeCategories[0]?.code ?? "donation")
-              }
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
               className={selectClassName}
             >
               {incomeCategories.map((item) => (
@@ -426,6 +664,13 @@ function EditServiceDialog({
               ))}
             </select>
           </div>
+          {category === "church_service" ? (
+            <ChurchFeeFields
+              idPrefix={`edit-service-${service.service_id}`}
+              standardAmount={service.standard_amount}
+              years={service.fee_years}
+            />
+          ) : null}
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -487,8 +732,8 @@ function ToggleServiceDialog({ service }: { service: IncomeServiceRow }) {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {activating
-                ? `“${service.service_name}” will become selectable when the Treasurer records income.`
-                : `“${service.service_name}” will no longer be selectable for new income records. Existing records are kept.`}
+                ? `“${formatTypeLabel(service.service_name)}” will become selectable when the Treasurer records income.`
+                : `“${formatTypeLabel(service.service_name)}” will no longer be selectable for new income records. Existing records are kept.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {state.error ? (
@@ -579,7 +824,7 @@ function DeleteServiceDialog({ service }: { service: IncomeServiceRow }) {
             </AlertDialogMedia>
             <AlertDialogTitle>Delete income service?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove “{service.service_name}”. If it is
+              This will permanently remove “{formatTypeLabel(service.service_name)}”. If it is
               already used in records, deactivate it instead.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -668,15 +668,15 @@ export function CashFlowPageSkeleton() {
 export function ReportsPageSkeleton() {
   return (
     <div className="space-y-6">
-      <PageHeaderSkeleton action actions={2} titleWidth="w-56" />
+      <PageHeaderSkeleton action actions={1} titleWidth="w-56" />
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1.5">
-          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-24" />
           <Skeleton className="h-8 w-[220px]" />
         </div>
         <div className="space-y-1.5">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-8 w-[180px]" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-[220px]" />
         </div>
         <div className="space-y-1.5">
           <Skeleton className="h-4 w-10" />
@@ -687,52 +687,64 @@ export function ReportsPageSkeleton() {
           <Skeleton className="h-8 w-[150px]" />
         </div>
       </div>
-      <article className="mx-auto space-y-6 rounded-xl border bg-white p-6 text-black dark:bg-white">
-        <div className="flex items-center justify-center gap-3">
-          <Skeleton className="size-16 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="mx-auto h-5 w-64" />
-            <Skeleton className="mx-auto h-3 w-52" />
-          </div>
-          <Skeleton className="size-16 rounded-full" />
-        </div>
-        <Skeleton className="mx-auto h-5 w-72" />
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="space-y-2">
-              <Skeleton className="h-3 w-16" />
-              <Skeleton className="h-4 w-24" />
+      <article className="formal-report mx-auto">
+        <header className="formal-report-header text-center">
+          <div className="formal-report-letterhead">
+            <Skeleton className="size-16 shrink-0 rounded-full" />
+            <div className="space-y-2">
+              <Skeleton className="mx-auto h-[17px] w-64" />
+              <Skeleton className="mx-auto h-3 w-52" />
+              <Skeleton className="mx-auto h-[11px] w-44" />
             </div>
-          ))}
-        </div>
-        <Skeleton className="h-px w-full" />
-        <SkeletonTable
-          columns={["w-20", "w-28", "w-32", "w-24", "ml-auto w-20"]}
-          rows={6}
-        />
-        <div className="grid gap-8 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-24" />
+            <Skeleton className="size-16 shrink-0 rounded-full" />
+          </div>
+          <Skeleton className="mx-auto mt-4 h-[15px] w-72" />
+          <Skeleton className="mx-auto mt-4 h-3 w-36" />
+          <div className="mt-4 grid grid-cols-4 gap-x-6 gap-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="flex justify-between gap-3">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-16" />
+              <div key={index} className="min-w-0 space-y-1">
+                <Skeleton className="h-2.5 w-16" />
+                <Skeleton className="h-[13px] w-24" />
               </div>
             ))}
           </div>
-          <div className="flex justify-center">
-            <Skeleton className="size-40 rounded-full" />
+          <div className="mt-5 border-b border-[#111111]" />
+        </header>
+
+        <section className="mt-6">
+          <Skeleton className="h-8 w-full" />
+          <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] items-start gap-8">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-56" />
+              <Skeleton className="h-3 w-40" />
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div key={index} className="flex justify-between gap-3 py-1.5">
+                  <Skeleton className={index % 4 === 0 ? "h-4 w-32" : "ml-6 h-4 w-40"} />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="size-[220px] rounded-full" />
+              {Array.from({ length: 3 }).map((_, index) => (
+                <Skeleton key={index} className="h-3 w-full" />
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="grid gap-8 sm:grid-cols-2">
+        </section>
+
+        <section className="mt-10 grid grid-cols-2 gap-10">
           {Array.from({ length: 2 }).map((_, index) => (
-            <div key={index} className="space-y-3">
-              <Skeleton className="h-3 w-24" />
-              <Skeleton className="mt-8 h-px w-48" />
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-2.5 w-24" />
+              <div className="mt-10 w-48 border-b border-[#111111]" />
               <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-28" />
             </div>
           ))}
-        </div>
+        </section>
       </article>
     </div>
   );

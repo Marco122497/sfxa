@@ -1,3 +1,4 @@
+import { formatTypeLabel } from "@/lib/income-access";
 import { createClient } from "@/lib/supabase/server";
 import { toNumber } from "@/lib/format";
 
@@ -72,7 +73,7 @@ function mapCategorySummary(
   return (rows ?? []).map((row) => ({
     monthKey: row.month_key,
     monthLabel: monthLabel(row.month_key),
-    categoryName: row.category_name,
+    categoryName: formatTypeLabel(row.category_name),
     total: toNumber(row.total),
   }));
 }
@@ -137,8 +138,8 @@ export async function getPublicTransparencyData() {
   ).map((row) => ({
     monthKey: row.month_key,
     monthLabel: monthLabel(row.month_key),
-    categoryName: row.category_name,
-    subcategoryName: row.subcategory_name,
+    categoryName: formatTypeLabel(row.category_name),
+    subcategoryName: formatTypeLabel(row.subcategory_name),
     total: toNumber(row.total),
   }));
 
@@ -153,7 +154,7 @@ export async function getPublicTransparencyData() {
         }[]
       | null) ?? []
   ).map((row) => ({
-    categoryName: row.category_name,
+    categoryName: formatTypeLabel(row.category_name),
     fiscalYear: row.fiscal_year,
     allocated: toNumber(row.allocated),
     utilized: toNumber(row.utilized),

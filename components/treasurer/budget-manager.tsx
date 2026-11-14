@@ -13,6 +13,7 @@ import {
   type FinanceActionState,
 } from "@/app/actions/finance";
 import { formatMoney, toNumber } from "@/lib/format";
+import { formatTypeLabel } from "@/lib/income-access";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   AlertDialog,
@@ -125,7 +126,7 @@ function BudgetFormFields({
               key={category.budget_category_id}
               value={category.budget_category_id}
             >
-              {category.category_name}
+              {formatTypeLabel(category.category_name)}
             </option>
           ))}
         </select>
@@ -146,7 +147,7 @@ function BudgetFormFields({
           <option value="">Entire category (general)</option>
           {specificOptions.map((sub) => (
             <option key={sub.subcategory_id} value={sub.subcategory_id}>
-              {sub.subcategory_name}
+              {formatTypeLabel(sub.subcategory_name)}
             </option>
           ))}
         </select>
@@ -503,7 +504,7 @@ export function BudgetManager({
                     {group.fiscal_year}
                   </TableCell>
                   <TableCell className="px-2 py-1.5 font-semibold">
-                    {group.category_name || "—"}
+                    {formatTypeLabel(group.category_name) || "—"}
                   </TableCell>
                   <TableCell className="px-2 py-1.5 text-right font-medium tabular-nums">
                     {formatMoney(group.allocated)}
@@ -525,7 +526,7 @@ export function BudgetManager({
                     <TableRow key={row.budget_id}>
                       <TableCell className="px-2 py-1.5" />
                       <TableCell className="px-2 py-1.5 pl-6">
-                        {row.subcategory_name || (
+                        {formatTypeLabel(row.subcategory_name) || (
                           <span className="text-muted-foreground">
                             General allocation
                           </span>
@@ -546,7 +547,7 @@ export function BudgetManager({
                       {showActions ? (
                         <TableCell className="px-2 py-1.5">
                           <RowActionsDialog
-                            label={`${row.subcategory_name || row.category_name || "Allocation"} · FY ${row.fiscal_year}`}
+                            label={`${formatTypeLabel(row.subcategory_name || row.category_name) || "Allocation"} · FY ${row.fiscal_year}`}
                           >
                             {canEdit ? (
                               <EditBudgetDialog
@@ -557,7 +558,7 @@ export function BudgetManager({
                             {canDelete ? (
                               <DeleteBudgetButton
                                 budgetId={row.budget_id}
-                                label={`${formatMoney(allocated)} · ${row.subcategory_name || row.category_name || "allocation"} · FY ${row.fiscal_year}`}
+                                label={`${formatMoney(allocated)} · ${formatTypeLabel(row.subcategory_name || row.category_name) || "allocation"} · FY ${row.fiscal_year}`}
                               />
                             ) : null}
                           </RowActionsDialog>

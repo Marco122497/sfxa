@@ -11,6 +11,8 @@ import {
   type IncomeCategoryActionState,
 } from "@/app/actions/income-categories";
 import { useServerAction } from "@/hooks/use-refresh-on-success";
+import { formatTypeLabel } from "@/lib/income-access";
+import { isIncomeCategoryId } from "@/lib/income";
 import { RowActionsDialog } from "@/components/layout/row-actions-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -126,6 +128,7 @@ function EditIncomeCategoryDialog({ row }: { row: IncomeCategoryRow }) {
     () => setOpen(false)
   );
   const formId = `edit-income-category-${row.income_category_id}`;
+  const nameLocked = isIncomeCategoryId(row.category_code);
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -145,8 +148,9 @@ function EditIncomeCategoryDialog({ row }: { row: IncomeCategoryRow }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Edit income category</AlertDialogTitle>
           <AlertDialogDescription>
-            Update the display name or description. Existing income services
-            stay linked.
+            {nameLocked
+              ? "This category name is fixed. You can update the description. Existing income services stay linked."
+              : "Update the display name or description. Existing income services stay linked."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <form action={formAction} id={formId} className="space-y-4">
@@ -167,6 +171,7 @@ function EditIncomeCategoryDialog({ row }: { row: IncomeCategoryRow }) {
               id={`${formId}-name`}
               name="category_name"
               required
+              readOnly={nameLocked}
               defaultValue={row.category_name}
             />
           </div>
@@ -248,7 +253,7 @@ function DeleteIncomeCategoryButton({ row }: { row: IncomeCategoryRow }) {
             </AlertDialogMedia>
             <AlertDialogTitle>Delete income category?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove “{row.category_name}”. Income
+              This will permanently remove “{formatTypeLabel(row.category_name)}”. Income
               services under it must be moved or deleted first.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -345,7 +350,7 @@ export function IncomeCategoryManager({
             {filtered.map((row) => (
               <TableRow key={row.income_category_id}>
                 <TableCell className="px-2 py-1.5 font-medium">
-                  {row.category_name}
+                  {formatTypeLabel(row.category_name)}
                 </TableCell>
                 <TableCell className="px-2 py-1.5 text-muted-foreground">
                   {row.description || "—"}
@@ -354,9 +359,11 @@ export function IncomeCategoryManager({
                   {row.service_count}
                 </TableCell>
                 <TableCell className="px-2 py-1.5">
-                  <RowActionsDialog label={row.category_name}>
+                  <RowActionsDialog label={formatTypeLabel(row.category_name)}>
                     <EditIncomeCategoryDialog row={row} />
-                    <DeleteIncomeCategoryButton row={row} />
+                    {isIncomeCategoryId(row.category_code) ? null : (
+                      <DeleteIncomeCategoryButton row={row} />
+                    )}
                   </RowActionsDialog>
                 </TableCell>
               </TableRow>

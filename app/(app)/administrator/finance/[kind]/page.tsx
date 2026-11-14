@@ -31,7 +31,7 @@ export default async function AdminFinanceKindPage({
   }
 
   const withPending = isDonationLike(meta.code, meta.name);
-  const { categories, rows: mapped } = await loadReceiveIncome(meta.code, {
+  const { categories, rows: mapped, serviceFees } = await loadReceiveIncome(meta.code, {
     withStatus: withPending,
   });
   const rows = withPending
@@ -62,6 +62,7 @@ export default async function AdminFinanceKindPage({
             canDelete
             suggestedOrNumber={suggestedOrNumber}
             transactionLimit={transactionLimit}
+            serviceFees={serviceFees}
           />
         </CardContent>
       </Card>

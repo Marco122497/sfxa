@@ -86,6 +86,7 @@ export default async function AdminIncomeMonitoringPage() {
                 canDelete
                 suggestedOrNumber={suggestedOrNumber}
                 transactionLimit={transactionLimit}
+                serviceFees={item.serviceFees}
               />
             </CardContent>
           </Card>
