@@ -89,7 +89,7 @@ export function FinancialStatement({ data }: { data: FormalReportData }) {
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] items-start gap-8">
+      <div className="mt-4 grid w-full min-w-0 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-8">
         <div>
           <h3 className="text-[16px] font-bold tracking-[0.04em] text-[#111111] uppercase">
             Parish Financial Report
@@ -133,14 +133,20 @@ export function FinancialStatement({ data }: { data: FormalReportData }) {
                 </td>
               </tr>
               {expenseLines.map((line) => (
-                <StatementLine
-                  key={line.label}
-                  label={line.label}
-                  amount={line.amount}
-                />
+                <Fragment key={line.label}>
+                  <StatementLine label={line.label} amount={line.amount} />
+                  {(line.children ?? []).map((item, index) => (
+                    <StatementLine
+                      key={`${line.label}-${index}`}
+                      label={item.label}
+                      amount={item.amount}
+                      indent
+                    />
+                  ))}
+                </Fragment>
               ))}
               <StatementLine
-                label="Total Expense"
+                label="Total Amount Spent"
                 amount={expenses?.amount ?? 0}
                 total
               />
@@ -151,6 +157,51 @@ export function FinancialStatement({ data }: { data: FormalReportData }) {
               />
             </tbody>
           </table>
+
+          {data.budget ? (
+            <div className="mt-6">
+              <h4 className="text-[13px] font-bold tracking-[0.04em] text-[#111111] uppercase">
+                Overall budget and remaining balance
+              </h4>
+              <p className="mt-1 text-[12px] text-[#4b5563]">
+                Remaining balance is the overall allocated budget minus every expense in this period.
+              </p>
+              <table className="mt-3 w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#111111]">
+                    <th className="py-2 pr-3 text-left text-[10px] font-semibold tracking-[0.12em] uppercase">
+                      Category
+                    </th>
+                    <th className="py-2 pr-3 text-right text-[10px] font-semibold tracking-[0.12em] uppercase">
+                      Allocated
+                    </th>
+                    <th className="py-2 pr-3 text-right text-[10px] font-semibold tracking-[0.12em] uppercase">
+                      Spent
+                    </th>
+                    <th className="py-2 text-right text-[10px] font-semibold tracking-[0.12em] uppercase">
+                      Remaining
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.budget.lines.map((line) => (
+                    <tr key={line.category} className="border-t border-[#e5e7eb]">
+                      <td className="py-1.5 pr-3">{line.category}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{money(line.allocated)}</td>
+                      <td className="py-1.5 pr-3 text-right tabular-nums">{money(line.spent)}</td>
+                      <td className="py-1.5 text-right tabular-nums">{money(line.remaining)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 border-b-2 border-[#111111] font-semibold">
+                    <td className="py-1.5 pr-3">Overall budget</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.budget.allocated)}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums">{money(data.budget.spent)}</td>
+                    <td className="py-1.5 text-right tabular-nums">{money(data.budget.remaining)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-6">
@@ -254,7 +305,7 @@ export function CategoryStatement({ data }: { data: FormalReportData }) {
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-[1.15fr_0.85fr] items-start gap-8">
+      <div className="mt-4 grid w-full min-w-0 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-8">
         <div>
           <h3 className="text-[16px] font-bold tracking-[0.04em] text-[#111111] uppercase">
             {data.title}
@@ -319,7 +370,7 @@ export function BudgetStatement({ data }: { data: FormalReportData }) {
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-[1.2fr_0.8fr] items-start gap-8">
+      <div className="mt-4 grid w-full min-w-0 grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] items-start gap-8">
         <div>
           <h3 className="text-[16px] font-bold tracking-[0.04em] text-[#111111] uppercase">
             Parish Budget Report

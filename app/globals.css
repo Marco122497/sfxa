@@ -223,9 +223,12 @@
 
 .formal-report {
   box-sizing: border-box;
-  width: 210mm;
+  width: min(100%, 210mm);
+  max-width: 100%;
+  min-width: 0;
   min-height: 297mm;
-  padding: 14mm 16mm 20mm;
+  margin-inline: auto;
+  padding: clamp(12px, 4vw, 16mm);
   color: #111111;
   background: #ffffff;
   box-shadow: 0 1px 8px rgb(15 23 42 / 12%);
@@ -239,21 +242,25 @@
 
 .formal-report-letterhead {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  max-width: 100%;
 }
 
 .official-receipt-preview.formal-report {
-  width: 210mm;
+  width: min(100%, 210mm);
+  max-width: 100%;
   min-height: 297mm;
-  padding: 14mm 16mm 20mm;
+  padding: clamp(12px, 4vw, 16mm);
   box-shadow: 0 1px 8px rgb(15 23 42 / 12%);
 }
 
 @media print {
   @page {
-    margin: 14mm 16mm 18mm;
+    size: auto;
+    margin: 12mm;
 
     @bottom-left {
       content: "Generated from SXFP Finance (v1.1.1.24-beta)";
@@ -313,13 +320,41 @@
   }
 
   .formal-report {
+    box-sizing: border-box !important;
     width: 100% !important;
-    max-width: none !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     min-height: 0 !important;
     height: auto !important;
     margin: 0 auto !important;
     padding: 0 !important;
     box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .formal-report table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .formal-report th,
+  .formal-report td,
+  .formal-report dd,
+  .formal-report p {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .formal-report img,
+  .formal-report svg,
+  .formal-report canvas {
+    max-width: 100% !important;
+  }
+
+  .formal-report .grid {
+    width: 100%;
+    min-width: 0;
   }
 
   html.printing-official-receipt .official-receipt-preview.formal-report {

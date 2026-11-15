@@ -195,6 +195,8 @@ export async function loadReceiveIncome(
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
+          .order("paid_time", { ascending: false, nullsFirst: false })
+          .order("donation_id", { ascending: false })
           .limit(200)
       : await supabase
           .from("donations")
@@ -203,6 +205,8 @@ export async function loadReceiveIncome(
           )
           .in("category_id", kindIds)
           .order("donation_date", { ascending: false })
+          .order("paid_time", { ascending: false, nullsFirst: false })
+          .order("donation_id", { ascending: false })
           .limit(200);
 
     if (first.error) {
@@ -243,6 +247,14 @@ export async function loadReceiveIncome(
           ? String(row.status)
           : undefined,
     };
+  });
+
+  rows.sort((a, b) => {
+    const recorded = (row: ReceiveIncomeRow) =>
+      `${row.donation_date}T${(row.paid_time || "00:00:00").slice(0, 8)}`;
+    const byTime = recorded(b).localeCompare(recorded(a));
+    if (byTime !== 0) return byTime;
+    return b.donation_id - a.donation_id;
   });
 
   const serviceFees = await loadChurchServiceFees(supabase, kindIds);

@@ -22,7 +22,7 @@ export default async function ParishOfficerReportsPage({
   const params = await searchParams;
   const type: ParishReportType = isParishReportType(params.type)
     ? params.type
-    : "church_services";
+    : "summary";
   const { from, to } = resolveReportDateRange(params);
   const data = await getLimitedFormalReportData(supabase, type, from, to);
   const parishPriestName = await getParishPriestName(supabase);
@@ -33,7 +33,7 @@ export default async function ParishOfficerReportsPage({
       <div className="print:hidden">
         <PageHeading
           title="Financial Reports"
-          description="Totals for church services, collections, donations, other income, and expenses."
+          description="The financial report brings together income, itemized expenses, the overall budget, and the remaining balance."
           icon={FileTextIcon}
           actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />

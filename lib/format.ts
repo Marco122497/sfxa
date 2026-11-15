@@ -7,17 +7,22 @@ export function formatMoney(value: number | string | null | undefined): string {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
-export function formatDate(value: string | null | undefined): string {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("en-PH", {
-    dateStyle: "medium",
-  }).format(new Date(value));
+const PARISH_TIME_ZONE = "Asia/Manila";
+
+function parishPart(
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes
+) {
+  const value = parts.find((part) => part.type === type)?.value ?? "00";
+  return value === "24" ? "00" : value;
 }
 
-/** Parish clock used when a payment is saved without a typed date or time. */
-export function currentParishDateTime(now = new Date()) {
+/** Calendar date and clock time in Asia/Manila. */
+export function parishDateParts(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
+    timeZone: PARISH_TIME_ZONE,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -25,13 +30,45 @@ export function currentParishDateTime(now = new Date()) {
     minute: "2-digit",
     second: "2-digit",
     hourCycle: "h23",
-  }).formatToParts(now);
-  const pick = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "00";
+  }).formatToParts(date);
   return {
-    date: `${pick("year")}-${pick("month")}-${pick("day")}`,
-    time: `${pick("hour")}:${pick("minute")}:${pick("second")}`,
+    year: parishPart(parts, "year"),
+    month: parishPart(parts, "month"),
+    day: parishPart(parts, "day"),
+    hour: parishPart(parts, "hour"),
+    minute: parishPart(parts, "minute"),
+    second: parishPart(parts, "second"),
   };
+}
+
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  const dateOnly = /^(\d{4}-\d{2}-\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(`${dateOnly[1]}T00:00:00+08:00`)
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: PARISH_TIME_ZONE,
+    dateStyle: "medium",
+  }).format(date);
+}
+
+/** Parish clock used when a payment is saved without a typed date or time. */
+export function currentParishDateTime(now = new Date()) {
+  const parts = parishDateParts(now);
+  if (!parts) {
+    return { date: "1970-01-01", time: "00:00:00" };
+  }
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}:${parts.second}`,
+  };
+}
+
+/** A church schedule chosen as parish wall time, stored with an explicit offset. */
+export function parishScheduleInstant(date: string, time: string) {
+  return `${date}T${time}:00+08:00`;
 }
 
 /** Manila calendar date after today, as YYYY-MM-DD. */
@@ -48,9 +85,10 @@ export const HOURLY_TIMES = Array.from({ length: 10 }, (_, index) => {
   const hour = index + 7;
   const value = `${String(hour).padStart(2, "0")}:00`;
   const label = new Intl.DateTimeFormat("en-PH", {
+    timeZone: PARISH_TIME_ZONE,
     hour: "numeric",
     minute: "2-digit",
-  }).format(new Date(2000, 0, 1, hour, 0));
+  }).format(new Date(`2000-01-01T${value}:00+08:00`));
   return { value, label };
 });
 
@@ -68,21 +106,26 @@ export function formatTime(value: string | null | undefined): string {
   if (!value) return "";
   const clock = /^(\d{2}):(\d{2})/.exec(value);
   if (clock && value.length <= 8) {
-    const date = new Date();
-    date.setHours(Number(clock[1]), Number(clock[2]), 0, 0);
-    return new Intl.DateTimeFormat("en-PH", { timeStyle: "short" }).format(date);
+    const date = new Date(`2000-01-01T${clock[1]}:${clock[2]}:00+08:00`);
+    return new Intl.DateTimeFormat("en-PH", {
+      timeZone: PARISH_TIME_ZONE,
+      timeStyle: "short",
+    }).format(date);
   }
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "";
-  return new Intl.DateTimeFormat("en-PH", { timeStyle: "short" }).format(parsed);
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: PARISH_TIME_ZONE,
+    timeStyle: "short",
+  }).format(parsed);
 }
 
 export function toDateTimeLocal(value: string | null | undefined) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return value;
+  const parts = parishDateParts(value);
+  if (!parts) return "";
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
 export function toNumber(value: unknown): number {

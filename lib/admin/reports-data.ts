@@ -4,7 +4,7 @@ import { incomeCategoryLabel } from "@/lib/income";
 import { formatTypeLabel, incomeServiceReportLabel } from "@/lib/income-access";
 import { loadIncomeKindFor } from "@/lib/income-kind";
 import { isPostedPayment } from "@/lib/payments";
-import { toNumber } from "@/lib/format";
+import { formatDate, toNumber } from "@/lib/format";
 import {
   getAdminReportTypeMeta,
   getIncomeReportTypeMeta,
@@ -117,6 +117,9 @@ export async function getLimitedFormalReportData(
 ): Promise<FormalReportData> {
   const meta = getReportTypeMeta(type);
 
+  if (type === "summary") {
+    return getFinancialSummaryReport(supabase, from, to, meta.title);
+  }
   if (isIncomeReportType(type)) {
     return getAdminIncomeOversight(supabase, type, from, to, meta.title);
   }
@@ -137,7 +140,9 @@ async function getFinancialSummaryReport(
     categories.map((row) => [row.category_id, formatTypeLabel(row.category_name)])
   );
 
-  const [kindFor, { data: donations }, expensesResult] = await Promise.all([
+  const fromYear = Number(from.slice(0, 4));
+  const toYear = Number(to.slice(0, 4));
+  const [kindFor, { data: donations }, expensesResult, budgetsResult] = await Promise.all([
     loadIncomeKindFor(supabase),
     supabase
       .from("donations")
@@ -148,15 +153,22 @@ async function getFinancialSummaryReport(
       .lte("donation_date", to),
     supabase
       .from("expenses")
-      .select("amount, expense_date, expense_categories(category_name)")
+      .select("amount, expense_date, description, expense_categories(category_name)")
       .gte("expense_date", from)
-      .lte("expense_date", to),
+      .lte("expense_date", to)
+      .order("expense_date", { ascending: true }),
+    supabase
+      .from("budgets")
+      .select("fiscal_year, allocated_amount, budget_categories(category_name)")
+      .gte("fiscal_year", fromYear)
+      .lte("fiscal_year", toYear),
   ]);
 
   let expenses = expensesResult.data as
     | {
         amount: number | string;
         expense_date: string;
+        description?: string | null;
         expense_categories?:
           | { category_name?: string }
           | { category_name?: string }[]
@@ -167,10 +179,19 @@ async function getFinancialSummaryReport(
   if (expensesResult.error) {
     const fallback = await supabase
       .from("expenses")
-      .select("amount, expense_date")
+      .select("amount, expense_date, expense_categories(category_name)")
       .gte("expense_date", from)
-      .lte("expense_date", to);
+      .lte("expense_date", to)
+      .order("expense_date", { ascending: true });
     expenses = fallback.data as typeof expenses;
+  }
+
+  let budgets = budgetsResult.data;
+  if (budgetsResult.error) {
+    const fallback = await supabase
+      .from("budgets")
+      .select("fiscal_year, allocated_amount, budget_categories(category_name)");
+    budgets = fallback.data;
   }
 
   let totalDonations = 0;
@@ -226,16 +247,40 @@ async function getFinancialSummaryReport(
   }
 
   const expenseBreakdown = new Map<string, number>();
-  const totalExpenses = (expenses ?? []).reduce((sum, row) => {
+  const expenseItems = new Map<string, { sort: string; label: string; amount: number }[]>();
+  let totalExpenses = 0;
+  for (const row of expenses ?? []) {
     const amount = toNumber(row.amount);
     const category =
-      relationName(row.expense_categories ?? null) || "Uncategorized";
-    expenseBreakdown.set(
-      category,
-      (expenseBreakdown.get(category) ?? 0) + amount
+      formatTypeLabel(relationName(row.expense_categories ?? null) || "Uncategorized");
+    const description = row.description?.trim() || "";
+    const dateLabel = formatDate(row.expense_date);
+    const list = expenseItems.get(category) ?? [];
+    list.push({
+      sort: row.expense_date,
+      label: description ? `${dateLabel} · ${description}` : dateLabel,
+      amount,
+    });
+    expenseItems.set(category, list);
+    expenseBreakdown.set(category, (expenseBreakdown.get(category) ?? 0) + amount);
+    totalExpenses += amount;
+  }
+
+  const allocatedByCategory = new Map<string, number>();
+  for (const row of budgets ?? []) {
+    const category = formatTypeLabel(
+      relationName(
+        row.budget_categories as
+          | { category_name?: string }
+          | { category_name?: string }[]
+          | null
+      ) || "Uncategorized"
     );
-    return sum + amount;
-  }, 0);
+    allocatedByCategory.set(
+      category,
+      (allocatedByCategory.get(category) ?? 0) + toNumber(row.allocated_amount)
+    );
+  }
 
   const totalIncome =
     totalDonations +
@@ -258,7 +303,43 @@ async function getFinancialSummaryReport(
   const collectionChildren = toChildren(collectionBreakdown);
   const churchServiceChildren = toChildren(churchServiceBreakdown);
   const otherIncomeChildren = toChildren(otherIncomeBreakdown);
-  const expenseChildren = toChildren(expenseBreakdown);
+  const expenseChildren = [...expenseItems.entries()]
+    .sort((a, b) => (expenseBreakdown.get(b[0]) ?? 0) - (expenseBreakdown.get(a[0]) ?? 0))
+    .map(([category, items]) => {
+      const amount = expenseBreakdown.get(category) ?? 0;
+      const lines = [...items].sort(
+        (a, b) => a.sort.localeCompare(b.sort) || a.label.localeCompare(b.label)
+      );
+      return {
+        label: category,
+        amount,
+        display: formatMoneyPlain(amount),
+        children: lines.map((item) => ({
+          label: item.label,
+          amount: item.amount,
+          display: formatMoneyPlain(item.amount),
+        })),
+      };
+    });
+
+  const budgetCategories = new Set([
+    ...allocatedByCategory.keys(),
+    ...expenseBreakdown.keys(),
+  ]);
+  const budgetLines = [...budgetCategories]
+    .sort((a, b) => a.localeCompare(b))
+    .map((category) => {
+      const allocated = allocatedByCategory.get(category) ?? 0;
+      const spent = expenseBreakdown.get(category) ?? 0;
+      return {
+        category,
+        allocated,
+        spent,
+        remaining: allocated - spent,
+      };
+    });
+  const allocatedTotal = [...allocatedByCategory.values()].reduce((sum, amount) => sum + amount, 0);
+  const remainingBalance = allocatedTotal - totalExpenses;
 
   const incomeServices = [
     {
@@ -310,6 +391,18 @@ async function getFinancialSummaryReport(
       id: "net",
       label: "Actual Cash",
       value: formatMoneyPlain(cashOnHand),
+      tone: "green" as const,
+    },
+    {
+      id: "budget-allocated",
+      label: "Overall Budget",
+      value: formatMoneyPlain(allocatedTotal),
+      tone: "navy" as const,
+    },
+    {
+      id: "budget-remaining",
+      label: "Remaining Balance",
+      value: formatMoneyPlain(remainingBalance),
       tone: "green" as const,
     },
   ];
@@ -364,10 +457,27 @@ async function getFinancialSummaryReport(
     ["Description", "Amount"],
     ...summaryRows.flatMap((row) => [
       [row.label, formatMoneyPlain(row.amount)],
-      ...(row.children ?? []).map((child) => [
-        `  ${child.label}`,
-        child.display,
-      ]),
+      ...(row.children ?? []).flatMap((child) => {
+        const nested =
+          "children" in child && Array.isArray(child.children)
+            ? (child.children as { label: string; display: string }[])
+            : [];
+        return [
+          [`  ${child.label}`, child.display],
+          ...nested.map((item) => [`    ${item.label}`, item.display]),
+        ];
+      }),
+    ]),
+    [],
+    ["Overall Budget", formatMoneyPlain(allocatedTotal)],
+    ["Total Amount Spent", formatMoneyPlain(totalExpenses)],
+    ["Remaining Balance", formatMoneyPlain(remainingBalance)],
+    ["Category", "Allocated", "Spent", "Remaining"],
+    ...budgetLines.map((line) => [
+      line.category,
+      formatMoneyPlain(line.allocated),
+      formatMoneyPlain(line.spent),
+      formatMoneyPlain(line.remaining),
     ]),
   ];
 
@@ -382,8 +492,14 @@ async function getFinancialSummaryReport(
     summaryLines,
     breakdown,
     tableTitle: "Summary Table",
+    budget: {
+      allocated: allocatedTotal,
+      spent: totalExpenses,
+      remaining: remainingBalance,
+      lines: budgetLines,
+    },
     notes:
-      "Expand Donations, Collections / Offerings, Church Services, Other Income, Total Income, or Expenses to view category breakdowns. Public and private services, such as Wedding (Public) and Wedding (Private), appear as separate lines.",
+      "Income is itemized by service. Each expense is listed under its category. Remaining balance is the overall allocated budget minus every expense in this period.",
     exportRows,
   };
 }

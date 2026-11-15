@@ -70,6 +70,7 @@ export function buildFullName(parts: {
 export function formatDateTime(value: string | null | undefined): string {
   if (!value) return "—";
   return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));

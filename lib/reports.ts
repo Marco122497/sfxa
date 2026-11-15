@@ -62,6 +62,12 @@ export const ACCOUNTABILITY_REPORT = {
 } as const;
 
 export const REPORT_TYPES = [
+  {
+    id: "summary",
+    label: "Financial Report",
+    title: "FINANCIAL REPORT",
+    code: "FS",
+  },
   ...INCOME_REPORT_TYPES,
   { id: "expenses", label: "Expenses", title: "EXPENSE REPORT", code: "ER" },
   { id: "budget", label: "Budget", title: "BUDGET REPORT", code: "BR" },
@@ -80,8 +86,8 @@ export function getReportTypeMeta(type: ReportType) {
 export const ADMIN_REPORT_TYPES = [
   {
     id: "summary",
-    label: "Financial Summary",
-    title: "FINANCIAL SUMMARY REPORT",
+    label: "Financial Report",
+    title: "FINANCIAL REPORT",
     code: "FS",
   },
   ...INCOME_REPORT_TYPES,
@@ -114,6 +120,12 @@ export function getAdminReportTypeMeta(type: AdminReportType) {
 
 /** View-only report types available to parish officers. */
 export const PARISH_REPORT_TYPES = [
+  {
+    id: "summary",
+    label: "Financial Report",
+    title: "FINANCIAL REPORT",
+    code: "FS",
+  },
   ...INCOME_REPORT_TYPES,
   {
     id: "expenses",

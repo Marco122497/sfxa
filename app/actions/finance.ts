@@ -10,6 +10,7 @@ import {
 import {
   currentParishDateTime,
   formatMoney,
+  parishScheduleInstant,
   parishTomorrow,
   scheduleHourKey,
   toDateTimeLocal,
@@ -340,8 +341,7 @@ async function resolvePaymentAmount(
     };
   }
   const serviceMatch = serviceRaw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-  const serviceDate = new Date(serviceRaw);
-  if (!serviceMatch || Number.isNaN(serviceDate.getTime())) {
+  if (!serviceMatch) {
     return {
       amount: 0,
       serviceAt: null as string | null,
@@ -351,6 +351,16 @@ async function resolvePaymentAmount(
     };
   }
   const [, scheduleDate, scheduleTime] = serviceMatch;
+  const serviceAt = parishScheduleInstant(scheduleDate, scheduleTime);
+  if (Number.isNaN(new Date(serviceAt).getTime())) {
+    return {
+      amount: 0,
+      serviceAt: null as string | null,
+      priest,
+      paidTime,
+      error: "Enter a complete date and time for the service.",
+    };
+  }
   const donationId = Number(formData.get("donation_id"));
   let keptSchedule = false;
   if (donationId) {
@@ -420,7 +430,7 @@ async function resolvePaymentAmount(
     };
   }
 
-  const year = serviceDate.getFullYear();
+  const year = Number(scheduleDate.slice(0, 4));
   const adjustment = await supabase
     .from("service_fee_years")
     .select("adjustment")
@@ -455,7 +465,7 @@ async function resolvePaymentAmount(
 
   return {
     amount,
-    serviceAt: serviceDate.toISOString(),
+    serviceAt,
     priest,
     paidTime,
   };

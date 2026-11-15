@@ -36,6 +36,14 @@ export type ReportRowBreakdownItem = {
   label: string;
   amount: number;
   display: string;
+  children?: { label: string; amount: number; display: string }[];
+};
+
+export type BudgetReportLine = {
+  category: string;
+  allocated: number;
+  spent: number;
+  remaining: number;
 };
 
 export type ReportRow = {
@@ -76,6 +84,13 @@ export type FormalReportData = {
   breakdown: ReportBreakdownItem[];
   notes: string;
   exportRows: string[][];
+  /** Overall allocation, spending, and what remains. Included on the financial report. */
+  budget?: {
+    allocated: number;
+    spent: number;
+    remaining: number;
+    lines: BudgetReportLine[];
+  };
   tableTitle?: string;
   showBreakdown?: boolean;
 };

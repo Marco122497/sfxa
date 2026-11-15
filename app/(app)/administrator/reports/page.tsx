@@ -33,7 +33,7 @@ export default async function AdminReportsPage({
       <div className="print:hidden">
         <PageHeading
           title="Financial Reports"
-          description="Each walk-in payment with its official receipt number, plus expenses, budget lines, and the user accountability report."
+          description="The financial report brings together income, itemized expenses, the overall budget, and the remaining balance."
           icon={FileTextIcon}
           actions={<ReportExportButtons title={`SXFP ${data.title}`} />}
         />

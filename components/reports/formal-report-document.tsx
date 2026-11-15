@@ -88,7 +88,7 @@ export function FormalReportDocument({
           Printed: {formatDate(generatedAt.toISOString().slice(0, 10))}
         </p>
 
-        <dl className="mt-4 grid grid-cols-4 gap-x-6 gap-y-3">
+        <dl className="mt-4 grid w-full min-w-0 grid-cols-4 gap-x-6 gap-y-3">
           {metaItems.map((item) => (
             <div key={item.label} className="min-w-0">
               <dt className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
@@ -112,12 +112,12 @@ export function FormalReportDocument({
         <CategoryStatement data={data} />
       )}
 
-      <section className="report-keep mt-10 grid grid-cols-2 gap-10">
+      <section className="report-keep mt-10 grid w-full min-w-0 grid-cols-2 gap-10">
         <div className="text-sm">
           <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
             Prepared by
           </p>
-          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <div className="mt-10 w-48 max-w-full border-b border-[#111111]" />
           <p className="mt-2 font-medium uppercase">{generatedBy}</p>
           <p className="text-[12px] uppercase text-[#4b5563]">
             {generatedRole || "Staff"}
@@ -130,7 +130,7 @@ export function FormalReportDocument({
           <p className="text-[10px] font-medium tracking-[0.16em] text-[#6b7280] uppercase">
             Noted by
           </p>
-          <div className="mt-10 w-48 border-b border-[#111111]" />
+          <div className="mt-10 w-48 max-w-full border-b border-[#111111]" />
           <p className="mt-2 font-medium uppercase">{notedByName}</p>
           <p className="text-[12px] uppercase text-[#4b5563]">Parish Priest</p>
           <p className="mt-1 text-[12px] text-[#4b5563]">Date: __________</p>
